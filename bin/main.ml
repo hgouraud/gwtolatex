@@ -6,8 +6,9 @@ let out_file = ref ""
 let debug = ref false
 let livres = ref "/Users/Henri/Genea/Livres"
 let version oc = output_string oc "Version\n"
-let one_http_call oc line = output_string oc line
 let one_page oc line = output_string oc line
+
+let bad_code c = c >= 400
 
 let one_command oc command =
   let out c command =
@@ -22,6 +23,30 @@ let one_command oc command =
   | "Chapter" as c -> out c command
   | "Section" as c -> out c command
   | _ -> output_string oc (command ^ "\n")
+
+let one_http_call _oc line =
+  let url_beg = try String.index_from line 0 '"' with Not_found -> 0 in
+  let url_end =
+    try String.index_from line (url_beg + 1) '"' with Not_found -> 0
+  in
+  let url = String.sub line (url_beg + 1) (url_end - url_beg - 1) in
+  print_string url;
+  print_newline ();
+
+  let resp = Ezcurl.get ~url () in
+  begin match resp with
+    | Ok {Ezcurl.code; body; _} ->
+      if bad_code code then
+          Printf.eprintf "bad code when fetching %s: %d\n%!" url code
+      else (
+          print_string
+            (Format.sprintf "one_http_call done %d, %d\n" code
+               (String.length body));
+          print_string body)
+    | Error (_, msg) ->
+          Printf.eprintf "error when fetching %s:\n  %s\n%!" url msg
+  end
+
 
 let process_one_line oc line =
   match line.[0] with
