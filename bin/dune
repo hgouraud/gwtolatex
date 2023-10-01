@@ -1,4 +1,4 @@
 (executable
  (public_name gwtolatex)
  (name main)
- (libraries ezcurl))
+ (libraries ezcurl markup))
