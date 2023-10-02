@@ -1,0 +1,107 @@
+\documentclass[a4paper]{book}
+
+\tracingcommands=1
+\tracingparagraphs=1 
+\tracingmacros=1
+\tracingoutput=1
+\makeindex
+
+\input{Generic-inputs/MyEnvironment.tex}
+
+\begin{titlepage}
+\title{Un aperçu de la généalogie chausiaise}
+\author{Henri Gouraud&&&&
+\texttt{Henri.Gouraud@LaPoste.net}&&&&
+\copyright 2023}
+\end{titlepage}
+
+\begin{document}
+\WarningsOff*
+\maketitle         % genère le titre
+\tableofcontents   % table des matières
+
+<v Version>
+<x Chapter Avant-propos>
+\input{Chausey-inputs/Notes.tex}
+
+<x Chapter Un peu d'histoire>
+<a href="http://127.0.0.1:2317/Chausey?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
+<x Wide>
+<y No_Chnb_in_fignbr>
+
+<y NoEp>
+<x Chapter Listes de descendants>
+<x Section Famille Antoine>
+<x tex \index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
+voir Famille Fortin (Chocolat)
+<a href="http://127.0.0.1:2317/Chausey?m=D;p=francois;n=bahurel;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Famille Bahurel</a>Bahurel (Famille)<br>
+<x Adjust_w 7cm>
+<a href="http://127.0.0.1:2317/Chausey?p=jacques+louis;n=ernouf;oc=0;templ=tex;w=hg:1045">Ernouf, Jacques Louis</a><br>
+<x Adjust_w>
+<a href="http://127.0.0.1:2317/Chausey?p=leon+francois;n=ernouf;oc=0;templ=tex;w=hg:1045">Ernouf, Léon François</a><br>
+\label{Godel}
+<x NoFiches>
+<x NoWide>
+
+<x Section Arbres généalogiques>
+<y Arbres>
+\input{Chausey-inputs/Notes-arbres.tex}
+<x Newpage>
+<y NoEp>
+<x Fiches>
+
+<y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
+<y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
+<y table is 59 wide>
+
+<begin page>
+<sideways="1"
+<split="23 24 32 28 RthenL">
+<title="Arbre descendant d'Albert Marie (Toumagi)">
+<index="Marie, Albert (Toumagi)">
+<href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045">
+<end>
+<y NoArbres>
+
+\newpage
+
+\begin{figure}
+\begin{center}
+\vspace {-0.5 cm}
+\includegraphics[width=16 cm]{../Livres/Chausey-inputs/Chausey-ign-0}
+
+\label{Big-Chausey}
+\thesection.2 -- Vue aérienne de l'archipel - Source Géoportail IGN, 2014 ou 2015.
+\end{center}
+\end{figure}
+
+<x NoSub>
+<x NoFiches>
+
+<x Chapter Régates de Chausey>
+<a href="http://127.0.0.1:2317/Chausey?p=regates;n=chausey;oc=0;templ=tex;w=hg:1045">Régates de Chausey</a>Régates<br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES&f=regates-chausey-1922;templ=tex;w=hg:1045">Régates de 1922</a>Régates, 1922<br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES&f=regates-chausey-1937;templ=tex;w=hg:1045">Régates de 1937</a>Régates, 1937<br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES&f=regates-chausey-1938;templ=tex;w=hg:1045">Régates de 1938</a>Régates, 1938<br>
+<x Immediate>
+\newpage
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES&f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979</a>Régates, 1979<br>
+<x NoImmediate>
+
+
+\clearpage
+\printindex
+\newpage
+{\huge {\bf Notes}}
+<y \par>
+<y Run Make-Genea du : \date \time>
+\par
+GeneWeb commit : \input{../../GitHub/hgouraud/geneweb/distribution/gw/etc/version.txt}
+\par
+\par
+\hgbaseversion{}
+\par
+\pdftexbanner{}
+\newpage
+{\huge {\bf Notes}}
+\end{document}
