@@ -1,1 +1,2 @@
 <a href="http://127.0.0.1:2317/Chausey?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
+<a href="http://127.0.0.1:2317/Chausey?p=henri;n=gouraud;templ=tex;w=hg:1045">Henri Gouraud</a><br>
