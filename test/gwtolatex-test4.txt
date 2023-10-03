@@ -1,0 +1,91 @@
+\documentclass[a4paper]{book}
+
+\tracingcommands=1
+\tracingparagraphs=1 
+\tracingmacros=1
+\tracingoutput=1
+\makeindex
+
+\input{Generic-inputs/MyEnvironment.tex}
+
+\begin{titlepage}
+\title{Un aperçu de la généalogie chausiaise}
+\author{Henri Gouraud
+\texttt{Henri.Gouraud@LaPoste.net}
+\copyright 2023}
+\end{titlepage}
+
+\begin{document}
+\WarningsOff*
+<y \maketitle         % genère le titre
+\tableofcontents   % table des matières
+
+<v Version>
+<x Chapter Avant-propos>\label{chap 1}
+<y \input{Chausey-inputs/Notes.tex}
+
+<x Chapter Un peu d'histoire>
+Un peu d'histoire ...
+<x Wide>
+<y No_Chnb_in_fignbr>
+
+<y NoEp>
+<x NoFiches>
+<x NoWide>
+
+<x Section Arbres généalogiques>
+<y Arbres>
+<y \input{Chausey-inputs/Notes-arbres.tex}
+<x Newpage>
+<y NoEp>
+<x Fiches>
+
+<y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
+<y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
+<y table is 59 wide>
+
+<z begin page>
+<z sideways="1">
+<z split="23 24 32 28 RthenL">
+<z title="Arbre descendant d'Albert Marie (Toumagi)">
+<z index="Marie, Albert (Toumagi)">
+Arbre desc Toumagi
+<z end>
+<y NoArbres>
+
+\newpage
+
+\begin{figure}
+\begin{center}
+\vspace {-0.5 cm}
+<y \includegraphics[width=16 cm]{../Livres/Chausey-inputs/Chausey-ign-0}
+
+\label{Big-Chausey}
+\thesection.2 -- Vue aérienne de l'archipel - Source Géoportail IGN, 2014 ou 2015.
+\end{center}
+\end{figure}
+
+<x NoSub>
+<x NoFiches>
+
+<x Immediate>
+\newpage
+<x NoImmediate>
+
+
+\clearpage
+\printindex
+\newpage
+{\huge {\bf Notes}}
+<y \par>
+<y Run Make-Genea du : \date \time>
+\par
+<y GeneWeb commit : \input{../../GitHub/hgouraud/geneweb/distribution/gw/etc/version.txt}
+\par
+\par
+<y \hgbaseversion{}
+\par
+<y \pdftexbanner{}
+\newpage
+{\huge {\bf Notes}}
+\end{document}

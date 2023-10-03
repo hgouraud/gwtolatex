@@ -1,6 +1,7 @@
 (* Copyright (c) 2013 H.Gouraud *)
 
 let test = ref false
+let follow = ref false
 let test_nb = ref 0
 let level = ref 1
 let version oc = output_string oc "Version\n"
@@ -68,20 +69,14 @@ let _find_matching_tag name body =
   in
   match_tag 0 body
 
-let _dummy_tags_1 =
+let dummy_tags_1 =
+  [ "!--"; "body"; "bdo"; "samp"; "span"; "table"; "tbody"; "div"; "html" ]
+
+let dummy_tags_2 =
   [
-    "!--";
-    "body";
-    "/body";
-    "bdo";
-    "/bdo";
     "col";
-    "div";
-    "/div";
     "!DOCTYPE";
     "!doc";
-    "html";
-    "/html";
     "imgsrc";
     "fontcolor";
     "input";
@@ -89,51 +84,91 @@ let _dummy_tags_1 =
     "meta";
     "nav";
     "option";
-    "samp";
-    "/samp";
-    "span";
-    "/span";
-    "tbody";
-    "/tbody";
   ]
 
-let _dummy_tags_2 =
+let dummy_tags_3 =
   [ "button"; "head"; "form"; "select"; "colgroup"; "font"; "script" ]
 
-type my_tree = Text of string | Element of string * (string * string) list * my_tree list
+type name = string * string
+
+type my_tree =
+  | Text of string
+  | Element of string * (name * string) list * my_tree list
 
 let rec process_tree oc tree =
   match tree with
   | Text s -> output_string oc s
-  | Element (name, attributes, children) ->
-    match name with
-    | "i" -> (output_string oc "\\i{"; process_tree oc children; output_string oc "}")
-    | _ -> (output_string oc "<name"; process_tree oc children; output_string oc ">")
+  | Element (name, attributes, children) -> (
+      match name with
+      | ("i" | "b") as t ->
+          output_string oc (Format.sprintf "{\\%s " t);
+          List.iter (fun c -> process_tree oc c) children;
+          output_string oc "}"
+      | "p" ->
+          output_string oc (Format.sprintf "\\par");
+          List.iter (fun c -> process_tree oc c) children
+      | "ul" ->
+          output_string oc (Format.sprintf "\\begin{hgitemize}");
+          List.iter (fun c -> process_tree oc c) children;
+          output_string oc "\\end{hgitemize}"
+      | "li" ->
+          output_string oc (Format.sprintf "\\item ");
+          List.iter (fun c -> process_tree oc c) children
+      | "small" ->
+          output_string oc (Format.sprintf "{\\small ");
+          List.iter (fun c -> process_tree oc c) children;
+          output_string oc "}"
+      | name when List.mem name dummy_tags_1 ->
+          List.iter (fun c -> process_tree oc c) children
+      | name when List.mem name dummy_tags_2 -> ()
+      | name when List.mem name dummy_tags_3 -> ()
+      | a ->
+          output_string oc
+            (Printf.sprintf "<begin %s %d (%s)>" a (List.length attributes)
+               (if List.length attributes > 0 then
+                List.fold_left
+                  (fun acc ((a, b), c) -> acc ^ a ^ ":" ^ b ^ "=" ^ c)
+                  "" attributes
+               else ""));
+          List.iter (fun c -> process_tree oc c) children;
+          output_string oc (Printf.sprintf "<end %s>" a))
 
 let process_html oc body =
   let open Markup in
-  body |> string
-  |> parse_html |> signals
-  |> tree
-  ~text:(fun ss -> Text (String.concat "" ss))
-  ~element:(fun (name, _) attributes children -> Element (name, attributes, children))
-  |> process_tree oc
+  let tree =
+    body |> string |> parse_html |> signals
+    |> tree
+         ~text:(fun ss -> Text (String.concat "" ss))
+         ~element:(fun (_, name) attributes children ->
+           Element (name, attributes, children))
+  in
+  match tree with Some tree -> process_tree oc tree | _ -> failwith "bad tree"
 
 let bad_code c = c >= 400
 
-let one_command oc command =
-  let out c command =
-    output_string oc
-      (c
-      ^ String.sub command (String.length c)
-          (String.length command - String.length c)
-      ^ "\n")
+let one_command oc line =
+  let end_c =
+    try String.index_from line 0 '>' with Not_found -> String.length line - 1
   in
-  let parts = String.split_on_char ' ' command in
+  let cmd = String.sub line 3 (end_c - 3) in
+  let remain =
+    if end_c < String.length line then
+      String.sub line (end_c + 1) (String.length line - end_c - 1)
+    else ""
+  in
+  let out c command =
+    let param =
+      String.sub command (String.length c)
+        (String.length command - String.length c)
+    in
+    output_string oc (Format.sprintf "\\%s{%s}%s\n" c param remain)
+  in
+
+  let parts = String.split_on_char ' ' cmd in
   match List.nth parts 0 with
-  | "Chapter" as c -> out c command
-  | "Section" as c -> out c command
-  | _ -> output_string oc (command ^ "\n")
+  | "Chapter" -> out "chapter" cmd
+  | "Section" -> out "section" cmd
+  | _ -> output_string oc (Format.sprintf "%%%s%s\n" cmd remain)
 
 let one_http_call oc line =
   let url_beg = try String.index_from line 0 '"' with Not_found -> 0 in
@@ -160,10 +195,11 @@ let process_one_line oc line =
       | 'v' -> version oc
       | 'a' -> one_http_call oc line
       | 'b' -> one_page oc line
-      | 'x' -> one_command oc (String.sub line 3 (String.length line - 5))
+      | 'x' -> one_command oc line
       | 'y' -> output_string oc ""
-      | _ -> output_string oc line)
-  | _ -> output_string oc line
+      | 'z' -> one_command oc line
+      | _ -> output_string oc (line ^ "\n"))
+  | _ -> output_string oc (line ^ "\n")
 
 let base = ref ""
 let family = ref ""
@@ -194,6 +230,7 @@ let main () =
         " Number of times makeindex is done." );
       ("-level", Arg.Int (fun x -> level := x), " Test traces level.");
       ("-batch", Arg.Set batch, " Pdflatex mode (batch or not).");
+      ("-follow", Arg.Set follow, " Produce Pdflatex.");
       ( "-test",
         Arg.Int
           (fun x ->
@@ -207,18 +244,25 @@ let main () =
   let speclist = Arg.align speclist in
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
-  let fname_txt = Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb in
+  let fname_txt, family_out =
+    Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb,
+    if !family <> "" then !family else Printf.sprintf "gwtolatex-test%d" !test_nb
+  in
   let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
   let fname_all = Filename.concat !livres (!family ^ ".txt") in
-  let fname_out = if !out_file <> "" then !out_file else !family ^ ".gw2l" in
+  let fname_out = if !out_file <> "" then !out_file else family_out ^ ".tex" in
   let mode, fname_in, oc =
-    if Sys.file_exists fname_txt then ("txt", fname_txt, stderr)
+    if Sys.file_exists fname_txt then
+      ( "txt",
+        fname_txt,
+        if !follow then open_out fname_out else stderr
+      )
     else if Sys.file_exists fname_htm then ("html", fname_htm, stderr)
     else ("", fname_all, open_out (Filename.concat !livres fname_out))
   in
   let ic = open_in_bin fname_in in
   if not !debug then Sys.enable_runtime_warnings false;
-  if !test then Printf.eprintf "\n***Starting test with %s\n" fname_in;
+  if !test then (Printf.eprintf "\n***Starting test with %s\n" fname_in; flush stderr);
   (match mode with
   | "html" ->
       let body = really_input_string ic (in_channel_length ic) in
@@ -226,34 +270,40 @@ let main () =
       close_in ic;
       close_out oc;
       exit 0
-  | _ -> (
+  | _ ->
       try
         while true do
           let line = input_line ic in
           process_one_line oc line
         done
-      with End_of_file ->
+      with End_of_file -> (
         close_in ic;
-        close_out oc;
-        if !test then exit 0 else ()));
-  Printf.eprintf "Done\n";
+        close_out oc));
+  Printf.eprintf "Done txt parsing\n"; flush stderr;
 
   let mode = if !batch then "" else "-interaction=batchmode" in
-  let cmmd =
-    Printf.sprintf "pdflatex %s %s.tex" mode (Filename.concat !livres !family)
+  let cmmd1 =
+    Printf.sprintf "pdflatex %s %s.tex" mode family_out
   in
-  let error = Sys.command cmmd in
+  let error = Sys.command cmmd1 in
   if error <> 0 then (
     Printf.eprintf "Error in pdflatex processing (%d)\n" error;
     exit 0);
-  let cmmd =
-    Printf.sprintf "makeindex %s %s.tex" mode (Filename.concat !livres !family)
+  if !test then exit 0;
+  (* makeindex does not like absolute paths! *)
+  let cmmd2 =
+    Printf.sprintf "makeindex %s.idx" family_out
   in
   for _i = 0 to !index do
-    let error = Sys.command cmmd in
+    let error = Sys.command cmmd2 in
     if error <> 0 then (
       Printf.eprintf "Error in makeindex processing (%d)\n" error;
       exit 0)
-  done
+  done;
+  let error = Sys.command cmmd1 in
+  if error <> 0 then (
+    Printf.eprintf "Error in 2nd pdflatex processing (%d)\n" error;
+    exit 0);
+  Printf.eprintf "Done all\n"
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)
