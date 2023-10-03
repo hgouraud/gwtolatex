@@ -1,13 +1,12 @@
 (* Copyright (c) 2013 H.Gouraud *)
 
 let test = ref false
-let mode = ref "txt"
 let test_nb = ref 0
 let level = ref 1
 let version oc = output_string oc "Version\n"
 let one_page oc line = output_string oc line
 
-let strip_nl s =
+let _strip_nl s =
   let b = Buffer.create 10 in
   String.iter
     (fun c -> if c = '\n' then Buffer.add_char b ' ' else Buffer.add_char b c)
@@ -17,53 +16,59 @@ let strip_nl s =
 let chop_body n body = String.sub body 0 (min n (String.length body))
 
 (* returns content between matching tags, and following body *)
-let find_matching_tag name body =
-  if !level > 1 then 
+let _find_matching_tag name body =
+  if !level > 1 then
     Printf.eprintf "Find matching tag: name: %s body: (%d) %s\n" name
-      (String.length body)(chop_body 60 body);
+      (String.length body) (chop_body 60 body);
   let rec match_tag i body =
     if i >= String.length body - 1 then ("", "")
     else
-    let j =
-      try String.index_from body i '<'
-      with Not_found | Invalid_argument _ -> -1
-    in
-    if j = -1 then (
-      Printf.eprintf "Cannot find matching tag: %s, %s\n" name
-        (chop_body 50 body);
-      ("", ""))
-    else if String.length body > j + 1 && body.[j + 1] = '/' then (
-      let found =
-        let rec loop k =
-          if k = String.length name then true
-          else if body.[j + 2 + k] = name.[k] then loop (k + 1)
-          else false
-        in
-        loop 0
+      let j =
+        try String.index_from body i '<'
+        with Not_found | Invalid_argument _ -> -1
       in
-      if !level > 1 then Printf.eprintf "Found: %s, (%d)\n" (if found then "yes" else "no") (String.length body);
-      if found then (
-        (* <tag>content</tag>, body *)
-        let content = String.sub body 0 j in
-        if !level > 1 then Printf.eprintf "Body3: name: %s, %d (%s) (%s)\n" name j (chop_body 30 body) content;
-        let body =
-          String.sub body
-            (j + 3 + String.length name)
-            (String.length body - (j + 3 + String.length name))
+      if j = -1 then (
+        Printf.eprintf "Cannot find matching tag: %s, %s\n" name
+          (chop_body 50 body);
+        ("", ""))
+      else if String.length body > j + 1 && body.[j + 1] = '/' then (
+        let found =
+          let rec loop k =
+            if k = String.length name then true
+            else if body.[j + 2 + k] = name.[k] then loop (k + 1)
+            else false
+          in
+          loop 0
         in
-        if !level > 1 then Printf.eprintf "Body4: (%s)\n" (chop_body 30 body);
-        let body =
-          if body <> "" && body.[0] = '\n' then String.sub body 1 (String.length body - 1)
-          else body
-        in
-        if !level > 1 then Printf.eprintf "Body5: (%s)\n" (chop_body 30 body);
-        (content, body))
-      else match_tag (j + 1) body)
-    else match_tag (j + 1) body
+        if !level > 1 then
+          Printf.eprintf "Found: %s, (%d)\n"
+            (if found then "yes" else "no")
+            (String.length body);
+        if found then (
+          (* <tag>content</tag>, body *)
+          let content = String.sub body 0 j in
+          if !level > 1 then
+            Printf.eprintf "Body3: name: %s, %d (%s) (%s)\n" name j
+              (chop_body 30 body) content;
+          let body =
+            String.sub body
+              (j + 3 + String.length name)
+              (String.length body - (j + 3 + String.length name))
+          in
+          if !level > 1 then Printf.eprintf "Body4: (%s)\n" (chop_body 30 body);
+          let body =
+            if body <> "" && body.[0] = '\n' then
+              String.sub body 1 (String.length body - 1)
+            else body
+          in
+          if !level > 1 then Printf.eprintf "Body5: (%s)\n" (chop_body 30 body);
+          (content, body))
+        else match_tag (j + 1) body)
+      else match_tag (j + 1) body
   in
   match_tag 0 body
 
-let dummy_tags_1 =
+let _dummy_tags_1 =
   [
     "!--";
     "body";
@@ -92,127 +97,27 @@ let dummy_tags_1 =
     "/tbody";
   ]
 
-let dummy_tags_2 =
+let _dummy_tags_2 =
   [ "button"; "head"; "form"; "select"; "colgroup"; "font"; "script" ]
 
-(* tag is <name atributes> may be multi lines *)
+type my_tree = Text of string | Element of string * (string * string) list * my_tree list
 
-let rec process_html oc body =
-  if !level > 1 then Printf.eprintf "Process html %d (%s)\n\n" (String.length body) (chop_body 50 body);
-  let process_tag oc tag body =
-    if !level > 1 then Printf.eprintf "Process tag: %s\n" tag;
-    let tag = strip_nl tag in
-    let name, attr =
-      let j =
-        try String.index_from tag 0 '>'
-        with Not_found | Invalid_argument _ -> -1
-      in
-      if j = -1 then (
-        Printf.eprintf "Bad tag: %s (%s)\n" tag (chop_body 50 body);
-        exit 1);
-      let j =
-        try String.index_from tag 0 ' '
-        with Not_found | Invalid_argument _ -> -1
-      in
-      let tag, attr =
-        if j = -1 then (String.sub tag 1 (String.length tag - 2), "")
-        else
-          ( String.sub tag 1 (j - 1),
-            String.sub tag (j + 1) (String.length tag - j - 2) )
-      in
-      if !level > 1 then
-        Printf.eprintf "Returns: %d name: %s, attr: %s\n" j tag attr;
-      (tag, attr)
-    in
-    let attr = String.split_on_char ' ' attr in
-    (* faut scanner attr !!  espaces dans la zone params xxx="yyy zzz" *)
-    let attr =
-      List.map
-        (fun a ->
-          let eq = try String.index_from a 0 '=' with Not_found -> 0 in
-          let k = String.sub a 0 eq in
-          let v = String.sub a eq (String.length a - eq) in
-          let v =
-            if v <> "" && v.[0] = '=' then String.sub v 1 (String.length v - 1)
-            else v
-          in
-          (k, v))
-        attr
-    in
-    if !test && !level > 2 then Printf.eprintf "Tag0: %s\n" tag;
+let rec process_tree oc tree =
+  match tree with
+  | Text s -> output_string oc s
+  | Element (name, attributes, children) ->
     match name with
-    | tag when List.mem tag dummy_tags_1 -> body
-    | tag when List.mem tag dummy_tags_2 ->
-        let _content, body' = find_matching_tag tag body in
-        body'
-    | "a" -> (
-        if !level > 1 then Printf.eprintf "Treating tag a: (%s)\n" (chop_body 50 body);
-        let href = try List.assoc "href" attr with Not_found -> "no href" in
-        let content, body' = find_matching_tag "a" body in
-        output_string oc ("<a> Href:" ^ href ^ " -> ");
-        if !level > 1 then Printf.eprintf "\n: %s\n" content;
-        process_html oc content;
-        output_string oc "</a>";
-        body')
-    | "i" ->
-        output_string oc "\\{i ";
-        body
-    | "/i" ->
-        output_string oc "}";
-        body
-    | "img" ->
-        let src = try List.assoc "src" attr with Not_found -> "no src" in
-        output_string oc ("<img " ^ src ^ ">");
-        body
-    | "li" ->
-        output_string oc "\\item {";
-        body
-    | "/li" ->
-        output_string oc "}";
-        body
-    | "ul" ->
-        output_string oc "\\begin {itemize}";
-        body
-    | "/ul" ->
-        output_string oc "\\end {itemize}";
-        body
-    | _ ->
-        output_string oc (Printf.sprintf "other tags: %s\n" tag);
-        body
-  in
-  (* end process tag *)
-  
-  if !level > 1 then Printf.eprintf "Body2: (%s)\n" (chop_body 30 body);
-  if body = "" || body = "\n" then ()
-  else if body.[0] <> '<' then
-    let j =
-      try String.index_from body 0 '<'
-      with Not_found | Invalid_argument _ -> -1
-    in
-    if j = -1 then output_string oc body
-    else (
-      output_string oc (String.sub body 0 j);
-      process_html oc (String.sub body j (String.length body - j)))
-  else
-    let tag, body =
-      let j =
-        try String.index_from body 0 '>'
-        with Not_found | Invalid_argument _ -> -1
-      in
-      ( String.sub body 0 (j + 1),
-        String.sub body (j + 1) (String.length body - j - 1) )
-    in
-    if !level > 1 then Printf.eprintf "Tag: %s, (%s)\n" tag body;
-    if !level > 1 then Printf.eprintf "Body: (%s)\n" (chop_body 10 body);
-    let body =
-      if body <> "" && body.[0] = '\n' then
-        String.sub body 1 (String.length body - 1)
-      else body
-    in
-    let body =
-      if tag <> "" || body <> "" then process_tag oc tag body else ""
-    in
-    process_html oc body
+    | "i" -> (output_string oc "\\i{"; process_tree oc children; output_string oc "}")
+    | _ -> (output_string oc "<name"; process_tree oc children; output_string oc ">")
+
+let process_html oc body =
+  let open Markup in
+  body |> string
+  |> parse_html |> signals
+  |> tree
+  ~text:(fun ss -> Text (String.concat "" ss))
+  ~element:(fun (name, _) attributes children -> Element (name, attributes, children))
+  |> process_tree oc
 
 let bad_code c = c >= 400
 
@@ -289,8 +194,12 @@ let main () =
         " Number of times makeindex is done." );
       ("-level", Arg.Int (fun x -> level := x), " Test traces level.");
       ("-batch", Arg.Set batch, " Pdflatex mode (batch or not).");
-      ("-test", Arg.Int (fun x -> test_nb := x; test := true), " Choose test file.");
-      ("-mode", Arg.String (fun x -> mode := x), " Test mode (process txt or html).");
+      ( "-test",
+        Arg.Int
+          (fun x ->
+            test_nb := x;
+            test := true),
+        " Choose test file." );
       ("-debug", Arg.Unit (fun () -> debug := true), " Debug mode.");
     ]
   in
@@ -298,40 +207,37 @@ let main () =
   let speclist = Arg.align speclist in
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
+  let fname_txt = Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb in
+  let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
+  let fname_all = Filename.concat !livres (!family ^ ".txt") in
+  let fname_out = if !out_file <> "" then !out_file else !family ^ ".gw2l" in
+  let mode, fname_in, oc =
+    if Sys.file_exists fname_txt then ("txt", fname_txt, stderr)
+    else if Sys.file_exists fname_htm then ("html", fname_htm, stderr)
+    else ("", fname_all, open_out (Filename.concat !livres fname_out))
+  in
+  let ic = open_in_bin fname_in in
   if not !debug then Sys.enable_runtime_warnings false;
-  let out_fname = if !out_file <> "" then !out_file else !family ^ ".gw2l" in
-  (if !test && !mode = "html" then (
-   let ic = open_in_bin (Printf.sprintf "test/gwtolatex-test%d.html" !test_nb) in
-   let oc = stderr in
-   let body = really_input_string ic (in_channel_length ic) in
-   Printf.eprintf "\n***Starting test\n";
-   process_html oc body;
-   close_in ic;
-   exit 0)
-  else if !test && !mode = "txt" then (
-    let ic = open_in (Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb) in
-    let oc = stderr in
-    try
-      while true do
-        let line = input_line ic in
-        process_one_line oc line
-      done
-    with End_of_file ->
+  if !test then Printf.eprintf "\n***Starting test with %s\n" fname_in;
+  (match mode with
+  | "html" ->
+      let body = really_input_string ic (in_channel_length ic) in
+      process_html oc body;
       close_in ic;
       close_out oc;
-      )
-  else
-    let ic = open_in (Filename.concat !livres (!family ^ ".txt")) in
-    let oc = open_out (Filename.concat !livres out_fname) in
-    try
-      while true do
-        let line = input_line ic in
-        process_one_line oc line
-      done
-    with End_of_file ->
-      close_in ic;
-      close_out oc);
+      exit 0
+  | _ -> (
+      try
+        while true do
+          let line = input_line ic in
+          process_one_line oc line
+        done
+      with End_of_file ->
+        close_in ic;
+        close_out oc;
+        if !test then exit 0 else ()));
   Printf.eprintf "Done\n";
+
   let mode = if !batch then "" else "-interaction=batchmode" in
   let cmmd =
     Printf.sprintf "pdflatex %s %s.tex" mode (Filename.concat !livres !family)
