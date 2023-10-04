@@ -84,9 +84,13 @@ let _find_matching_tag name body =
   in
   match_tag 0 body
 
-let dummy_tags_1 =
-  [ "!--"; "body"; "bdo"; "samp"; "span"; "table"; "tbody"; "div"; "html" ]
+(* read children, ignore tag *)
+let dummy_tags_0 = [ "body"; "html"; "div" ]
 
+let dummy_tags_1 =
+  [ "!--"; "bdo"; "samp"; "span"; "table"; "tbody"; ]
+
+(* ignore tag *)
 let dummy_tags_2 =
   [
     "col";
@@ -100,7 +104,8 @@ let dummy_tags_2 =
     "nav";
     "option";
   ]
-
+  
+(* skip to end tag *)
 let dummy_tags_3 =
   [ "button"; "head"; "form"; "select"; "colgroup"; "font"; "script" ]
 
@@ -498,9 +503,9 @@ let rec process_tree och tree =
             else content
           in
           output_string och str
-      | name when List.mem name dummy_tags_1 ->
-      
-      
+      | name when List.mem name dummy_tags_0 ->
+          List.iter (fun c -> process_tree och c) children;
+      | name when List.mem name dummy_tags_1 -> ()
       | name when List.mem name dummy_tags_2 -> ()
       | name when List.mem name dummy_tags_3 -> ()
       | "a" -> tag_a name attributes children
