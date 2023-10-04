@@ -14,6 +14,21 @@ let _strip_nl s =
     s;
   Buffer.contents b
 
+let contains str sub =
+  let strlen = String.length str in
+  let sublen = String.length sub in
+  let rec aux i1 i2 =
+    if i1 = sublen then true
+    else if i2 = strlen then false
+    else if String.unsafe_get str i2 = String.unsafe_get sub i1 then
+      aux (i1 + 1) (i2 + 1)
+    else false
+  in
+  let rec loop i =
+    if i + sublen <= strlen then aux 0 i || loop (i + 1) else false
+  in
+  loop 0
+
 let chop_body n body = String.sub body 0 (min n (String.length body))
 
 (* returns content between matching tags, and following body *)
@@ -114,10 +129,8 @@ type _page = { chapter : int; section : int; subsection : int; images : image }
 
 let rec dump children l =
   let tab l =
-    let rec loop acc i =
-      if i = l then acc
-      else loop (acc ^ "  ") (i + 1)
-    in loop "" 0 
+    let rec loop acc i = if i = l then acc else loop (acc ^ "  ") (i + 1) in
+    loop "" 0
   in
   Printf.eprintf "%sChildren: %d\n" (tab l) (List.length children);
   List.iter
@@ -132,9 +145,7 @@ let rec dump children l =
 
 let dump_tag tag name attributes children =
   Printf.eprintf "<begin %s\n>" name;
-  List.iter
-    (fun ((a, b), c) -> Printf.eprintf "  attr: %s=%s\n" b c)
-    attributes;
+  List.iter (fun ((a, b), c) -> Printf.eprintf "  attr: %s=%s\n" b c) attributes;
   dump children 0;
   Printf.eprintf "<end %s>" name
 
@@ -172,70 +183,137 @@ let split_href href =
   let v = try List.assoc "v" evars with Not_found -> "" in
   (m, p, n, oc, i, k, s, v)
 
-let tag_a process_tree och name attributes children =
-  let attr = get_att_list attributes in
-  let href = try List.assoc "href" attr with Not_found -> "" in
-  let m, p, n, oc, i, k, s, v = split_href href in
-  (* if p<> "" or n <> "" we have a person *)
-  (* it may appear undes a different spelling as part of <a>xxx</a> *)
-  (* or we may have a portrait k <> "" *)
-  (* or an image m=IM|IMH|DOC|SRC *)
-  (* <a href=m=IM...k=p.oc.n><img src=m=IM...k=p.oc.n></a> *)
-  (* assumes that children is a single string *)
-  (* which may be an <img src=xxx> *)
-  if !level > 1 then (
-    Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
-    dump children 0);
-  List.iter
-    (fun obj ->
-      match obj with
-      | Text person ->
-          let p = upgrade_fn p in
-          let n = upgrade_sn n in
-          let oc = if oc <> "" then Format.sprintf " (%s)" oc else "" in
-          let full_name = Format.sprintf "%s %s%s" p n oc in
-          if (p <> "" || n <> "") && k = "" then (
-            output_string och (Format.sprintf "{\\b %s}" full_name);
-            output_string och (Format.sprintf "\\index{%s, %s%s}" n p oc);
-            output_string och
-              (Format.sprintf "\\index{%s, voir %s, %s%s}" person n p oc));
-          output_string och person
-      | Element (_, _, _) as elt -> process_tree och elt)
-    children
+(* process_tree_cumul accumulates results in a string *)
 
-let tag_img process_tree och name attributes children =
-  let attr = get_att_list attributes in
-  let href = try List.assoc "src" attr with Not_found -> "" in
-  let m, p, n, oc, i, k, s, v = split_href href in
-  if k <> "" then
-    output_string och (Format.sprintf "Image (k): %s\n" k);
-  if s <> "" then
-    output_string och (Format.sprintf "Image (s): %s\n" s)
+let rec process_tree_cumul och cumul tree =
+  let tag_a cumul name attributes children =
+    let attr = get_att_list attributes in
+    let href = try List.assoc "href" attr with Not_found -> "" in
+    let m, p, n, oc, i, k, s, v = split_href href in
+    (* if p<> "" or n <> "" we have a person *)
+    (* it may appear undes a different spelling as part of <a>xxx</a> *)
+    (* or we may have a portrait k <> "" *)
+    (* or an image m=IM|IMH|DOC|SRC *)
+    (* <a href=m=IM...k=p.oc.n><img src=m=IM...k=p.oc.n></a> *)
+    (* assumes that children is a single string *)
+    (* which may be an <img src=xxx> *)
+    if !level > 1 then (
+      Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
+      dump children 0);
+    let content =
+      List.fold_left (fun acc c -> process_tree_cumul och cumul c) "" children
+    in
+    let p = upgrade_fn p in
+    let n = upgrade_sn n in
+    let oc = if oc <> "" then Format.sprintf " (%s)" oc else "" in
+    let full_name = Format.sprintf "%s %s%s" p n oc in
+    if (p <> "" || n <> "") && k = "" then
+      cumul
+      ^ Format.sprintf "{\\b %s}" full_name
+      ^ Format.sprintf "\\index{%s, %s%s}" n p oc
+      ^ Format.sprintf "\\index{%s, voir %s, %s%s}" content n p oc
+      ^ content
+    else cumul ^ content
+  in
 
-let rec process_tree och tree =
+  let tag_img cumul name attributes children =
+    let attr = get_att_list attributes in
+    let href = try List.assoc "src" attr with Not_found -> "" in
+    let m, p, n, oc, i, k, s, v = split_href href in
+    if k <> "" then output_string och (Format.sprintf "Image (k): %s\n" k);
+    if s <> "" then output_string och (Format.sprintf "Image (s): %s\n" s);
+    ""
+  in
   match tree with
-  | Text s -> output_string och s
+  | Text s -> cumul ^ s
   | Element (name, attributes, children) -> (
       match name with
       | ("i" | "b" | "u" | "em") as t ->
-          output_string och (Format.sprintf "{\\%s " t);
-          List.iter (fun c -> process_tree och c) children;
-          output_string och "}"
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          cumul
+          ^ if content <> "" then Format.sprintf "{\\%s %s}" t content else ""
+      | "h1" ->
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          let sect =
+            if !subsection = 1 then (
+              incr subsection;
+              "subsection")
+            else (
+              incr section;
+              subsection := 0;
+              "section")
+          in
+          cumul
+          ^
+          if content <> "" then Format.sprintf "{\\%s %s}" sect content else ""
+      | "h2" ->
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          cumul
+          ^
+          if content <> "" then Format.sprintf "{\\subsection %s}" content
+          else ""
+      | "h3" ->
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          let str =
+            if contains content ">Bateaux<" then
+              Format.sprintf "\n\\par\\hgbato{Bateaux}"
+            else if contains content ">Propriétaires<" then
+              Format.sprintf "\n\\par\\hgbato{Propriétaires}"
+            else Format.sprintf "{\\subsubsection %s}" content
+          in
+          cumul ^ if content <> "" then str else ""
       | "p" ->
-          output_string och (Format.sprintf "\\par");
-          List.iter (fun c -> process_tree och c) children
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          cumul
+          ^ if content <> "" then Format.sprintf "\\par\n %s" content else ""
       | "ul" ->
-          output_string och (Format.sprintf "\\begin{hgitemize}");
-          List.iter (fun c -> process_tree och c) children;
-          output_string och "\\end{hgitemize}"
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          cumul
+          ^
+          if content <> "" then
+            Format.sprintf "\\begin{hgitemise}\n %s/n\\end{hgitemise}\n" content
+          else ""
       | "li" ->
-          output_string och (Format.sprintf "\\item{}");
-          List.iter (fun c -> process_tree och c) children
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          cumul
+          ^ if content <> "" then Format.sprintf "\\item{}{%s}" content else ""
       | "small" ->
-          output_string och (Format.sprintf "{\\small ");
-          List.iter (fun c -> process_tree och c) children;
-          output_string och "}"
-      | "span" -> (
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          cumul
+          ^ if content <> "" then Format.sprintf "{\\small %s}" content else ""
+      | "span" ->
           (* look for potential TeX code *)
           (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
           (* children is a single string of TeX *)
@@ -246,26 +324,187 @@ let rec process_tree och tree =
                 else ok || false)
               false attributes
           in
-          match children with
-          | [ Text line ] when tex ->
-              let line = String.sub line 4 (String.length line - 7) in
-              let line =
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          let str =
+            if tex then
+              let content = String.sub content 4 (String.length content - 7) in
+              let content =
                 let i =
-                  try String.index_from line 0 '%' with Not_found -> -1
+                  try String.index_from content 0 '%' with Not_found -> -1
                 in
                 if i > 0 then
-                  String.sub line 0 i
-                  ^ String.sub line (i + 1) (String.length line - i - 1)
-                else line
+                  String.sub content 0 i
+                  ^ String.sub content (i + 1) (String.length content - i - 1)
+                else content
               in
-              output_string och line
-          | _ -> List.iter (fun c -> process_tree och c) children)
-      | name when List.mem name dummy_tags_1 ->
+              content
+            else content
+          in
+          cumul ^ str
+      | name when List.mem name dummy_tags_1 -> ""
+      | name when List.mem name dummy_tags_2 -> ""
+      | name when List.mem name dummy_tags_3 -> ""
+      | "a" -> tag_a cumul name attributes children
+      | "img" -> tag_img cumul name attributes children
+      | _ ->
+          Printf.eprintf "Missing tag: %s\n" name;
+          "")
+
+let rec process_tree och tree =
+  let tag_a name attributes children =
+    let attr = get_att_list attributes in
+    let href = try List.assoc "href" attr with Not_found -> "" in
+    let m, p, n, oc, i, k, s, v = split_href href in
+    (* if p<> "" or n <> "" we have a person *)
+    (* it may appear undes a different spelling as part of <a>xxx</a> *)
+    (* or we may have a portrait k <> "" *)
+    (* or an image m=IM|IMH|DOC|SRC *)
+    (* <a href=m=IM...k=p.oc.n><img src=m=IM...k=p.oc.n></a> *)
+    (* assumes that children is a single string *)
+    (* which may be an <img src=xxx> *)
+    if !level > 1 then (
+      Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
+      dump children 0);
+    let content =
+      List.fold_left
+        (fun acc c -> acc ^ process_tree_cumul och acc c)
+        "" children
+    in
+    let p = upgrade_fn p in
+    let n = upgrade_sn n in
+    let oc = if oc <> "" then Format.sprintf " (%s)" oc else "" in
+    let full_name = Format.sprintf "%s %s%s" p n oc in
+    if (p <> "" || n <> "") && k = "" then
+      let str = Format.sprintf "{\\b %s}" full_name in
+      let str = str ^ Format.sprintf "\\index{%s, %s%s}" n p oc in
+      let str =
+        str ^ Format.sprintf "\\index{%s, voir %s, %s%s}" content n p oc
+      in
+      output_string och (str ^ content)
+    else output_string och content
+  in
+
+  let tag_img name attributes children =
+    let attr = get_att_list attributes in
+    let href = try List.assoc "src" attr with Not_found -> "" in
+    let m, p, n, oc, i, k, s, v = split_href href in
+    if k <> "" then output_string och (Format.sprintf "Image (k): %s\n" k);
+    if s <> "" then output_string och (Format.sprintf "Image (s): %s\n" s)
+  in
+  if !level > 1 then
+    Printf.eprintf "Process_tree\n";
+  match tree with
+  | Text s -> (
+    if !level > 1 then
+      Printf.eprintf "Text elt: %s\n" s;
+      output_string och s)
+  | Element (name, attributes, children) -> (
+    if !level > 1 then 
+      Printf.eprintf "Tag elt: %s\n" name;
+      match name with
+      | ("i" | "b" | "u" | "em") as t ->
+          output_string och (Format.sprintf "{\\%s " t);
+          List.iter (fun c -> process_tree och c) children;
+          output_string och (Format.sprintf "}")
+      | "h1" ->
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och acc c)
+              "" children
+          in
+          let sect =
+            if !subsection = 1 then (
+              incr subsection;
+              "subsection")
+            else (
+              incr section;
+              subsection := 0;
+              "section")
+          in
+          output_string och
+            (if content <> "" then Format.sprintf "{\\%s %s}" sect content
+            else "")
+      | "h2" ->
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och acc c)
+              "" children
+          in
+          output_string och
+            (if content <> "" then Format.sprintf "{\\subsection %s}" content
+            else "")
+      | "h3" ->
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och acc c)
+              "" children
+          in
+          let str =
+            if contains content ">Bateaux<" then
+              Format.sprintf "\n\\par\\hgbato{Bateaux}"
+            else if contains content ">Propriétaires<" then
+              Format.sprintf "\n\\par\\hgbato{Propriétaires}"
+            else Format.sprintf "{\\subsubsection %s}" content
+          in
+          output_string och (if content <> "" then str else "")
+      | "p" ->
+          output_string och (Format.sprintf "\\par\n");
           List.iter (fun c -> process_tree och c) children
+      | "ul" ->
+          output_string och (Format.sprintf "\\begin{hgitemise}\n");
+          List.iter (fun c -> process_tree och c) children;
+          output_string och (Format.sprintf "\\end{hgitemise}\n")
+      | "li" ->
+          output_string och (Format.sprintf "\\item{}{");
+          List.iter (fun c -> process_tree och c) children;
+          output_string och (Format.sprintf "}\n")
+      | "small" ->
+          output_string och (Format.sprintf "{\\small ");
+          List.iter (fun c -> process_tree och c) children;
+          output_string och (Format.sprintf "}\n")
+      | "span" ->
+          (* look for potential TeX code *)
+          (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
+          (* children is a single string of TeX *)
+          let tex =
+            List.fold_left
+              (fun ok ((_, k), v) ->
+                if k = "class" && v = "display:none" then ok || true
+                else ok || false)
+              false attributes
+          in
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och acc c)
+              "" children
+          in
+          let str =
+            if tex then
+              let content = String.sub content 4 (String.length content - 7) in
+              let content =
+                let i =
+                  try String.index_from content 0 '%' with Not_found -> -1
+                in
+                if i > 0 then
+                  String.sub content 0 i
+                  ^ String.sub content (i + 1) (String.length content - i - 1)
+                else content
+              in
+              content
+            else content
+          in
+          output_string och str
+      | name when List.mem name dummy_tags_1 ->
+      
+      
       | name when List.mem name dummy_tags_2 -> ()
       | name when List.mem name dummy_tags_3 -> ()
-      | "a" -> tag_a process_tree och name attributes children
-      | "img" -> tag_img process_tree och name attributes children
+      | "a" -> tag_a name attributes children
+      | "img" -> tag_img name attributes children
       | _ -> Printf.eprintf "Missing tag: %s\n" name)
 
 let process_html och body =
@@ -332,7 +571,8 @@ let one_http_call och line =
         Printf.eprintf "bad code when fetching %s: %d\n%!" url code
       else (
         if !level > 1 then Printf.eprintf "Body size: %d\n" (String.length body);
-        process_html och body)
+        let _ = process_html och body in
+        ())
   | Error (_, msg) -> Printf.eprintf "error when fetching %s:\n  %s\n%!" url msg
 
 let process_one_line och line =
@@ -413,7 +653,7 @@ let main () =
   (match mode with
   | "html" ->
       let body = really_input_string ic (in_channel_length ic) in
-      process_html och body;
+      let _ = process_html och body in
       close_in ic;
       close_out och;
       exit 0

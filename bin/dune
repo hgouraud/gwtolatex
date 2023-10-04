@@ -1,4 +1,4 @@
 (executable
  (public_name gwtolatex)
  (name gwtolatex)
- (libraries ezcurl markup))
+ (libraries ezcurl markup geneweb.gwdb-legacy geneweb.sosa_zarith geneweb))
