@@ -499,6 +499,8 @@ let rec process_tree och tree =
     (* <a href=m=IM...k=p.oc.n><img src=m=IM...k=p.oc.n></a> *)
     (* assumes that children is a single string *)
     (* which may be an <img src=xxx> *)
+    (* TODO m=TT t=xxx p=yyy *)
+    (* TODO decode names  p=louis;n=de%20bourbon; *)
     if !level > 1 then Printf.eprintf "Tag a (tree)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
@@ -525,9 +527,10 @@ let rec process_tree och tree =
       let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
       let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
       let ocn = if ocn = 0 then "" else Format.sprintf "(%d)" ocn in
+      (* TODO verify uppercase! (le Fort), (Le Fort) *)
       let check = Printf.sprintf "%s %s" fn sn in
       if !level > 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
-      if (p <> "" || n <> "") && k = "" && content <> check then
+      if (fn <> "" || sn <> "") && k = "" && content <> check then
         Format.sprintf "{\\b %s %s %s}" fn sn ocn
         ^ Format.sprintf "\\index{%s, %s %s}" sn fn ocn
         ^ Format.sprintf "\\index{%s, voir %s, %s %s}" content sn fn ocn
@@ -645,17 +648,16 @@ let rec process_tree och tree =
           (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
           (* children is a single string of TeX *)
           let tex =
-            List.fold_left
-              (fun ok ((_, k), v) ->
-                if k = "class" && v = "display:none" then ok || true
-                else ok || false)
-              false attributes
+            List.exists
+              (fun ((_, k), v) ->
+                v = "display:none") attributes
           in
           let content =
             List.fold_left
               (fun acc c -> acc ^ process_tree_cumul och acc c)
               "" children
           in
+          (* TODO check for tex at beginning of string *)
           let str =
             if tex then
               let content = String.sub content 4 (String.length content - 7) in

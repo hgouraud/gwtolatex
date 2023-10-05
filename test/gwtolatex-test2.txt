@@ -8,12 +8,12 @@
 
 \input{Generic-inputs/MyEnvironment.tex}
 
-\begin{titlepage}
 \title{Un aperçu de la généalogie chausiaise}
-\author{Henri Gouraud&&&&
-\texttt{Henri.Gouraud@LaPoste.net}&&&&
+\author{Henri Gouraud \\
+Henri.Gouraud@LaPoste.net \\
+\\
 \copyright 2023}
-\end{titlepage}
+\date{Octobre 2023}
 
 \begin{document}
 \WarningsOff*
