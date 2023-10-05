@@ -8,20 +8,19 @@ type my_tree =
 
 type im_type = Portrait | Image_k | Image_s
 
-type image = {
-  _im_type : im_type;
-  _filename : string; (* ch,   sec,  ssec, sssec, nb *)
-  _where : (int * int * int * int * int) list;
+type _image = {
+  im_type : im_type;
+  filename : string;
+  where : (int * int * int * int); (* ch, sec, ssec, sssec*)
+  image_nbr : int;
 }
-
-type _page = { chapter : int; section : int; subsection : int; images : image }
 
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
 let level = ref 1
-let version och = output_string och "Version\n"
-let one_page och line = output_string och line
+let version = "1.0"
+
 
 (* current values *)
 let chapter = ref 0
@@ -30,6 +29,27 @@ let subsection = ref 0
 let subsubsection = ref 0
 let nbr = ref 0
 let images_in_page = ref []
+
+
+let chapter = ref 0
+let section = ref 0
+let subsection = ref 0
+let subsubsection = ref 0
+let image_nbr = ref 0
+let images_in_page = ref []
+let collect_images = ref false
+let wide = ref false
+let fiches = ref false
+let highlights = ref []
+let width = ref 7
+let ch_nb_in_fig_nb = ref true
+let immediate = ref false
+let sub = ref false
+let trees = ref false
+let ep = ref false
+let arbres = ref false
+let sideways = ref false
+
 
 let open_base basename =
   match basename with
@@ -222,6 +242,41 @@ let print_image image =
         | Image_k -> "Image_k")
         name ch sec ssec sssec nb
 
+(* process commands to build a full page page *)
+(* used for tree displays and large images *)
+(* various commands govern the layout *)
+(* as well as captions, labels and fig numbers *)
+
+(* example:
+
+<y Split a html colon driven table across two pages (two passes)>
+<y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
+<y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
+<y table is 59 wide>
+<y trial and errors !!>
+
+<begin page>
+<sideways="1"
+<split="23 24 32 28 RthenL">
+<title="Arbre descendant d'Albert Marie (Toumagi)">
+<index="Marie, Albert (Toumagi)">
+<href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045">
+<end>
+
+<begin page>
+<sideways="1">
+<title="Arbre ascendant d'EugŽnie Collet">
+<index="Collet, EugŽnie (ep Vaillant)">
+<href="http://127.0.0.1:2317/Chausey?m=A;p=eugenie (x);n=collet;v=5;siblings=on;notes=on;t=T;after=;before=;dag=on;templ=tex;w=hg:1045">
+<end>
+*)
+
+let one_page och line = output_string och line
+
+
+
+
+
 (* process_tree_cumul accumulates results in a string *)
 
 let rec process_tree_cumul och cumul tree =
@@ -284,10 +339,11 @@ let rec process_tree_cumul och cumul tree =
         ( (if k <> "" then Image_k else if s <> "" then Image_s else Portrait),
           image_label,
           (!chapter, !section, !subsection, !subsubsection),
-          !nbr )
+          !image_nbr )
       in
       incr nbr;
-      images_in_page := image :: !images_in_page;
+      if !collect_images then
+        images_in_page := image :: !images_in_page;
       print_image image
     in
     str
@@ -305,6 +361,14 @@ let rec process_tree_cumul och cumul tree =
           in
           cumul
           ^ if content <> "" then Format.sprintf "{\\%s %s}" t content else ""
+      | "sup" ->
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          cumul
+          ^ if content <> "" then Format.sprintf "\\textsuperscript{%s}" content else ""
       | "h1" ->
           let content =
             List.fold_left
@@ -314,10 +378,13 @@ let rec process_tree_cumul och cumul tree =
           let sect =
             if !subsection = 1 then (
               incr subsection;
+              subsubsection := 0;
               "subsection")
             else (
               incr section;
               subsection := 0;
+              subsection := 0;
+              subsubsection := 0;
               "section")
           in
           cumul
@@ -480,7 +547,7 @@ let rec process_tree och tree =
           (try int_of_string oc with Failure _ -> 0)
       with
       | Some ip -> ip
-      | None -> Gwdb.iper_of_string i
+      | None -> if i = "" then Gwdb.dummy_iper else Gwdb.iper_of_string i
     in
     let str =
       let person = Gwdb.poi !my_base ip in
@@ -511,6 +578,10 @@ let rec process_tree och tree =
       match name with
       | ("i" | "b" | "u" | "em") as t ->
           output_string och (Printf.sprintf "{\\%s " t);
+          List.iter (fun c -> process_tree och c) children;
+          output_string och (Printf.sprintf "}")
+      | "sup" ->
+          output_string och (Printf.sprintf "{\\textsuperscript{" );
           List.iter (fun c -> process_tree och c) children;
           output_string och (Printf.sprintf "}")
       | "h1" ->
@@ -663,6 +734,26 @@ let one_command och line =
   | "SubSubSection" ->
       out "subsubsection" cmd;
       incr subsubsection
+  | "Newpage" -> output_string och "\\newpage"
+  | "Adjust_w" -> output_string och (Format.sprintf "\\newwidth{%s}\n"
+      (if List.length parts > 1 then List.nth parts 0 else "7cm"))
+  | "Version" -> output_string och (version ^ "\n")
+  | "CollectImagesOn>" -> collect_images := true
+  | "CollectImagesOff>" -> collect_images := false
+  | "WideOn>" -> wide := false
+  | "WideOff>" -> wide := false
+  | "SubOn" -> sub := true
+  | "SubOff" -> sub := false
+  | "EpOn" -> ep := true
+  | "EpOff" -> ep := true
+  | "ArbresOn" -> arbres := true
+  | "ArbresOff" -> arbres := false
+  | "Ch_nb_in_fig_nb" -> ch_nb_in_fig_nb := true
+  | "Ch_nb_in_fig_nbOff" -> ch_nb_in_fig_nb := false
+  | "FichesOn" -> fiches := true
+  | "FichesOff" -> fiches := false
+  | "ImmediateOn" -> immediate := true
+  | "ImmediateOff" -> immediate := false
   | _ -> output_string och (Format.sprintf "%%%s%s\n" cmd remain)
 
 let one_http_call och line =
@@ -688,12 +779,10 @@ let process_one_line och line =
   match line.[0] with
   | '<' -> (
       match line.[1] with
-      | 'v' -> version och
       | 'a' -> one_http_call och line
       | 'b' -> one_page och line
       | 'x' -> one_command och line
       | 'y' -> output_string och ""
-      | 'z' -> one_command och line
       | _ -> output_string och (line ^ "\n"))
   | _ -> output_string och (line ^ "\n")
 
