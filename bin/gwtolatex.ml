@@ -11,7 +11,7 @@ type im_type = Portrait | Image_k | Image_s
 type _image = {
   im_type : im_type;
   filename : string;
-  where : (int * int * int * int); (* ch, sec, ssec, sssec*)
+  where : int * int * int * int; (* ch, sec, ssec, sssec*)
   image_nbr : int;
 }
 
@@ -21,7 +21,6 @@ let test_nb = ref 0
 let level = ref 1
 let version = "1.0"
 
-
 (* current values *)
 let chapter = ref 0
 let section = ref 0
@@ -29,8 +28,6 @@ let subsection = ref 0
 let subsubsection = ref 0
 let nbr = ref 0
 let images_in_page = ref []
-
-
 let chapter = ref 0
 let section = ref 0
 let subsection = ref 0
@@ -49,7 +46,6 @@ let trees = ref false
 let ep = ref false
 let arbres = ref false
 let sideways = ref false
-
 
 let open_base basename =
   match basename with
@@ -211,7 +207,9 @@ let get_att_list attributes =
 
 let split_href href =
   let parts = String.split_on_char '?' href in
-  let href = replace ';' '&' (List.nth parts (if List.length parts = 2 then 1 else 0)) in
+  let href =
+    replace ';' '&' (List.nth parts (if List.length parts = 2 then 1 else 0))
+  in
   let evars = String.split_on_char '&' href in
   let evars =
     List.map
@@ -249,33 +247,29 @@ let print_image image =
 
 (* example:
 
-<y Split a html colon driven table across two pages (two passes)>
-<y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
-<y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
-<y table is 59 wide>
-<y trial and errors !!>
+   <y Split a html colon driven table across two pages (two passes)>
+   <y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
+   <y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
+   <y table is 59 wide>
+   <y trial and errors !!>
 
-<begin page>
-<sideways="1"
-<split="23 24 32 28 RthenL">
-<title="Arbre descendant d'Albert Marie (Toumagi)">
-<index="Marie, Albert (Toumagi)">
-<href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045">
-<end>
+   <begin page>
+   <sideways="1"
+   <split="23 24 32 28 RthenL">
+   <title="Arbre descendant d'Albert Marie (Toumagi)">
+   <index="Marie, Albert (Toumagi)">
+   <href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045">
+   <end>
 
-<begin page>
-<sideways="1">
-<title="Arbre ascendant d'Eugénie Collet">
-<index="Collet, Eugénie (ep Vaillant)">
-<href="http://127.0.0.1:2317/Chausey?m=A;p=eugenie (x);n=collet;v=5;siblings=on;notes=on;t=T;after=;before=;dag=on;templ=tex;w=hg:1045">
-<end>
+   <begin page>
+   <sideways="1">
+   <title="Arbre ascendant d'Eugénie Collet">
+   <index="Collet, Eugénie (ep Vaillant)">
+   <href="http://127.0.0.1:2317/Chausey?m=A;p=eugenie (x);n=collet;v=5;siblings=on;notes=on;t=T;after=;before=;dag=on;templ=tex;w=hg:1045">
+   <end>
 *)
 
 let one_page och line = output_string och line
-
-
-
-
 
 (* process_tree_cumul accumulates results in a string *)
 
@@ -342,8 +336,7 @@ let rec process_tree_cumul och cumul tree =
           !image_nbr )
       in
       incr nbr;
-      if !collect_images then
-        images_in_page := image :: !images_in_page;
+      if !collect_images then images_in_page := image :: !images_in_page;
       print_image image
     in
     str
@@ -361,6 +354,7 @@ let rec process_tree_cumul och cumul tree =
           in
           cumul
           ^ if content <> "" then Format.sprintf "{\\%s %s}" t content else ""
+      | "br" -> "\\\n"
       | "sup" ->
           let content =
             List.fold_left
@@ -368,7 +362,9 @@ let rec process_tree_cumul och cumul tree =
               "" children
           in
           cumul
-          ^ if content <> "" then Format.sprintf "\\textsuperscript{%s}" content else ""
+          ^
+          if content <> "" then Format.sprintf "\\textsuperscript{%s}" content
+          else ""
       | "h1" ->
           let content =
             List.fold_left
@@ -407,10 +403,9 @@ let rec process_tree_cumul och cumul tree =
               "" children
           in
           let str =
-            if contains content ">Bateaux<" then
-              Format.sprintf "\n\\par\\hgbato{Bateaux}"
+            if contains content ">Bateaux<" then "\n\\par\\hgbato{Bateaux}"
             else if contains content ">Propriétaires<" then
-              Format.sprintf "\n\\par\\hgbato{Propriétaires}"
+              "\n\\par\\hgbato{Propriétaires}"
             else Format.sprintf "{\\subsubsection %s}" content
           in
           cumul ^ if content <> "" then str else ""
@@ -466,7 +461,8 @@ let rec process_tree_cumul och cumul tree =
               "" children
           in
           let str =
-            if tex then
+            if tex && String.sub content 0 3 = "tex" then (
+              if !level > 1 then Printf.eprintf "TeX content: %s\n" content;
               let content = String.sub content 4 (String.length content - 7) in
               let content =
                 let i =
@@ -477,7 +473,7 @@ let rec process_tree_cumul och cumul tree =
                   ^ String.sub content (i + 1) (String.length content - i - 1)
                 else content
               in
-              content
+              content)
             else content
           in
           cumul ^ str
@@ -582,11 +578,12 @@ let rec process_tree och tree =
       | ("i" | "b" | "u" | "em") as t ->
           output_string och (Printf.sprintf "{\\%s " t);
           List.iter (fun c -> process_tree och c) children;
-          output_string och (Printf.sprintf "}")
+          output_string och "}"
+      | "br" -> output_string och "\\\n"
       | "sup" ->
-          output_string och (Printf.sprintf "{\\textsuperscript{" );
+          output_string och (Printf.sprintf "{\\textsuperscript{");
           List.iter (fun c -> process_tree och c) children;
-          output_string och (Printf.sprintf "}")
+          output_string och "}"
       | "h1" ->
           let content =
             List.fold_left
@@ -621,45 +618,42 @@ let rec process_tree och tree =
               "" children
           in
           let str =
-            if contains content ">Bateaux<" then
-              Format.sprintf "\n\\par\\hgbato{Bateaux}"
+            if contains content ">Bateaux<" then "\n\\par\\hgbato{Bateaux}"
             else if contains content ">Propriétaires<" then
-              Format.sprintf "\n\\par\\hgbato{Propriétaires}"
+              "\n\\par\\hgbato{Propriétaires}"
             else Format.sprintf "{\\subsubsection %s}" content
           in
           output_string och (if content <> "" then str else "")
       | "p" ->
-          output_string och (Format.sprintf "\\par\n");
+          output_string och "\\par\n";
           List.iter (fun c -> process_tree och c) children
       | "ul" ->
           output_string och (Format.sprintf "\\begin{hgitemise}\n");
           List.iter (fun c -> process_tree och c) children;
-          output_string och (Format.sprintf "\\end{hgitemise}\n")
+          output_string och "\\end{hgitemise}\n"
       | "li" ->
           output_string och (Format.sprintf "\\item{}{");
           List.iter (fun c -> process_tree och c) children;
-          output_string och (Format.sprintf "}\n")
+          output_string och "}\n"
       | "small" ->
           output_string och (Format.sprintf "{\\small ");
           List.iter (fun c -> process_tree och c) children;
-          output_string och (Format.sprintf "}\n")
+          output_string och "}\n"
       | "span" ->
           (* look for potential TeX code *)
           (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
           (* children is a single string of TeX *)
           let tex =
-            List.exists
-              (fun ((_, k), v) ->
-                v = "display:none") attributes
+            List.exists (fun ((_, k), v) -> v = "display:none") attributes
           in
           let content =
             List.fold_left
               (fun acc c -> acc ^ process_tree_cumul och acc c)
               "" children
           in
-          (* TODO check for tex at beginning of string *)
           let str =
-            if tex then
+            if tex && String.sub content 0 3 = "tex" then (
+              if !level > 1 then Printf.eprintf "TeX content: %s\n" content;
               let content = String.sub content 4 (String.length content - 7) in
               let content =
                 let i =
@@ -670,7 +664,7 @@ let rec process_tree och tree =
                   ^ String.sub content (i + 1) (String.length content - i - 1)
                 else content
               in
-              content
+              content)
             else content
           in
           output_string och str
@@ -737,8 +731,10 @@ let one_command och line =
       out "subsubsection" cmd;
       incr subsubsection
   | "Newpage" -> output_string och "\\newpage"
-  | "Adjust_w" -> output_string och (Format.sprintf "\\newwidth{%s}\n"
-      (if List.length parts > 1 then List.nth parts 0 else "7cm"))
+  | "Adjust_w" ->
+      output_string och
+        (Format.sprintf "\\newwidth{%s}\n"
+           (if List.length parts > 1 then List.nth parts 0 else "7cm"))
   | "Version" -> output_string och (version ^ "\n")
   | "CollectImagesOn>" -> collect_images := true
   | "CollectImagesOff>" -> collect_images := false
