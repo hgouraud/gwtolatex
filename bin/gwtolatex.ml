@@ -1,11 +1,37 @@
 (* Copyright (c) 2013 H.Gouraud *)
 
+type name = string * string
+
+type my_tree =
+  | Text of string
+  | Element of string * (name * string) list * my_tree list
+
+type im_type = Portrait | Image_k | Image_s
+
+type image = {
+  _im_type : im_type;
+  _filename : string; (* ch,   sec,  ssec, sssec, nb *)
+  _where : (int * int * int * int * int) list;
+}
+
+type _page = { chapter : int; section : int; subsection : int; images : image }
+
+
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
 let level = ref 1
 let version och = output_string och "Version\n"
 let one_page och line = output_string och line
+
+(* current values *)
+let chapter = ref 0
+let section = ref 0
+let subsection = ref 0
+let subsubsection = ref 0
+let nbr = ref 0
+
+let images_in_page = ref []
 
 let open_base basename =
   match basename with
@@ -121,28 +147,6 @@ let dummy_tags_3 =
   [ "button"; "head"; "form"; "select"; "colgroup"; "font"; "script";
     "title"; "style"; ]
 
-type name = string * string
-
-type my_tree =
-  | Text of string
-  | Element of string * (name * string) list * my_tree list
-
-type im_type = Portrait | Image
-
-type image = {
-  _im_type : im_type;
-  _filename : string; (* ch,   sec,  ssec, sssec, nb *)
-  _where : (int * int * int * int * int) list;
-}
-
-(* current values *)
-let chapter = ref 0
-let section = ref 0
-let subsection = ref 0
-let subsubsection = ref 0
-let nbr = ref 0
-
-type _page = { chapter : int; section : int; subsection : int; images : image }
 
 let rec dump children l =
   let tab l =
@@ -174,9 +178,6 @@ let replace x y str =
     str;
   Buffer.contents b
 
-let upgrade_fn fn = fn
-let upgrade_sn sn = sn
-
 let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
 
@@ -200,11 +201,18 @@ let split_href href =
   let v = try List.assoc "v" evars with Not_found -> "" in
   (m, p, n, oc, i, k, s, v)
 
+let print_image image =
+  match image with
+  | (Portrait | Image_s | Image_k) as t, name, (ch, sec, ssec, sssec), nb ->
+      Format.sprintf "Type: %s, name: %s, (%d, %d, %d, %d), nb: %d"
+        (match t with Portrait -> "Portrait" | Image_s -> "Image_s" | Image_k -> "Image_k")
+        name ch sec ssec sssec nb
+
 (* process_tree_cumul accumulates results in a string *)
 
 let rec process_tree_cumul och cumul tree =
   let tag_a cumul name attributes children =
-    (*Printf.eprintf "Tag a (cumul)\n";*)
+    if !level > 1 then Printf.eprintf "Tag a (cumul)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
     let m, p, n, oc, i, k, s, v = split_href href in
@@ -214,40 +222,60 @@ let rec process_tree_cumul och cumul tree =
     let content =
       List.fold_left (fun acc c -> process_tree_cumul och cumul c) "" children
     in
-    let p = upgrade_fn p in
-    let n = upgrade_sn n in
-    let oc = if oc <> "" then Format.sprintf " (%s)" oc else "" in
-    if i <> "" then (
-     let person = Gwdb.poi !my_base (Gwdb.iper_of_string i) in
-     let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
-     let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
-     let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-     Printf.eprintf "Personne (cumul): %s %s (%d) (%s)\n" fn sn ocn i);
-    let full_name = Format.sprintf "%s %s%s" p n oc in
-    if (p <> "" || n <> "") && k = "" then
-      cumul
-      ^ Format.sprintf "{\\b %s}" full_name
-      ^ Format.sprintf "\\index{%s, %s%s}" n p oc
-      ^ Format.sprintf "\\index{%s, voir %s, %s%s}" content n p oc
-      ^ content
-    else cumul ^ content
+    let ip =
+      match Gwdb.person_of_key !my_base p n (try int_of_string oc with Failure _ -> 0) with
+      | Some ip -> ip
+      | None -> Gwdb.iper_of_string i
+    in
+    let str =
+      let person = Gwdb.poi !my_base ip in
+      let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
+      let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
+      let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
+      let ocn = if ocn = 0 then "" else Format.sprintf "(%d)" ocn in
+      if (p <> "" || n <> "") && k = "" then
+        Format.sprintf "{\\b %s %s %s}" fn sn ocn
+        ^ Format.sprintf "\\index{%s, %s %s}" sn fn ocn
+        ^ Format.sprintf "\\index{%s, voir %s, %s %s}" content sn fn ocn
+      else ""
+    in
+    str ^ content
   in
 
   let tag_img cumul name attributes children =
-    (*Printf.eprintf "Tag img (cumul)\n";*)
+    if !level > 1 then
+      Printf.eprintf "Tag img (cumul)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
     let m, p, n, oc, i, k, s, v = split_href href in
-    if i <> "" then (
-     let person = Gwdb.poi !my_base (Gwdb.iper_of_string i) in
-     let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
-     let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
-     let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-     Printf.eprintf "Personne (cumul): %s %s (%d) (%s)\n" fn sn ocn i);
-    if k <> "" then output_string och (Format.sprintf "Image (k): %s\n" k);
-    if s <> "" then output_string och (Format.sprintf "Image (s): %s\n" s);
-    ""
+    let ip =
+      match Gwdb.person_of_key !my_base p n (try int_of_string oc with Failure _ -> 0) with
+      | Some ip -> ip
+      | None -> Gwdb.iper_of_string i 
+    in
+    let str =
+      let person = Gwdb.poi !my_base ip in
+      let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
+      let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
+      let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
+      let image_label =
+          Format.sprintf "%s.%d.%s\n" fn ocn sn
+      in
+      let image =
+        (
+          (if k <> "" then Image_k else if s <> "" then Image_s else Portrait),
+          (image_label),
+          (!chapter, !section, !subsection, !subsubsection),
+          !nbr
+        )
+      in
+      incr nbr;
+      images_in_page := image :: !images_in_page;
+      print_image image
+    in
+    str
   in
+
   match tree with
   | Text s -> cumul ^ s
   | Element (name, attributes, children) -> (
@@ -380,10 +408,6 @@ let rec process_tree_cumul och cumul tree =
 
 let rec process_tree och tree =
   let tag_a name attributes children =
-    (*Printf.eprintf "Tag a (tree)\n";*)
-    let attr = get_att_list attributes in
-    let href = try List.assoc "href" attr with Not_found -> "" in
-    let m, p, n, oc, i, k, s, v = split_href href in
     (* if p<> "" or n <> "" we have a person *)
     (* it may appear undes a different spelling as part of <a>xxx</a> *)
     (* or we may have a portrait k <> "" *)
@@ -391,62 +415,76 @@ let rec process_tree och tree =
     (* <a href=m=IM...k=p.oc.n><img src=m=IM...k=p.oc.n></a> *)
     (* assumes that children is a single string *)
     (* which may be an <img src=xxx> *)
-    if !level > 1 then
-      Printf.eprintf "Tag a: %d, %s, %s, %s, %s\n"
-        (List.length children) href p n i;
-    if !level > 1 then
-      Printf.eprintf "Start scanning children of a\n";
+    if !level > 1 then Printf.eprintf "Tag a (tree)\n";
+    let attr = get_att_list attributes in
+    let href = try List.assoc "href" attr with Not_found -> "" in
+    let m, p, n, oc, i, k, s, v = split_href href in
+    if !level > 1 then (
+      Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
+      dump children 0);
     let content =
-      List.fold_left
-        (fun acc c -> acc ^ process_tree_cumul och acc c)
-        "" children
+      List.fold_left (fun acc c -> process_tree och c) "" children
     in
-    if !level > 1 then
-      Printf.eprintf "End scanning children of a: %s\n" content;
-    let p = upgrade_fn p in
-    let n = upgrade_sn n in
-    let oc = if oc <> "" then Format.sprintf " (%s)" oc else "" in
-    if i <> "" then (
-      let person = Gwdb.poi !my_base (Gwdb.iper_of_string i) in
+    let ip =
+      match Gwdb.person_of_key !my_base p n (try int_of_string oc with Failure _ -> 0) with
+      | Some ip -> ip
+      | None -> Gwdb.iper_of_string i
+    in
+    let str =
+      let person = Gwdb.poi !my_base ip in
       let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
       let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
       let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-      Printf.eprintf "Personne (tree): %s %s (%d) (%s)\n" fn sn ocn i);
-    let full_name = Format.sprintf "%s %s%s" p n oc in
-    if (p <> "" || n <> "") && k = "" then
-      let str = Format.sprintf "{\\b %s}" full_name in
-      let str = str ^ Format.sprintf "\\index{%s, %s%s}" n p oc in
-      let str =
-        str ^ Format.sprintf "\\index{%s, voir %s, %s%s}" content n p oc
-      in
-      output_string och (str ^ content)
-    else output_string och content
+      let ocn = if ocn = 0 then "" else Format.sprintf "(%d)" ocn in
+      if (p <> "" || n <> "") && k = "" then
+        Format.sprintf "{\\b %s %s %s}" fn sn ocn
+        ^ Format.sprintf "\\index{%s, %s %s}" sn fn ocn
+        ^ Format.sprintf "\\index{%s, voir %s, %s %s}" content sn fn ocn
+      else ""
+    in
+    output_string och (str ^ content)
   in
 
   let tag_img name attributes children =
-    (*Printf.eprintf "Tag img (tree)\n";*)
+    if !level > 1 then Printf.eprintf "Tag img (tree)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
     let m, p, n, oc, i, k, s, v = split_href href in
-    if i <> "" then (
-      let person = Gwdb.poi !my_base (Gwdb.iper_of_string i) in
+    let ip =
+      match Gwdb.person_of_key !my_base p n (try int_of_string oc with Failure _ -> 0) with
+      | Some ip -> ip
+      | None -> Gwdb.iper_of_string i 
+    in
+    let str =
+      let person = Gwdb.poi !my_base ip in
       let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
       let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
       let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-      Printf.eprintf "Personne (tree) (i): %s %s (%d) (%s)\n" fn sn ocn i);
-    if k <> "" then output_string och (Format.sprintf "Image (k): %s\n" k);
-    if s <> "" then output_string och (Format.sprintf "Image (s): %s\n" s)
+      let image_label =
+          Format.sprintf "%s.%d.%s\n" fn ocn sn
+      in
+      let image =
+        (
+          (if k <> "" then Image_k else if s <> "" then Image_s else Portrait),
+          (image_label),
+          (!chapter, !section, !subsection, !subsubsection),
+          !nbr
+        )
+      in
+      incr nbr;
+      images_in_page := image :: !images_in_page;
+      print_image image
+    in
+    output_string och str
   in
-  if !level > 1 then
-    Printf.eprintf "Process_tree\n";
+
+  if !level > 1 then Printf.eprintf "Process_tree\n";
   match tree with
   | Text s -> (
-    if !level > 1 then
-      Printf.eprintf "Text elt: %s\n" s;
+      if !level > 1 then Printf.eprintf "Text elt: %s\n" s;
       output_string och s)
   | Element (name, attributes, children) -> (
-    if !level > 1 then 
-      Printf.eprintf "Tag elt: %s\n" name;
+      if !level > 1 then Printf.eprintf "Tag elt: %s\n" name;
       match name with
       | ("i" | "b" | "u" | "em") as t ->
           output_string och (Printf.sprintf "{\\%s " t);
