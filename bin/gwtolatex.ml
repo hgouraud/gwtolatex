@@ -345,9 +345,13 @@ let rec process_tree_cumul och cumul tree =
     str
   in
 
+  if !level > 1 then Printf.eprintf "Process tree cumul\n";
   match tree with
-  | Text s -> cumul ^ s
+  | Text s -> (
+      if !level > 1 then Printf.eprintf "Text elt: %s\n" s;
+      cumul ^ s)
   | Element (name, attributes, children) -> (
+      if !level > 1 then Printf.eprintf "Tag elt: %s\n" name;
       match name with
       | ("i" | "b" | "u" | "em") as t ->
           let content =
@@ -481,6 +485,10 @@ let rec process_tree_cumul och cumul tree =
             else content
           in
           cumul ^ str
+      | name when List.mem name dummy_tags_0 ->
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              cumul children
       | name when List.mem name dummy_tags_1 -> ""
       | name when List.mem name dummy_tags_2 -> ""
       | name when List.mem name dummy_tags_3 -> ""
@@ -692,9 +700,12 @@ let process_html och body =
          ~element:(fun (_, name) attributes children ->
            Element (name, attributes, children))
   in
-  match tree with
-  | Some tree -> process_tree och tree
-  | _ -> failwith "bad tree"
+  let content = 
+    match tree with
+    | Some tree -> (process_tree_cumul och "" tree)
+    | _ -> "bad tree"
+  in
+  output_string och content
 
 let bad_code c = c >= 400
 
