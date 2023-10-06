@@ -203,6 +203,39 @@ let replace x y str =
   Buffer.contents b
 
 (* TODO find TaTeX equivalent string *)
+(*
+    & % $ # _ { } ~ ^ \
+
+Outside \verb, the first seven of them can be typeset 
+by prepending a backslash; for the other three,
+use the macros \textasciitilde, \textasciicircum, and \textbackslash.
+*)
+
+
+let escape str =
+  let special = [
+    ('&', "\\&{}"); 
+    ('%', "\\%{}"); 
+    ('$', "\\${}"); 
+    ('#', "\\#{}"); 
+    ('_', "\\_{}"); 
+    ('{', "\\{{}"); 
+    ('}', "\\}{}");
+    ('~', "\\~{}"); 
+    ('^', "\\^{}"); 
+    ('\\', "\\textbackslash{}"); 
+    ] in
+  let b = Buffer.create 100 in
+  String.iter
+    (fun c -> 
+      try
+        let s = List.assoc c special in
+        Buffer.add_string b s
+      with
+      Not_found -> Buffer.add_char b c)
+    str;
+  Buffer.contents b
+(*
 let escape str =
   let special = [ '&'; '_'; '¤'] in
   let b = Buffer.create 100 in
@@ -210,6 +243,7 @@ let escape str =
     (fun c -> if List.mem c special then Buffer.add_string b "?" else Buffer.add_char b c)
     str;
   Buffer.contents b
+*)
 
 let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
