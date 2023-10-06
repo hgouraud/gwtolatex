@@ -202,6 +202,15 @@ let replace x y str =
     str;
   Buffer.contents b
 
+(* TODO find TaTeX equivalent string *)
+let escape str =
+  let special = [ '&'; '_'; '§'] in
+  let b = Buffer.create 100 in
+  String.iter
+    (fun c -> if List.mem c special then Buffer.add_string b "?" else Buffer.add_char b c)
+    str;
+  Buffer.contents b
+
 let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
 
@@ -240,6 +249,15 @@ let print_image image =
         | Image_k -> "Image_k")
         name ch sec ssec sssec nb
 
+let simple_tag t str =
+  let tags = [ ("b", "textbf"); ("i", "textit"); ("small", "small") ] in
+  let cmd = try List.assoc t tags with Not_found -> (
+    Printf.eprintf "funny tag %s\n" t;
+    "underline")
+  in
+  if str <> "" then Format.sprintf "{\\%s %s}" cmd str else ""
+
+
 (* process commands to build a full page page *)
 (* used for tree displays and large images *)
 (* various commands govern the layout *)
@@ -275,6 +293,15 @@ let one_page och line = output_string och line
 
 let rec process_tree_cumul och cumul tree =
   let tag_a cumul name attributes children =
+    (* if p <> "" or n <> "" we have a person *)
+    (* it may appear undes a different spelling as part of <a>xxx</a> *)
+    (* or we may have a portrait k <> "" *)
+    (* or an image m=IM|IMH|DOC|SRC *)
+    (* <a href=m=IM...k=p.oc.n><img src=m=IM...k=p.oc.n></a> *)
+    (* assumes that children is a single string *)
+    (* which may be an <img src=xxx> *)
+    (* TODO m=TT t=xxx p=yyy *)
+    (* TODO decode names  p=louis;n=de%20bourbon; *)
     if !level > 1 then Printf.eprintf "Tag a (cumul)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
@@ -291,7 +318,7 @@ let rec process_tree_cumul och cumul tree =
           (try int_of_string oc with Failure _ -> 0)
       with
       | Some ip -> ip
-      | None -> Gwdb.iper_of_string i
+      | None -> try Gwdb.iper_of_string i with Failure _ -> Gwdb.dummy_iper
     in
     let str =
       let person = Gwdb.poi !my_base ip in
@@ -299,6 +326,7 @@ let rec process_tree_cumul och cumul tree =
       let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
       let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
       let ocn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
+      (* TODO verify uppercase! (le Fort), (Le Fort) *)
       let check = Printf.sprintf "%s %s%s" fn sn ocn in
       if !level > 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
       if (fn <> "" || sn <> "") && k = "" then
@@ -353,7 +381,14 @@ let rec process_tree_cumul och cumul tree =
   | Element (name, attributes, children) -> (
       if !level > 1 then Printf.eprintf "Tag elt: %s\n" name;
       match name with
-      | ("i" | "b" | "u" | "em") as t ->
+      | "b" | "i" | "small" as t -> 
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          cumul ^ (simple_tag t content)
+      | "u" | "em" as t ->
           let content =
             List.fold_left
               (fun acc c -> acc ^ process_tree_cumul och cumul c)
@@ -443,14 +478,6 @@ let rec process_tree_cumul och cumul tree =
           in
           cumul
           ^ if content <> "" then Format.sprintf "\\item{}{%s}" content else ""
-      | "small" ->
-          let content =
-            List.fold_left
-              (fun acc c -> acc ^ process_tree_cumul och cumul c)
-              "" children
-          in
-          cumul
-          ^ if content <> "" then Format.sprintf "{\\small %s}" content else ""
       | "span" ->
           (* look for potential TeX code *)
           (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
@@ -498,199 +525,6 @@ let rec process_tree_cumul och cumul tree =
           Printf.eprintf "Missing tag: %s\n" name;
           "")
 
-let rec process_tree och tree =
-  let tag_a name attributes children =
-    (* if p <> "" or n <> "" we have a person *)
-    (* it may appear undes a different spelling as part of <a>xxx</a> *)
-    (* or we may have a portrait k <> "" *)
-    (* or an image m=IM|IMH|DOC|SRC *)
-    (* <a href=m=IM...k=p.oc.n><img src=m=IM...k=p.oc.n></a> *)
-    (* assumes that children is a single string *)
-    (* which may be an <img src=xxx> *)
-    (* TODO m=TT t=xxx p=yyy *)
-    (* TODO decode names  p=louis;n=de%20bourbon; *)
-    if !level > 1 then Printf.eprintf "Tag a (tree)\n";
-    let attr = get_att_list attributes in
-    let href = try List.assoc "href" attr with Not_found -> "" in
-    let m, p, n, oc, i, k, s, v = split_href href in
-    if !level > 1 then (
-      Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
-      if !level > 2 then dump children 0);
-    let content =
-      List.fold_left (fun acc c -> process_tree_cumul och acc c) "" children
-    in
-    let ip =
-      if !level > 1 then Printf.eprintf "Key: %s %s %s\n" p n oc;
-      match
-        Gwdb.person_of_key !my_base p n
-          (try int_of_string oc with Failure _ -> 0)
-      with
-      | Some ip -> ip
-      | None -> if i = "" then Gwdb.dummy_iper else Gwdb.iper_of_string i
-    in
-    if !level > 1 then Printf.eprintf "Ip: %s\n" (Gwdb.string_of_iper ip);
-    let str =
-      let person = Gwdb.poi !my_base ip in
-      let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
-      let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
-      let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-      let ocn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
-      (* TODO verify uppercase! (le Fort), (Le Fort) *)
-      let check = Printf.sprintf "%s %s%s" fn sn ocn in
-      if !level > 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
-      if (fn <> "" || sn <> "") && k = "" then
-        Format.sprintf "{\\b %s}" content
-        ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
-        ^
-        if check <> content then
-          Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
-        else ""
-      else content
-    in
-    output_string och str
-  in
-
-  let tag_img name attributes children =
-    if !level > 1 then Printf.eprintf "Tag img (tree)\n";
-    let attr = get_att_list attributes in
-    let href = try List.assoc "src" attr with Not_found -> "" in
-    let m, p, n, oc, i, k, s, v = split_href href in
-    let ip =
-      match
-        Gwdb.person_of_key !my_base p n
-          (try int_of_string oc with Failure _ -> 0)
-      with
-      | Some ip -> ip
-      | None -> if i = "" then Gwdb.dummy_iper else Gwdb.iper_of_string i
-    in
-    let str =
-      let person = Gwdb.poi !my_base ip in
-      let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
-      let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
-      let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-      let image_label = Format.sprintf "%s.%d.%s" fn ocn sn in
-      let image =
-        ( (if k <> "" then Image_k else if s <> "" then Image_s else Portrait),
-          image_label,
-          (!chapter, !section, !subsection, !subsubsection),
-          !nbr )
-      in
-      incr nbr;
-      images_in_page := image :: !images_in_page;
-      print_image image
-    in
-    output_string och str
-  in
-
-  if !level > 1 then Printf.eprintf "Process_tree\n";
-  match tree with
-  | Text s ->
-      if !level > 1 then Printf.eprintf "Text elt: %s\n" s;
-      output_string och s
-  | Element (name, attributes, children) -> (
-      if !level > 1 then Printf.eprintf "Tag elt: %s\n" name;
-      match name with
-      | ("i" | "b" | "u" | "em") as t ->
-          output_string och (Printf.sprintf "{\\%s " t);
-          List.iter (fun c -> process_tree och c) children;
-          output_string och "}"
-      | "br" -> output_string och "\\\n"
-      | "sup" ->
-          output_string och (Printf.sprintf "{\\textsuperscript{");
-          List.iter (fun c -> process_tree och c) children;
-          output_string och "}"
-      | "h1" ->
-          let content =
-            List.fold_left
-              (fun acc c -> acc ^ process_tree_cumul och acc c)
-              "" children
-          in
-          let sect =
-            if !subsection = 1 then (
-              incr subsection;
-              "subsection")
-            else (
-              incr section;
-              subsection := 0;
-              "section")
-          in
-          output_string och
-            (if content <> "" then Format.sprintf "{\\%s %s}" sect content
-            else "")
-      | "h2" ->
-          let content =
-            List.fold_left
-              (fun acc c -> acc ^ process_tree_cumul och acc c)
-              "" children
-          in
-          output_string och
-            (if content <> "" then Format.sprintf "{\\subsection %s}" content
-            else "")
-      | "h3" ->
-          let content =
-            List.fold_left
-              (fun acc c -> acc ^ process_tree_cumul och acc c)
-              "" children
-          in
-          let str =
-            if contains content ">Bateaux<" then "\n\\par\\hgbato{Bateaux}"
-            else if contains content ">Propriétaires<" then
-              "\n\\par\\hgbato{Propriétaires}"
-            else Format.sprintf "{\\subsubsection %s}" content
-          in
-          output_string och (if content <> "" then str else "")
-      | "p" ->
-          output_string och "\\par\n";
-          List.iter (fun c -> process_tree och c) children
-      | "ul" ->
-          output_string och (Format.sprintf "\\begin{hgitemise}\n");
-          List.iter (fun c -> process_tree och c) children;
-          output_string och "\\end{hgitemise}\n"
-      | "li" ->
-          output_string och (Format.sprintf "\\item{}{");
-          List.iter (fun c -> process_tree och c) children;
-          output_string och "}\n"
-      | "small" ->
-          output_string och (Format.sprintf "{\\small ");
-          List.iter (fun c -> process_tree och c) children;
-          output_string och "}\n"
-      | "span" ->
-          (* look for potential TeX code *)
-          (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
-          (* children is a single string of TeX *)
-          let display_none =
-            List.exists (fun ((_, k), v) -> v = "display:none") attributes
-          in
-          if display_none then
-            let content =
-              List.fold_left
-                (fun acc c -> acc ^ process_tree_cumul och acc c)
-                "" children
-            in
-            if String.sub content 0 3 = "tex" then (
-              if !level > 1 then Printf.eprintf "TeX content: %s\n" content;
-              let content = String.sub content 4 (String.length content - 7) in
-              let content =
-                let i =
-                  try String.index_from content 0 '%' with Not_found -> -1
-                in
-                if i > 0 then
-                  String.sub content 0 i
-                  ^ String.sub content (i + 1) (String.length content - i - 1)
-                else content
-              in
-              output_string och content)
-            else List.iter (fun c -> process_tree och c) children
-          else List.iter (fun c -> process_tree och c) children
-      | name when List.mem name dummy_tags_0 ->
-          List.iter (fun c -> process_tree och c) children
-      | name when List.mem name dummy_tags_1 -> ()
-      | name when List.mem name dummy_tags_2 -> ()
-      | name when List.mem name dummy_tags_3 -> ()
-      | "a" -> tag_a name attributes children
-      | "img" -> tag_img name attributes children
-      | _ -> Printf.eprintf "Missing tag: %s\n" name)
-
 let process_html och body =
   let open Markup in
   let tree =
@@ -705,6 +539,7 @@ let process_html och body =
     | Some tree -> (process_tree_cumul och "" tree)
     | _ -> "bad tree"
   in
+  let content = escape content in
   output_string och content
 
 let bad_code c = c >= 400
@@ -750,7 +585,7 @@ let one_command och line =
   | "Newpage" -> output_string och "\\newpage"
   | "Adjust_w" ->
       output_string och
-        (Format.sprintf "\\newwidth{%s}\n"
+        (Format.sprintf "Newwidth {\\b %s}\n"  (* TODO *)
            (if List.length parts > 1 then List.nth parts 0 else "7cm"))
   | "Version" -> output_string och (version ^ "\n")
   | "CollectImagesOn>" -> collect_images := true
@@ -852,12 +687,14 @@ let main () =
   in
   let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
   let fname_all = Filename.concat !livres (!family ^ ".txt") in
-  let fname_out = if !out_file <> "" then !out_file else family_out ^ ".tex" in
+  let fname_out = if !out_file <> "" then !out_file else
+    (Filename.concat "livres" (family_out ^ ".tex")) 
+  in
   let mode, fname_in, och =
     if Sys.file_exists fname_txt then
       ("txt", fname_txt, if !follow then open_out fname_out else stderr)
     else if Sys.file_exists fname_htm then ("html", fname_htm, stderr)
-    else ("", fname_all, open_out (Filename.concat !livres fname_out))
+    else ("", fname_all, open_out fname_out)
   in
   let ic = open_in_bin fname_in in
   if not !debug then Sys.enable_runtime_warnings false;
@@ -884,14 +721,18 @@ let main () =
   flush stderr;
 
   let mode = if !batch then "" else "-interaction=batchmode" in
-  let cmmd1 = Printf.sprintf "pdflatex %s %s.tex" mode family_out in
+  let cmmd1 = Printf.sprintf "pdflatex -output-directory=livres %s %s.tex" mode
+    family_out
+  in
   let error = Sys.command cmmd1 in
   if error <> 0 then (
     Printf.eprintf "Error in pdflatex processing (%d)\n" error;
     exit 0);
   if !test then exit 0;
   (* makeindex does not like absolute paths! *)
-  let cmmd2 = Printf.sprintf "makeindex %s.idx" family_out in
+  let cmmd2 = Printf.sprintf "makeindex livres%s%s.idx" 
+    (Filename.dir_sep) family_out
+  in
   for _i = 0 to !index do
     let error = Sys.command cmmd2 in
     if error <> 0 then (

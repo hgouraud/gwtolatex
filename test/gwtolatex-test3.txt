@@ -35,9 +35,9 @@ Henri.Gouraud@LaPoste.net \\
 <x tex \index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
 voir Famille Fortin (Chocolat)
 <a href="http://127.0.0.1:2317/Chausey?m=D;p=francois;n=bahurel;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Famille Bahurel</a>Bahurel (Famille)<br>
-<x Adjust_w 7cm>
+<y Adjust_w 7cm>
 <a href="http://127.0.0.1:2317/Chausey?p=jacques+louis;n=ernouf;oc=0;templ=tex;w=hg:1045">Ernouf, Jacques Louis</a><br>
-<x Adjust_w>
+<y Adjust_w>
 <a href="http://127.0.0.1:2317/Chausey?p=leon+francois;n=ernouf;oc=0;templ=tex;w=hg:1045">Ernouf, Léon François</a><br>
 \label{Godel}
 <x NoFiches>
@@ -80,12 +80,12 @@ voir Famille Fortin (Chocolat)
 
 <x Chapter Régates de Chausey>
 <a href="http://127.0.0.1:2317/Chausey?p=regates;n=chausey;oc=0;templ=tex;w=hg:1045">Régates de Chausey</a>Régates<br>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES&f=regates-chausey-1922;templ=tex;w=hg:1045">Régates de 1922</a>Régates, 1922<br>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES&f=regates-chausey-1937;templ=tex;w=hg:1045">Régates de 1937</a>Régates, 1937<br>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES&f=regates-chausey-1938;templ=tex;w=hg:1045">Régates de 1938</a>Régates, 1938<br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1922;templ=tex;w=hg:1045">Régates de 1922</a>Régates, 1922<br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1937;templ=tex;w=hg:1045">Régates de 1937</a>Régates, 1937<br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1938;templ=tex;w=hg:1045">Régates de 1938</a>Régates, 1938<br>
 <x Immediate>
 \newpage
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES&f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979</a>Régates, 1979<br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979</a>Régates, 1979<br>
 <x NoImmediate>
 
 
@@ -96,10 +96,10 @@ voir Famille Fortin (Chocolat)
 <y \par>
 <y Run Make-Genea du : \date \time>
 \par
-GeneWeb commit : \input{../../GitHub/hgouraud/geneweb/distribution/gw/etc/version.txt}
+GeneWeb commit : \input{../geneweb/distribution/gw/etc/version.txt}
 \par
 \par
-\hgbaseversion{}
+<y \hgbaseversion{}
 \par
 \pdftexbanner{}
 \newpage
