@@ -298,16 +298,19 @@ let rec process_tree_cumul och cumul tree =
       let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
       let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
       let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-      let ocn = if ocn = 0 then "" else Format.sprintf "(%d)" ocn in
-      let check = Printf.sprintf "%s %s" fn sn in
+      let ocn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
+      let check = Printf.sprintf "%s %s%s" fn sn ocn in
       if !level > 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
-      if (p <> "" || n <> "") && k = "" && content <> check then
-        Format.sprintf "{\\b %s %s %s}" fn sn ocn
-        ^ Format.sprintf "\\index{%s, %s %s}" sn fn ocn
-        ^ Format.sprintf "\\index{%s, voir %s, %s %s\n}" content sn fn ocn
-      else ""
+      if (fn <> "" || sn <> "") && k = "" then
+        Format.sprintf "{\\b %s}" content
+        ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
+        ^
+        if check <> content then
+          Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
+        else ""
+      else content
     in
-    str ^ content
+    str
   in
 
   let tag_img cumul name attributes children =
@@ -448,32 +451,33 @@ let rec process_tree_cumul och cumul tree =
           (* look for potential TeX code *)
           (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
           (* children is a single string of TeX *)
-          let tex =
+          let display_none =
             List.fold_left
               (fun ok ((_, k), v) ->
                 if k = "class" && v = "display:none" then ok || true
                 else ok || false)
               false attributes
           in
-          let content =
-            List.fold_left
-              (fun acc c -> acc ^ process_tree_cumul och cumul c)
-              "" children
-          in
           let str =
-            if tex && String.sub content 0 3 = "tex" then (
-              if !level > 1 then Printf.eprintf "TeX content: %s\n" content;
-              let content = String.sub content 4 (String.length content - 7) in
-              let content =
+            let content =
+              List.fold_left
+                (fun acc c -> acc ^ process_tree_cumul och cumul c)
+                "" children
+            in
+            if display_none then
+              if String.sub content 0 3 = "tex" then (
+                if !level > 1 then Printf.eprintf "TeX content: %s\n" content;
+                let content =
+                  String.sub content 4 (String.length content - 7)
+                in
                 let i =
                   try String.index_from content 0 '%' with Not_found -> -1
                 in
                 if i > 0 then
                   String.sub content 0 i
                   ^ String.sub content (i + 1) (String.length content - i - 1)
-                else content
-              in
-              content)
+                else content)
+              else content
             else content
           in
           cumul ^ str
@@ -522,17 +526,20 @@ let rec process_tree och tree =
       let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
       let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
       let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-      let ocn = if ocn = 0 then "" else Format.sprintf "(%d)" ocn in
+      let ocn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
       (* TODO verify uppercase! (le Fort), (Le Fort) *)
-      let check = Printf.sprintf "%s %s" fn sn in
+      let check = Printf.sprintf "%s %s%s" fn sn ocn in
       if !level > 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
-      if (fn <> "" || sn <> "") && k = "" && content <> check then
-        Format.sprintf "{\\b %s %s %s}" fn sn ocn
-        ^ Format.sprintf "\\index{%s, %s %s}" sn fn ocn
-        ^ Format.sprintf "\\index{%s, voir %s, %s %s}" content sn fn ocn
-      else ""
+      if (fn <> "" || sn <> "") && k = "" then
+        Format.sprintf "{\\b %s}" content
+        ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
+        ^
+        if check <> content then
+          Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
+        else ""
+      else content
     in
-    output_string och (str ^ content)
+    output_string och str
   in
 
   let tag_img name attributes children =
@@ -643,16 +650,16 @@ let rec process_tree och tree =
           (* look for potential TeX code *)
           (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
           (* children is a single string of TeX *)
-          let tex =
+          let display_none =
             List.exists (fun ((_, k), v) -> v = "display:none") attributes
           in
-          let content =
-            List.fold_left
-              (fun acc c -> acc ^ process_tree_cumul och acc c)
-              "" children
-          in
-          let str =
-            if tex && String.sub content 0 3 = "tex" then (
+          if display_none then
+            let content =
+              List.fold_left
+                (fun acc c -> acc ^ process_tree_cumul och acc c)
+                "" children
+            in
+            if String.sub content 0 3 = "tex" then (
               if !level > 1 then Printf.eprintf "TeX content: %s\n" content;
               let content = String.sub content 4 (String.length content - 7) in
               let content =
@@ -664,10 +671,9 @@ let rec process_tree och tree =
                   ^ String.sub content (i + 1) (String.length content - i - 1)
                 else content
               in
-              content)
-            else content
-          in
-          output_string och str
+              output_string och content)
+            else List.iter (fun c -> process_tree och c) children
+          else List.iter (fun c -> process_tree och c) children
       | name when List.mem name dummy_tags_0 ->
           List.iter (fun c -> process_tree och c) children
       | name when List.mem name dummy_tags_1 -> ()

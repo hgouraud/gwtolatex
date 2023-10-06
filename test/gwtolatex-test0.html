@@ -19,30 +19,50 @@ tag a enpty href
   Skip navigation menu
 </a>
 zzz (img m=IM&i=1709 tout seul; 1709 = Cécile Le Guillerm)
+  Type: Portrait, name: Cécile.0.Le Guillerm, (0, 0, 0, 0), nb: 0
   <img class="img-fluid" src="HenriT_blhqdglan?m=IM&i=1709" alt="Portrait">
 www (img m=IM&i=1709 dans tag a)
+{\b Cécile Le Guillerm }\index{Le Guillerm, Cécile }\index{Type: Portrait, name: Cécile.0.Le Guillerm, (0, 0, 0, 0), nb: 0
+, voir Le Guillerm, Cécile }Type: Portrait, name: Cécile.0.Le Guillerm, (0, 0, 0, 0), nb: 0
 <a href="chausey?m=IM&i=1709" target="_blank" rel="noopener">
   <img class="img-fluid" src="HenriT_blhqdglan?m=IM&i=1709" alt="Portrait">
 </a>
 ttt (img k=... dans tag a)
+Type: Image_k, name: Pierre.0.Gouraud, (0, 0, 0, 0), nb: 0
 <a href="chausey?m=IM&d=1651568292&p=pierre&n=gouraud&k=/pierre.0.gouraud" class="align-self-center" target="_blank">
 <img src="chausey?m=IM&d=1651568292&p=pierre&n=gouraud&k=/pierre.0.gouraud" alt="image" title="Pierre Gouraud (témoin)">
 </a>
 qqqq (img k=... tout seul)
+Type: Image_k, name: Pierre.0.Gouraud, (0, 0, 0, 0), nb: 0
 <img src="chausey?m=IM&d=1651568292&p=pierre&n=gouraud&k=/pierre.0.gouraud" alt="image" title="Pierre Gouraud (témoin)">
 rrrr
 <a href="zzzzzzzz"><span xxx>texte de span</span></a>
 <i>italic1</i><b>Bold1</b>
+{\i italic1}{\b Bold1}
 <i>italic2</i>
+{\i italic2}
 <i>aaa <b>bbb</b> ccc</i>
+{\i aaa {\b bbb} ccc}
+\index{Aaa, Bbb}
 <span class="display:none">tex \index{Aaa, Bbb}tex</span>
+\index{Ccc, Ddd}
 <span class="display:none">tex \index%{Ccc, Ddd}tex</span>
+{\b BOLD}
 <b>BOLD</b>
 aaaa (img s=...)
+Type: Image_s, name: Cécile.0.Le Guillerm, (0, 0, 0, 0), nb: 4
 <img class="img-fluid" src="HenriT_blhqdglan?m=IM_C&i=1709&s=adrien.2.gouraud.jpg" alt="1 slide">
-1935  <a href="chausey?p=albert&n=marie&oc=1" class="female-underline">Albert Marie</a>
-1935  <a href="chausey?p=albert&n=marie&oc=1" class="female-underline">Albert Marie x</a>
-1936  <a href="chausey?p=albert&n=marie" class="female-underline">Bebert</a>
+1935  {\b Albert Marie (1)}\index{Marie, Albert (1)}
+1935  <a href="chausey?p=albert&n=marie&oc=1" class="female-underline">Albert Marie (1)</a>
+1936  {\b Albert Marie}\index{Marie, Albert}
+1936  <a href="chausey?p=albert&n=marie&oc=0" class="female-underline">Albert Marie</a>
+1937  {\b Bebert}\index{Marie, Albert}\index{Bebert, voir Marie, Albert}
+1937  <a href="chausey?p=albert&n=marie&oc=0" class="female-underline">Bebert</a>
+
+aaa bbb ccc {\i iii} ddd
+<span>aaa <span>bbb</span> ccc <i>iii</i> ddd</span>
+
+
 <div class="container">
   aaa
   bbb
