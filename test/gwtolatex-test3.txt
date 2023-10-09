@@ -20,16 +20,16 @@ Henri.Gouraud@LaPoste.net \\
 \maketitle         % genère le titre
 \tableofcontents   % table des matières
 
-<v Version>
+<y Version>
 <x Chapter Avant-propos>
 \input{Chausey-inputs/Notes.tex}
 
 <x Chapter Un peu d'histoire>
 <a href="http://127.0.0.1:2317/Chausey?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
 <x Wide>
-<y No_Chnb_in_fignbr>
+<x Ch_nb_in_fig_nbrOff>
 
-<y NoEp>
+<x EpOff>
 <x Chapter Listes de descendants>
 <x Section Famille Antoine>
 <x tex \index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
@@ -39,16 +39,20 @@ voir Famille Fortin (Chocolat)
 <a href="http://127.0.0.1:2317/Chausey?p=jacques+louis;n=ernouf;oc=0;templ=tex;w=hg:1045">Ernouf, Jacques Louis</a><br>
 <y Adjust_w>
 <a href="http://127.0.0.1:2317/Chausey?p=leon+francois;n=ernouf;oc=0;templ=tex;w=hg:1045">Ernouf, Léon François</a><br>
-\label{Godel}
-<x NoFiches>
-<x NoWide>
+\label{Ernouf}
+<x FichesOff>
+<x WideOff>
 
-<x Section Arbres généalogiques>
-<y Arbres>
+<x Chapter Fiches individuelles>
+<a href="http://127.0.0.1:2317/Chausey?p=philippe;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Philippe\index{Gouraud, Philippe}</a><br>
+<a href="http://127.0.0.1:2317/Chausey?p=henri;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Henri</a><br>
+
+<x Chapter Arbres généalogiques>
+<x ArbresOn>
 \input{Chausey-inputs/Notes-arbres.tex}
 <x Newpage>
-<y NoEp>
-<x Fiches>
+<y EpOff>
+<x FichesOn>
 
 <y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
 <y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
@@ -61,7 +65,7 @@ voir Famille Fortin (Chocolat)
 <index="Marie, Albert (Toumagi)">
 <href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045">
 <end>
-<y NoArbres>
+<x ArbresOff>
 
 \newpage
 
@@ -75,28 +79,30 @@ voir Famille Fortin (Chocolat)
 \end{center}
 \end{figure}
 
-<x NoSub>
-<x NoFiches>
+<x SubOff>
+<x FichesOff>
 
 <x Chapter Régates de Chausey>
 <a href="http://127.0.0.1:2317/Chausey?p=regates;n=chausey;oc=0;templ=tex;w=hg:1045">Régates de Chausey</a>Régates<br>
 <a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1922;templ=tex;w=hg:1045">Régates de 1922</a>Régates, 1922<br>
 <a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1937;templ=tex;w=hg:1045">Régates de 1937</a>Régates, 1937<br>
 <a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1938;templ=tex;w=hg:1045">Régates de 1938</a>Régates, 1938<br>
-<x Immediate>
+<x ImmediateOn>
 \newpage
 <a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979</a>Régates, 1979<br>
-<x NoImmediate>
+<x ImmediateOff>
 
 
 \clearpage
+
 \printindex
 \newpage
 {\huge {\bf Notes}}
-<y \par>
-<y Run Make-Genea du : \date \time>
 \par
-GeneWeb commit : \input{../geneweb/distribution/gw/etc/version.txt}
+<y Run GwToLaTeX du : \date \time>
+\par
+GeneWeb commit : \input{./gw_version.txt}
+GwToLaTeX commit : \input{./version.txt}
 \par
 \par
 <y \hgbaseversion{}

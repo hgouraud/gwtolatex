@@ -1,12 +1,11 @@
 (* Copyright (c) 2013 H.Gouraud *)
-
 type name = string * string
 
 type my_tree =
   | Text of string
   | Element of string * (name * string) list * my_tree list
 
-type im_type = Portrait | Image_k | Image_s
+type im_type = Portrait | Imagek | Images
 
 type _image = {
   im_type : im_type;
@@ -15,6 +14,16 @@ type _image = {
   image_nbr : int;
 }
 
+(* execution context *)
+let base = ref ""
+let family = ref ""
+let out_file = ref ""
+let debug = ref false
+let index = ref 0
+let verbose = ref false
+let livres = ref "/Users/Henri/Genea/Livres"
+let base = ref ""
+let bases = ref ""
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
@@ -26,6 +35,7 @@ let chapter = ref 0
 let section = ref 0
 let subsection = ref 0
 let subsubsection = ref 0
+let current_level = ref 0
 let nbr = ref 0
 let images_in_page = ref []
 let chapter = ref 0
@@ -172,6 +182,15 @@ let dummy_tags_3 =
     "style";
   ]
 
+(* scan <a href="...">xxx</a> * to extract xxx *)
+let get_a_content line =
+  let i = try String.index_from line 0 '>' with Not_found -> -1 in
+  let j = try String.index_from line i '<' with Not_found -> -1 in
+  if i <> -1 && j <> -1 then
+    String.sub line (i + 1) (j - i - 1)
+  else ""
+  
+
 let rec dump children l =
   let tab l =
     let rec loop acc i = if i = l then acc else loop (acc ^ "..") (i + 1) in
@@ -202,6 +221,40 @@ let replace x y str =
     str;
   Buffer.contents b
 
+
+let unaccent_utf_8 lower s i =
+  let fns =
+    if lower then fun n s -> (String.lowercase_ascii s, n) else fun n s -> (s, n)
+  in
+  let fnc =
+    if lower then fun n c -> (String.make 1 @@ Char.lowercase_ascii c, n)
+    else fun n c -> (String.make 1 c, n)
+  in
+  let s, n =
+    Unidecode.decode fns fnc
+      (fun n -> (String.sub s i (n - i), n))
+      s i (String.length s)
+  in
+  if lower then (String.lowercase_ascii s, n) else (s, n)
+
+let lower s =
+  let rec copy special i len =
+    if i = String.length s then Buff.get len
+    else if Char.code s.[i] < 0x80 then
+      match s.[i] with
+      | ('a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '.') as c ->
+          let len = if special then Buff.store len ' ' else len in
+          let c = Char.lowercase_ascii c in
+          copy false (i + 1) (Buff.store len c)
+      | _ -> copy (len <> 0) (i + 1) len
+    else
+      let len = if special then Buff.store len ' ' else len in
+      let t, j = unaccent_utf_8 true s i in
+      copy false j (Buff.mstore len t)
+  in
+  copy false 0 0
+
+
 (* TODO find TaTeX equivalent string *)
 (*
     & % $ # _ { } ~ ^ \
@@ -211,19 +264,15 @@ by prepending a backslash; for the other three,
 use the macros \textasciitilde, \textasciicircum, and \textbackslash.
 *)
 
-
 let escape str =
   let special = [
-    ('&', "\\&{}"); 
+    ('&', "\\&"); 
     ('%', "\\%{}"); 
-    ('$', "\\${}"); 
     ('#', "\\#{}"); 
-    ('_', "\\_{}"); 
-    ('{', "\\{{}"); 
-    ('}', "\\}{}");
     ('~', "\\~{}"); 
     ('^', "\\^{}"); 
-    ('\\', "\\textbackslash{}"); 
+    ('_', "\\_"); 
+    (* dont escape _, $, {, } and \, we need them in the content *)
     ] in
   let b = Buffer.create 100 in
   String.iter
@@ -263,6 +312,13 @@ let split_href href =
   in
   if !level > 1 then
     List.iter (fun (k, v) -> Printf.eprintf "%s=%s\n" k v) evars;
+  let b = try List.assoc "b" evars with Not_found ->
+    let server = List.nth parts 0 in
+    let j = try String.rindex_from server (String.length server - 1) '/' with Not_found -> -1 in
+    if j <> -1 then String.sub server j
+      (String.length server - j - 1)
+    else ""
+  in
   let m = try List.assoc "m" evars with Not_found -> "" in
   let p = try List.assoc "p" evars with Not_found -> "" in
   let n = try List.assoc "n" evars with Not_found -> "" in
@@ -271,26 +327,93 @@ let split_href href =
   let k = try List.assoc "k" evars with Not_found -> "" in
   let s = try List.assoc "s" evars with Not_found -> "" in
   let v = try List.assoc "v" evars with Not_found -> "" in
-  (m, p, n, oc, i, k, s, v)
+  (b, m, p, n, oc, i, k, s, v)
 
-let print_image image =
-  match image with
-  | ((Portrait | Image_s | Image_k) as t), name, (ch, sec, ssec, sssec), nb ->
-      Format.sprintf "Type: %s, name: %s, (%d, %d, %d, %d), nb: %d"
-        (match t with
+let print_image (im_type , name, (ch, sec, ssec, sssec), nb )=
+  let trace =
+        Format.sprintf "Type: %s, name: %s, (%d, %d, %d, %d), nb: %d"
+        (match im_type with
         | Portrait -> "Portrait"
-        | Image_s -> "Image_s"
-        | Image_k -> "Image_k")
+        | Images -> "Images"
+        | Imagek -> "Imagek")
         name ch sec ssec sssec nb
+  in
+  match im_type with
+  | Portrait | Imagek ->
+        trace ^ "\\par" ^
+        Format.sprintf "\n\\includegraphics[width=5cm]{%s/%s.%s}\n"
+          "/Users/Henri/Genea/GeneWeb-Bases/images/chausey/Side"
+          (lower name |> replace '.' '-' |> replace ' ' '_' ) "jpg"
+  | Images ->
+        let ext = Filename.extension name in
+        let ext = String.sub ext 1 (String.length ext - 1) in
+        let name = Filename.remove_extension name in
+        trace ^ "\\par" ^
+        Format.sprintf "\n\\includegraphics[width=5cm]{%s/%s.%s}\n"
+          "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images"
+          name ext
 
-let simple_tag t str =
-  let tags = [ ("b", "textbf"); ("i", "textit"); ("small", "small") ] in
+
+let simple_tag_1 t str =
+  let tags = [ ("i", "textit"); ("small", "small") ] in
   let cmd = try List.assoc t tags with Not_found -> (
-    Printf.eprintf "funny tag %s\n" t;
+    Printf.eprintf "funny tag 1 %s\n" t;
+    "underline")
+  in
+  if str <> "" then Format.sprintf "\\%s{%s}" cmd str else ""
+
+let simple_tag_2 t str =
+  let tags = [ ("b", "bf"); ] in
+  let cmd = try List.assoc t tags with Not_found -> (
+    Printf.eprintf "funny tag 2 %s\n" t;
     "underline")
   in
   if str <> "" then Format.sprintf "{\\%s %s}" cmd str else ""
 
+(* convert %xx utf-8 notation *)
+let decode s =
+  let hexa_val conf =
+    match conf with
+    | '0'..'9' -> Char.code conf - Char.code '0'
+    | 'a'..'f' -> Char.code conf - Char.code 'a' + 10
+    | 'A'..'F' -> Char.code conf - Char.code 'A' + 10
+    | _ -> 0
+  in
+  let rec need_decode i =
+    if i < String.length s then
+      match s.[i] with
+      | '%' -> true
+      | _ -> need_decode (succ i)
+    else false
+  in
+  let rec compute_len i i1 =
+    if i < String.length s then
+      let i =
+        match s.[i] with
+        '%' when i + 2 < String.length s -> i + 3
+        | _ -> succ i
+      in
+      compute_len i (succ i1)
+    else i1
+  in
+  let rec copy_decode_in s1 i i1 =
+    if i < String.length s then
+      let i =
+        match s.[i] with
+        '%' when i + 2 < String.length s ->
+          let v = hexa_val s.[i+1] * 16 + hexa_val s.[i+2] in
+          Bytes.set s1 i1 (Char.chr v); i + 3
+        | x -> Bytes.set s1 i1 x; succ i
+      in
+      copy_decode_in s1 i (succ i1)
+    else Bytes.unsafe_to_string s1
+  in
+  if need_decode 0 then
+    let len = compute_len 0 0 in
+    let s1 = Bytes.create len in
+    let s = copy_decode_in s1 0 0 in
+    s
+  else s
 
 (* process commands to build a full page page *)
 (* used for tree displays and large images *)
@@ -339,7 +462,8 @@ let rec process_tree_cumul och cumul tree =
     if !level > 1 then Printf.eprintf "Tag a (cumul)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
-    let m, p, n, oc, i, k, s, v = split_href href in
+    let href = decode href |> escape in
+    let b, m, p, n, oc, i, k, s, v = split_href href in
     if !level > 1 then (
       Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
       dump children 0);
@@ -364,13 +488,16 @@ let rec process_tree_cumul och cumul tree =
       let check = Printf.sprintf "%s %s%s" fn sn ocn in
       if !level > 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
       if (fn <> "" || sn <> "") && k = "" then
-        Format.sprintf "{\\b %s}" content
+        Format.sprintf "{\\bf %s xx}" content
         ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
         ^
         if check <> content then
           Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
         else ""
-      else content
+      else
+        if b <> !family then
+          Format.sprintf "%s\\footnote{%s}" content href
+        else content
     in
     str
   in
@@ -379,7 +506,10 @@ let rec process_tree_cumul och cumul tree =
     if !level > 1 then Printf.eprintf "Tag img (cumul)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
-    let m, p, n, oc, i, k, s, v = split_href href in
+    let href = decode href |> escape in
+    output_string och href;
+    output_string och "\n";
+    let b, m, p, n, oc, i, k, s, v = split_href href in
     let ip =
       match
         Gwdb.person_of_key !my_base p n
@@ -389,14 +519,15 @@ let rec process_tree_cumul och cumul tree =
       | None -> if i = "" then Gwdb.dummy_iper else Gwdb.iper_of_string i
     in
     let str =
+      output_string och (Format.sprintf "Ip: %s, %s\n" i (Gwdb.string_of_iper ip));
       let person = Gwdb.poi !my_base ip in
       let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
       let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
       let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
       let image_label = Format.sprintf "%s.%d.%s" fn ocn sn in
       let image =
-        ( (if k <> "" then Image_k else if s <> "" then Image_s else Portrait),
-          image_label,
+        ( (if k <> "" then Imagek else if s <> "" then Images else Portrait),
+          (if k <> "" then image_label else s),
           (!chapter, !section, !subsection, !subsubsection),
           !image_nbr )
       in
@@ -415,13 +546,20 @@ let rec process_tree_cumul och cumul tree =
   | Element (name, attributes, children) -> (
       if !level > 1 then Printf.eprintf "Tag elt: %s\n" name;
       match name with
-      | "b" | "i" | "small" as t -> 
+      | "i" | "small" as t -> 
           let content =
             List.fold_left
               (fun acc c -> acc ^ process_tree_cumul och cumul c)
               "" children
           in
-          cumul ^ (simple_tag t content)
+          cumul ^ (simple_tag_1 t content)
+      | "b" as t -> 
+          let content =
+            List.fold_left
+              (fun acc c -> acc ^ process_tree_cumul och cumul c)
+              "" children
+          in
+          cumul ^ (simple_tag_2 t content)
       | "u" | "em" as t ->
           let content =
             List.fold_left
@@ -573,7 +711,6 @@ let process_html och body =
     | Some tree -> (process_tree_cumul och "" tree)
     | _ -> "bad tree"
   in
-  let content = escape content in
   output_string och content
 
 let bad_code c = c >= 400
@@ -600,26 +737,26 @@ let one_command och line =
   match List.nth parts 0 with
   | "Chapter" ->
       out "chapter" cmd;
-      incr chapter;
+      incr chapter; current_level := 0;
       section := 0;
       subsection := 0;
       subsubsection := 0
   | "Section" ->
       out "section" cmd;
-      incr section;
+      incr section; current_level := 1;
       subsection := 0;
       subsubsection := 0
   | "SubSection" ->
       out "subsection" cmd;
-      incr subsection;
+      incr subsection; current_level := 2;
       subsubsection := 0
   | "SubSubSection" ->
       out "subsubsection" cmd;
-      incr subsubsection
+      incr subsubsection; current_level := 3
   | "Newpage" -> output_string och "\\newpage"
   | "Adjust_w" ->
       output_string och
-        (Format.sprintf "Newwidth {\\b %s}\n"  (* TODO *)
+        (Format.sprintf "Newwidth {\\bf %s}\n"  (* TODO *)
            (if List.length parts > 1 then List.nth parts 0 else "7cm"))
   | "Version" -> output_string och (version ^ "\n")
   | "CollectImagesOn>" -> collect_images := true
@@ -646,8 +783,8 @@ let one_http_call och line =
     try String.index_from line (url_beg + 1) '"' with Not_found -> 0
   in
   let url = String.sub line (url_beg + 1) (url_end - url_beg - 1) in
-  output_string och url;
-  output_string och "\n";
+  if !level > 1 then (output_string och url;
+    output_string och "\n");
   let resp = Ezcurl.get ~url () in
   match resp with
   | Ok { Ezcurl.code; body; _ } ->
@@ -663,22 +800,26 @@ let process_one_line och line =
   match line.[0] with
   | '<' -> (
       match line.[1] with
-      | 'a' -> one_http_call och line
+      | 'a' ->( 
+          let content = get_a_content line in
+          let sec = 
+            match !current_level with
+            | 0 -> ""
+            | 1 -> "sub"
+            | 2 -> "subsub"
+            | _ -> "subsubsub"
+          in
+          let index =
+            if String.contains line '\\' then ""
+            else (Format.sprintf "\\index{%s}" content)
+          in
+          output_string och (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
+          one_http_call och line)
       | 'b' -> one_page och line
       | 'x' -> one_command och line
       | 'y' -> output_string och ""
       | _ -> output_string och (line ^ "\n"))
   | _ -> output_string och (line ^ "\n")
-
-let base = ref ""
-let family = ref ""
-let out_file = ref ""
-let debug = ref false
-let index = ref 0
-let batch = ref false
-let livres = ref "/Users/Henri/Genea/Livres"
-let base = ref ""
-let bases = ref ""
 
 let main () =
   let usage =
@@ -698,8 +839,9 @@ let main () =
       ( "-index",
         Arg.Int (fun x -> index := x),
         " Number of times makeindex is done." );
-      ("-level", Arg.Int (fun x -> level := x), " Test traces level.");
-      ("-batch", Arg.Set batch, " Pdflatex mode (batch or not).");
+      ("-level", Arg.Int (fun x -> level := x), " Debug traces level.");
+      ("-verbose", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
+      ("-v", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
       ("-follow", Arg.Set follow, " Produce Pdflatex.");
       ( "-test",
         Arg.Int
@@ -732,9 +874,8 @@ let main () =
   in
   let ic = open_in_bin fname_in in
   if not !debug then Sys.enable_runtime_warnings false;
-  if !test then (
-    Printf.eprintf "\n***Starting test with %s\n" fname_in;
-    flush stderr);
+  Printf.eprintf "\nThis is GwToLaTeX version %s on %s\n" version fname_in;
+  flush stderr;
   (match mode with
   | "html" ->
       let body = really_input_string ic (in_channel_length ic) in
@@ -754,15 +895,17 @@ let main () =
   Printf.eprintf "Done txt parsing\n";
   flush stderr;
 
-  let mode = if !batch then "" else "-interaction=batchmode" in
+  let mode = if !verbose then "" else "-interaction=batchmode" in
   let cmmd1 = Printf.sprintf "pdflatex -output-directory=livres %s %s.tex" mode
     family_out
   in
+  Printf.eprintf "First pass at pdflatex \n";
   let error = Sys.command cmmd1 in
   if error <> 0 then (
     Printf.eprintf "Error in pdflatex processing (%d)\n" error;
     exit 0);
-  if !test then exit 0;
+  Printf.eprintf "Building index\n";
+  if !test && !index = 0 then exit 0;
   (* makeindex does not like absolute paths! *)
   let cmmd2 = Printf.sprintf "makeindex livres%s%s.idx" 
     (Filename.dir_sep) family_out
@@ -773,10 +916,12 @@ let main () =
       Printf.eprintf "Error in makeindex processing (%d)\n" error;
       exit 0)
   done;
+  Printf.eprintf "Second pass at pdflatex \n";
   let error = Sys.command cmmd1 in
   if error <> 0 then (
     Printf.eprintf "Error in 2nd pdflatex processing (%d)\n" error;
     exit 0);
-  Printf.eprintf "Done all\n"
+  Printf.eprintf "Done all\n";
+  flush stderr
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)
