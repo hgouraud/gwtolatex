@@ -1,0 +1,37 @@
+%doctype;
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<!-- $Id: /etc/Tex/dag.txt,v TeX.1 2014-09-05 13:15:19 hg Exp $ -->
+<!-- Copyright (c) 1998-2007 INRIA -->
+<title>
+%head_title;
+</title>
+<meta name="robots" content="none"%/>
+<meta http-equiv="Content-Type" content="text/html; charset=%charset;"%/>
+<meta http-equiv="Content-Style-Type" content="text/css"%/>
+<link rel="shortcut icon" href="%image_prefix;/favicon_gwd.png"%/>
+
+<begintable>
+%foreach;dag_line;
+      %foreach;dag_cell;
+        <cell %dag_cell.align;>
+        %if;(dag_cell.colspan > 1)<multicolumnbegin %dag_cell.colspan;>%end;
+        %if;dag_cell.is_nothing;<emptycell %dag_cell.colspan>
+        %elseif;dag_cell.is_bar;<vbar %dag_cell.colspan;>
+        %elseif;(dag_cell.item != "")<cellitem>%dag_cell.item;</cellitem>
+        %elseif;(dag_cell.text != "")<celltext>%dag_cell.text;</celltext>
+        %else;
+          %if;dag_cell.is_hr_left;<rule-left %dag_cell.colspan;>
+          %elseif;dag_cell.is_hr_right;<rule-right %dag_cell.colspan;>
+          %else;<rule-fullcell %dag_cell.colspan;>
+          %end;
+        %end;
+        %if;(dag_cell.colspan > 1)<multicolumnend>%end;
+        </cell>
+      %end;
+      <newline>
+%end;
+<endtable>
+
+</body>
+</html>

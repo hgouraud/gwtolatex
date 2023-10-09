@@ -23,7 +23,7 @@ let index = ref 0
 let verbose = ref false
 let livres = ref "/Users/Henri/Genea/Livres"
 let base = ref ""
-let bases = ref ""
+let bases = ref "/Users/Henri/Genea/GeneWeb-Bases"
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
@@ -267,10 +267,10 @@ use the macros \textasciitilde, \textasciicircum, and \textbackslash.
 let escape str =
   let special = [
     ('&', "\\&"); 
-    ('%', "\\%{}"); 
-    ('#', "\\#{}"); 
-    ('~', "\\~{}"); 
-    ('^', "\\^{}"); 
+    ('%', "\\%"); 
+    ('#', "\\#"); 
+    ('~', "\\~"); 
+    ('^', "\\^"); 
     ('_', "\\_"); 
     (* dont escape _, $, {, } and \, we need them in the content *)
     ] in
@@ -330,7 +330,7 @@ let split_href href =
   (b, m, p, n, oc, i, k, s, v)
 
 let print_image (im_type , name, (ch, sec, ssec, sssec), nb )=
-  let trace =
+  let _trace =
         Format.sprintf "Type: %s, name: %s, (%d, %d, %d, %d), nb: %d"
         (match im_type with
         | Portrait -> "Portrait"
@@ -340,7 +340,6 @@ let print_image (im_type , name, (ch, sec, ssec, sssec), nb )=
   in
   match im_type with
   | Portrait | Imagek ->
-        trace ^ "\\par" ^
         Format.sprintf "\n\\includegraphics[width=5cm]{%s/%s.%s}\n"
           "/Users/Henri/Genea/GeneWeb-Bases/images/chausey/Side"
           (lower name |> replace '.' '-' |> replace ' ' '_' ) "jpg"
@@ -348,14 +347,13 @@ let print_image (im_type , name, (ch, sec, ssec, sssec), nb )=
         let ext = Filename.extension name in
         let ext = String.sub ext 1 (String.length ext - 1) in
         let name = Filename.remove_extension name in
-        trace ^ "\\par" ^
         Format.sprintf "\n\\includegraphics[width=5cm]{%s/%s.%s}\n"
           "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images"
           name ext
 
-
 let simple_tag_1 t str =
-  let tags = [ ("i", "textit"); ("small", "small") ] in
+  let tags = [ ("i", "textit"); ("small", "small");
+    ("u", "underline"); ("em", "emph") ] in
   let cmd = try List.assoc t tags with Not_found -> (
     Printf.eprintf "funny tag 1 %s\n" t;
     "underline")
@@ -488,7 +486,7 @@ let rec process_tree_cumul och cumul tree =
       let check = Printf.sprintf "%s %s%s" fn sn ocn in
       if !level > 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
       if (fn <> "" || sn <> "") && k = "" then
-        Format.sprintf "{\\bf %s xx}" content
+        Format.sprintf "{\\bf %s}" content
         ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
         ^
         if check <> content then
@@ -546,20 +544,13 @@ let rec process_tree_cumul och cumul tree =
   | Element (name, attributes, children) -> (
       if !level > 1 then Printf.eprintf "Tag elt: %s\n" name;
       match name with
-      | "i" | "small" as t -> 
+      | "i" | "small" | "u" | "em" as t -> 
           let content =
             List.fold_left
               (fun acc c -> acc ^ process_tree_cumul och cumul c)
               "" children
           in
           cumul ^ (simple_tag_1 t content)
-      | "b" as t -> 
-          let content =
-            List.fold_left
-              (fun acc c -> acc ^ process_tree_cumul och cumul c)
-              "" children
-          in
-          cumul ^ (simple_tag_2 t content)
       | "u" | "em" as t ->
           let content =
             List.fold_left
@@ -599,7 +590,7 @@ let rec process_tree_cumul och cumul tree =
           in
           cumul
           ^
-          if content <> "" then Format.sprintf "{\\%s %s}" sect content else ""
+          if content <> "" then Format.sprintf "\\%s{%s}" sect content else ""
       | "h2" ->
           let content =
             List.fold_left
@@ -608,7 +599,7 @@ let rec process_tree_cumul och cumul tree =
           in
           cumul
           ^
-          if content <> "" then Format.sprintf "{\\subsection %s}" content
+          if content <> "" then Format.sprintf "\\subsection{%s}" content
           else ""
       | "h3" ->
           let content =
@@ -620,7 +611,7 @@ let rec process_tree_cumul och cumul tree =
             if contains content ">Bateaux<" then "\n\\par\\hgbato{Bateaux}"
             else if contains content ">Propriétaires<" then
               "\n\\par\\hgbato{Propriétaires}"
-            else Format.sprintf "{\\subsubsection %s}" content
+            else Format.sprintf "\\subsubsection{%s}" content
           in
           cumul ^ if content <> "" then str else ""
       | "p" ->
@@ -640,7 +631,7 @@ let rec process_tree_cumul och cumul tree =
           cumul
           ^
           if content <> "" then
-            Format.sprintf "\\begin{hgitemise}\n %s/n\\end{hgitemise}\n" content
+            Format.sprintf "\\begin{hgitemize}\n %s/n\\end{hgitemize}\n" content
           else ""
       | "li" ->
           let content =
@@ -654,12 +645,11 @@ let rec process_tree_cumul och cumul tree =
           (* look for potential TeX code *)
           (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
           (* children is a single string of TeX *)
+          (* % might not be there (old format) *)
           let display_none =
-            List.fold_left
-              (fun ok ((_, k), v) ->
-                if k = "class" && v = "display:none" then ok || true
-                else ok || false)
-              false attributes
+            List.exists
+              (fun ((_, k), v) ->
+                k = "style" && v = "display:none") attributes
           in
           let str =
             let content =
@@ -667,6 +657,8 @@ let rec process_tree_cumul och cumul tree =
                 (fun acc c -> acc ^ process_tree_cumul och cumul c)
                 "" children
             in
+            if !level = 4 then
+              Printf.eprintf "Content (span): %s\n" content;
             if display_none then
               if String.sub content 0 3 = "tex" then (
                 if !level > 1 then Printf.eprintf "TeX content: %s\n" content;
@@ -788,13 +780,15 @@ let one_http_call och line =
   let resp = Ezcurl.get ~url () in
   match resp with
   | Ok { Ezcurl.code; body; _ } ->
-      if bad_code code then
-        Printf.eprintf "bad code when fetching %s: %d\n%!" url code
+      if bad_code code then (
+        Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
+        output_string och (Format.sprintf "Bad code when fetching %s: %d!\n" url code))
       else (
         if !level > 1 then Printf.eprintf "Body size: %d\n" (String.length body);
         let _ = process_html och body in
         ())
-  | Error (_, msg) -> Printf.eprintf "error when fetching %s:\n  %s\n%!" url msg
+  | Error (_, msg) -> (Printf.eprintf "error when fetching %s:\n  %s\n%!" url msg;
+      output_string och (Format.sprintf "Error when fetching %s:\n %s\n" url msg))
 
 let process_one_line och line =
   match line.[0] with
@@ -856,6 +850,12 @@ let main () =
   let speclist = Arg.align speclist in
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
+  let tex_dir = Filename.concat !bases "etc" in
+  let cmmd = Format.sprintf "cp -R ./tex %s%stex" tex_dir (Filename.dir_sep) in
+  let error = Sys.command cmmd in
+  if error > 0 then (
+    Printf.eprintf "Error while loading tex templates files (%d)\n" error;
+    exit 0);
   let fname_txt, family_out =
     ( Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb,
       if !family <> "" then !family

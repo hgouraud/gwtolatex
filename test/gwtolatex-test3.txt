@@ -72,7 +72,7 @@ voir Famille Fortin (Chocolat)
 \begin{figure}
 \begin{center}
 \vspace {-0.5 cm}
-\includegraphics[width=16 cm]{../Livres/Chausey-inputs/Chausey-ign-0}
+\includegraphics[width=16 cm]{Chausey-inputs/Chausey-ign-0.jpg}
 
 \label{Big-Chausey}
 \thesection.2 -- Vue aérienne de l'archipel - Source Géoportail IGN, 2014 ou 2015.
