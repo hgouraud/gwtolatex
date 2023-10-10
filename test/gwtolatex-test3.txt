@@ -26,24 +26,29 @@ Henri.Gouraud@LaPoste.net \\
 
 <x Chapter Un peu d'histoire>
 <a href="http://127.0.0.1:2317/Chausey?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
-<x Wide>
-<x Ch_nb_in_fig_nbrOff>
+<x Wide on>
+<x Ch_nb_in_fig_nbr on>
 
 <x Ep Off>
 <x Chapter Listes de descendants>
 <x Section Famille Antoine>
-<x tex \index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
+\index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
 voir Famille Fortin (Chocolat)
+
+<y works only in descendant trees>
+<x HighLight Leperchois Pierre>
+
 <a href="http://127.0.0.1:2317/Chausey?m=D;p=francois;n=bahurel;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Famille Bahurel</a>Bahurel (Famille)<br>
 <y Adjust_w 7cm>
-<a href="http://127.0.0.1:2317/Chausey?p=jacques+louis;n=ernouf;oc=0;templ=tex;w=hg:1045">Ernouf, Jacques Louis</a><br>
+<a href="http://127.0.0.1:2317/Chausey?m=D;p=pierre;n=leperchois;oc=0;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Leperchois, Pierre</a><br>
 <y Adjust_w>
-<a href="http://127.0.0.1:2317/Chausey?p=leon+francois;n=ernouf;oc=0;templ=tex;w=hg:1045">Ernouf, Léon François</a><br>
-\label{Ernouf}
 <x Fiches Off>
 <x Wide Off>
 
 <x Chapter Fiches individuelles>
+<x CollectImages on>
+\label{Ernouf}
+<a href="http://127.0.0.1:2317/Chausey?p=jules;n=durand;oc=0;templ=tex;w=hg:1045">Durand, jules</a><br>
 <a href="http://127.0.0.1:2317/Chausey?p=philippe;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Philippe\index{Gouraud, Philippe}</a><br>
 <a href="http://127.0.0.1:2317/Chausey?p=henri;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Henri</a><br>
 

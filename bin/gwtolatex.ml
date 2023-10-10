@@ -43,21 +43,19 @@ let version = "1.0"
 
 (* current values *)
 let current_level = ref 0
-let nbr = ref 0
 let images_in_page = ref []
 let chapter = ref 0
 let section = ref 0
 let subsection = ref 0
 let subsubsection = ref 0
 let image_nbr = ref 0
-let _images_in_page = ref []
+let image_label = ref 3
 let collect_images = ref false
 let wide = ref false
 let section_on_a_tag = ref false
-let _highlights = ref []
+let highlights = ref []
 let _width = ref 7
 let ch_nb_in_fig_nb = ref true
-let immediate = ref false
 let sub = ref false
 let _trees = ref false
 let ep = ref false
@@ -484,7 +482,7 @@ let rec process_tree_cumul och cumul tree =
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
     let href = decode href |> escape in
-    let b, _m, p, n, oc, i, k, _s, _v = split_href href in
+    let b, _m, p, n, oc, i, k, s, _v = split_href href in
     if !level > 1 then (
       Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
       dump children 0);
@@ -516,6 +514,19 @@ let rec process_tree_cumul och cumul tree =
           Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
         else ""
       else if b <> !family then Format.sprintf "%s\\footnote{%s}" content href
+      else if s <> "" then (
+          incr image_nbr;
+          let image = (Images, s, (!chapter, !section,
+            !subsection, !subsubsection), !image_nbr)
+          in
+          if !collect_images then images_in_page := image :: !images_in_page;
+          let str =
+            match !image_label with
+            | 4 -> Format.sprintf "%s\\textsuperscript{%d.%d.%d.%d}"
+                content !chapter !section !subsection !image_nbr
+            | _ -> Format.sprintf "%s\\textsuperscript{%d.%d.%d}"
+                content !chapter !section !image_nbr
+          in str)
       else content
     in
     str
@@ -547,7 +558,7 @@ let rec process_tree_cumul och cumul tree =
           (!chapter, !section, !subsection, !subsubsection),
           !image_nbr )
       in
-      incr nbr;
+      incr image_nbr;
       if !collect_images then images_in_page := image :: !images_in_page;
       print_image image
     in
@@ -702,7 +713,12 @@ let rec process_tree_cumul och cumul tree =
                   ^ String.sub content (i + 1) (String.length content - i - 1)
                 else content)
               else content
-            else if highlight_mode then Format.sprintf "{\\bf %s}" content
+            else if highlight_mode then (
+              if !level > 2 then Printf.eprintf "Hl2: (%s)\n" content;
+              if List.mem content !highlights then
+                Format.sprintf "{\\hl{\\bf %s}}" content
+              else
+                Format.sprintf "{\\bf %s}" content)
             else content
           in
           cumul ^ str
@@ -762,6 +778,11 @@ let one_command och line =
     output_string och (Format.sprintf "\\%s{%s}%s\n" c param remain)
   in
   match cmd with
+  | "Adjust_w" ->
+      output_string och
+        (Format.sprintf "Newwidth {\\bf %s}\n" (* TODO *)
+           (if param <> "" then param else "7cm"))
+  | "Arbres" -> arbres := param = "on"
   | "Chapter" ->
       out "chapter" param;
       incr chapter;
@@ -769,12 +790,23 @@ let one_command och line =
       section := 0;
       subsection := 0;
       subsubsection := 0
+  | "Ch_nb_in_fig_nb" -> ch_nb_in_fig_nb := param = "on"
+  | "CollectImages" -> collect_images := param = "on"
+  | "Ep" -> ep := param = "on"
+  | "Fiches" -> section_on_a_tag := param = "on"
+  | "HighLight" -> (highlights := param :: !highlights;
+      if !level > 2 then
+          List.iter (fun hl -> Printf.eprintf "Hl1: (%s)\n" hl) !highlights)
+  | "ImageLabel" -> image_label := (try int_of_string param with Failure _ -> 3)
+  | "LaTeX" -> output_string och param
+  | "Newpage" -> output_string och "\\newpage"
   | "Section" ->
       out "section" param;
       incr section;
       current_level := 1;
       subsection := 0;
       subsubsection := 0
+  | "Sub" -> sub := param = "on"
   | "SubSection" ->
       out "subsection" param;
       incr subsection;
@@ -784,20 +816,8 @@ let one_command och line =
       out "subsubsection" param;
       incr subsubsection;
       current_level := 3
-  | "Newpage" -> output_string och "\\newpage"
-  | "Adjust_w" ->
-      output_string och
-        (Format.sprintf "Newwidth {\\bf %s}\n" (* TODO *)
-           (if param <> "" then param else "7cm"))
   | "Version" -> output_string och (version ^ "\n")
-  | "CollectImages>" -> collect_images := param = "on"
-  | "WideOn>" -> wide := param = "on"
-  | "SubOn" -> sub := param = "on"
-  | "EpOn" -> ep := param = "on"
-  | "ArbresOn" -> arbres := param = "on"
-  | "Ch_nb_in_fig_nb" -> ch_nb_in_fig_nb := param = "on"
-  | "Fiches" -> section_on_a_tag := param = "on"
-  | "ImmediateOn" -> immediate := param = "on"
+  | "Wide>" -> wide := param = "on"
   | _ -> output_string och (Format.sprintf "%%%s%s\n" cmd remain)
 
 let one_http_call och line =
@@ -822,6 +842,21 @@ let one_http_call och line =
       output_string och
         (Format.sprintf "Error when fetching %s:\n %s\n" url msg)
 
+let print_images och images_list =
+  output_string och (Format.sprintf "\\par\n");
+  (* TODO manage Wide *)
+  List.iter (fun (im_type, name, (ch, sec, _ssec, _sssec), nbr) ->
+        match im_type with
+        | Imagek | Portrait -> ()
+        | Images ->
+            let name = Filename.remove_extension name in
+            let images_dir = "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images" in
+            output_string och (Format.sprintf
+              "\\parbox{5.1cm}{\\includegraphics[width=5.1cm]{%s/%s}\\\\\\hglabxa{%d}{%d}{%d}}\n"
+              images_dir name ch sec nbr)
+        ) (List.rev images_list);
+  output_string och (Format.sprintf "\\par\n")
+
 let process_one_line och line =
   match line.[0] with
   | '<' -> (
@@ -841,7 +876,10 @@ let process_one_line och line =
           in
           output_string och
             (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
-          one_http_call och line
+          one_http_call och line;
+          if !collect_images && !images_in_page <> [] then
+              print_images och !images_in_page;
+          output_string och (Format.sprintf "\\hrule\n")
       | 'b' -> one_page och line
       | 'x' -> one_command och line
       | 'y' -> output_string och ""
