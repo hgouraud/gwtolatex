@@ -1,0 +1,44 @@
+\documentclass[a4paper]{book}
+
+\tracingcommands=1
+\tracingparagraphs=1 
+\tracingmacros=1
+\tracingoutput=1
+\makeindex
+
+\input{Generic-inputs/MyEnvironment.tex}
+
+\title{Un aperçu de la généalogie chausiaise}
+\author{Henri Gouraud \\
+Henri.Gouraud@LaPoste.net \\
+\\
+\copyright 2023}
+\date{Octobre 2023}
+
+\begin{document}
+\WarningsOff*
+
+<x Ep Off>
+<x Chapter Listes de descendants>
+<x Section Famille Antoine>
+<x tex \index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
+voir Famille Fortin (Chocolat)
+<a href="http://127.0.0.1:2317/Chausey?m=D;p=francois;n=bahurel;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Famille Bahurel</a>Bahurel (Famille)<br>
+
+\clearpage
+
+\newpage
+{\huge {\bf Notes}}
+\par
+<y Run GwToLaTeX du : \date \time>
+\par
+GeneWeb commit : \input{./gw_version.txt}
+GwToLaTeX commit : \input{./version.txt}
+\par
+\par
+<y \hgbaseversion{}
+\par
+\pdftexbanner{}
+\newpage
+{\huge {\bf Notes}}
+\end{document}

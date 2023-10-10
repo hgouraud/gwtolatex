@@ -8,22 +8,22 @@
 %define;hgindex(alxx, snxx, fnxx, occxx)
   %if;(alxx = "0")
     %if;(occxx = "0")
-      \index{snxx, fnxx}
+      \index{snxx, fnxx}%nn;
     %else;
-      \index{snxx, fnxx (occxx)}
-    %end;
+      \index{snxx, fnxx (occxx)}%nn;
+    %end;%nn;
   %else;
     %if;(occxx = "0")
-      \index{alxx, voir snxx, fnxx}
+      \index{alxx, voir snxx, fnxx}%nn;
     %else;
-      \index{alxx, voir snxx, fnxx (occxx)}
-    %end;
-  %end;
+      \index{alxx, voir snxx, fnxx (occxx)}%nn;
+    %end;%nn;
+  %end;%nn;
 %end;
 
 %( hgname performs \bf or \highlight %)
 %define;hgfull_name(snxx, fnxx, ocxx)
-  <span mode="highlight">snxx fnxx%if;(ocxx != "0") (ocxx)%end;</span>
+  <span mode="highlight">snxx fnxx%if;(ocxx != "0") (ocxx)%end;</span>%nn;
 %end;
 
 \hghead{
@@ -63,16 +63,17 @@
 %end;
 
 %define;info2(xx)
-  &nbsp;%xx.title;%xx.dates;
+  %xx.title;%xx.dates;%nn;
 %end;
 
 %define;somebody_spouse_parent1(xx)
-  %apply;hgfull_name(spouse.xx.surname, spouse.xx.first_name, spouse.xx.occ)%apply;hgindex("0", spouse.xx.surname, spouse.xx.first_name, spouse.xx.occ)%nn;
-  %apply;info2("spouse.xx")
+  %apply;hgfull_name(spouse.xx.surname, spouse.xx.first_name, spouse.xx.occ)%nn;
+  %apply;hgindex("0", spouse.xx.surname, spouse.xx.first_name, spouse.xx.occ)%nn;
+  %apply;info2("spouse.xx")%nn;
 %end;
 
 %define;somebody_spouse_parent()
-    %if;(evar.parents = "on" and spouse.has_parents)%sp;
+    %if;(evar.parents = "on" and spouse.has_parents)
     \\ %nl;...
       {\footnotesize
       %apply;a_of_b%with;
@@ -83,10 +84,10 @@
         %apply;somebody_spouse_parent1("mother")
       %end;
       }
-    %end;
+    %end;%nn;
     %if;are_divorced;\\ %nl;... [divorced]0%divorce_date;.%nl;
     %elseif;are_separated;\\ %nl;... [separated]0.%nl;
-    %end;
+    %end;%nn;
 %end;
 
 
@@ -130,15 +131,14 @@
       (%relation_type;:
       %if;has_relation_him;%apply;link(relation_him.var)%end;%nl;
       %if;has_relation_her;%apply;link(relation_her.var)%end;)%nn;
-    %end;
+    %end;%nn;
     %foreach;xx.related;%nl;
       (%related_type;: %apply;link(related.var))%nn;
-    %end;
+    %end;%nn;
   %end;%nn;
 %end;
 
 %define;married_to(date_place)
-  %nl;
   %if;(is_male)
     %if;are_married;[married%t to:::date_place]0%nn;
     %elseif;are_not_married;[relationship%t to:::date_place]0%nn;
@@ -154,8 +154,8 @@
     %elseif;are_pacs;[pacsed%t to:::date_place]1%nn;
     %elseif;is_no_sexes_check;[relationship%t to:::date_place]1%nn;
     %elseif;is_no_mention;date_place [with]%nn;
-    %end;
-  %end;
+    %end;%nn;
+  %end;%nn;
 %end;
 
 %define;descendants_by_list(xx, yy, curlev, maxlev, famlev)
@@ -164,21 +164,18 @@
   %apply;somebody_long_info("xx").\\
   %incr_count;
   %foreach;xx.family;
-    %if;(family_cnt != 1 and curlev = 0)%nl;%end;
-    %lazy_force;
-    %apply;capitalize%with;
-    - %apply;married_to%with;
-        %if;(on_marriage_date != "") %on_marriage_date;%end;
-        %if;(marriage_place != ""), à %marriage_place;,%end;
+    %apply;capitalize%with; - %apply;married_to%with;
+        %if;(on_marriage_date != "") %on_marriage_date;%end;%nn;
+        %if;(marriage_place != ""), à %marriage_place;,%end;%nn;
       %end;%nn;
-    %end;%nl;
-    {\bf %spouse.surname; %spouse.first_name; %if(spouse.occ!=0)(%spouse.occ;)%end;}%nn;
-    %apply;hgindex("0", spouse.surname, spouse.first_name, spouse.occ)
-    %apply;somebody_long_info("spouse")
+    %end;%nn;
+    %sp;{\bf %spouse.surname; %spouse.first_name; %if(spouse.occ!=0)(%spouse.occ;)%end;}%nn;
+    %apply;hgindex("0", spouse.surname, spouse.first_name, spouse.occ)%nn;
+    %apply;somebody_long_info("spouse")%nn;
     %if;spouse.has_parents;
       %if;(spouse.father.first_name != "Famille")
         %apply;somebody_spouse_parent()
-      %end;
+      %end;%nn;
     %end;%nn;
     %if;(evar.witn = "on" and has_witnesses)%nl;([witness/witnesses]1:
       %foreach;witness;
@@ -211,10 +208,8 @@
               %( end item %)
             %end;
             \end{hgitemize}
-            %apply;lazy_print%with;%end;
           %else;
             %if;(curlev = 0)%nl;\par%nl;
-            %else;%apply;lazy_print%with; %nl;
             %end;
           %end;
         %end;
