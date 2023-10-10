@@ -29,7 +29,7 @@ Henri.Gouraud@LaPoste.net \\
 <x Wide>
 <x Ch_nb_in_fig_nbrOff>
 
-<x EpOff>
+<x Ep Off>
 <x Chapter Listes de descendants>
 <x Section Famille Antoine>
 <x tex \index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
@@ -40,19 +40,19 @@ voir Famille Fortin (Chocolat)
 <y Adjust_w>
 <a href="http://127.0.0.1:2317/Chausey?p=leon+francois;n=ernouf;oc=0;templ=tex;w=hg:1045">Ernouf, Léon François</a><br>
 \label{Ernouf}
-<x FichesOff>
-<x WideOff>
+<x Fiches Off>
+<x Wide Off>
 
 <x Chapter Fiches individuelles>
 <a href="http://127.0.0.1:2317/Chausey?p=philippe;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Philippe\index{Gouraud, Philippe}</a><br>
 <a href="http://127.0.0.1:2317/Chausey?p=henri;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Henri</a><br>
 
 <x Chapter Arbres généalogiques>
-<x ArbresOn>
+<x Arbres On>
 \input{Chausey-inputs/Notes-arbres.tex}
 <x Newpage>
-<y EpOff>
-<x FichesOn>
+<y Ep Off>
+<x Fiches On>
 
 <y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
 <y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
@@ -65,7 +65,7 @@ voir Famille Fortin (Chocolat)
 <index="Marie, Albert (Toumagi)">
 <href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045">
 <end>
-<x ArbresOff>
+<x Arbres Off>
 
 \newpage
 
@@ -79,19 +79,16 @@ voir Famille Fortin (Chocolat)
 \end{center}
 \end{figure}
 
-<x SubOff>
-<x FichesOff>
+<x Sub off>
+<x Fiches off>
 
 <x Chapter Régates de Chausey>
-<a href="http://127.0.0.1:2317/Chausey?p=regates;n=chausey;oc=0;templ=tex;w=hg:1045">Régates de Chausey</a>Régates<br>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1922;templ=tex;w=hg:1045">Régates de 1922</a>Régates, 1922<br>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1937;templ=tex;w=hg:1045">Régates de 1937</a>Régates, 1937<br>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1938;templ=tex;w=hg:1045">Régates de 1938</a>Régates, 1938<br>
-<x ImmediateOn>
+<a href="http://127.0.0.1:2317/Chausey?p=regates;n=chausey;oc=0;templ=tex;w=hg:1045">Régates de Chausey\index{Régates}</a><br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1922;templ=tex;w=hg:1045">Régates de 1922\index{Régates, 1922}</a><br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1937;templ=tex;w=hg:1045">Régates de 1937\index{Régates, 1937}</a><br>
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1938;templ=tex;w=hg:1045">Régates de 1938\index{Régates, 1938}</a><br>
 \newpage
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979</a>Régates, 1979<br>
-<x ImmediateOff>
-
+<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979\index{Régates, 1979}</a><br>
 
 \clearpage
 

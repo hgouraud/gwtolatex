@@ -23,7 +23,7 @@
 
 %( hgname performs \bf or \highlight %)
 %define;hgfull_name(snxx, fnxx, ocxx)
-  <hgname snxx fnxx%if;(ocxx != "0") (ocxx)%end;>
+  <hgname snxx fnxx%if;(ocxx != "0") (ocxx)%end;></hgname>
 %end;
 
 \hghead{
