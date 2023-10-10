@@ -158,8 +158,8 @@ let _find_matching_tag name body =
   match_tag 0 body
 
 (* read children, ignore tag *)
-let dummy_tags_0 = [ "body"; "html"; "div" ]
-let dummy_tags_1 = [ "!--"; "bdo"; "samp"; "span"; "table"; "tbody" ]
+let dummy_tags_0 = [ "body"; "html"; "div"; "table" ]
+let dummy_tags_1 = [ "!--"; "bdo"; "samp"; "span"; "tbody" ]
 
 (* ignore tag *)
 let dummy_tags_2 =
@@ -683,10 +683,11 @@ let rec process_tree_cumul och cumul tree =
               if String.length content > 3 then String.sub content 0 3 = "tex"
               else false
             in
-            let content = if contains content "pageref" then "" else content in
             if !level = 4 then Printf.eprintf "Content (span): %s\n" content;
             if display_none then
               if String.length content > 3 && (tex_mode_1 || tex_mode_2) then (
+                let content = replace '[' '{' content in
+                let content = replace ']' '}' content in
                 if !level > 1 then Printf.eprintf "TeX content: %s\n" content;
                 let content =
                   if tex_mode_2 then
