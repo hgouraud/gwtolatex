@@ -15,7 +15,7 @@ type _image = {
 }
 
 (* execution context *)
-let base = ref ""
+let base = ref "chausey"
 let family = ref ""
 let out_file = ref ""
 let debug = ref false
@@ -23,9 +23,18 @@ let index = ref 0
 let verbose = ref false
 
 (* TODO manage Livres and bases references. ? env variables? *)
-let livres = ref "/Users/Henri/Genea/Livres"
-let base = ref ""
-let bases = ref "/Users/Henri/Genea/GeneWeb-Bases"
+let livres =
+  ref
+    (try Sys.getenv "GWTL_LIVRES"
+     with Not_found -> "/Users/Henri/Genea/Livres")
+
+(*
+let bases =
+  ref
+    (try Sys.getenv "GWTL_BASES"
+     with Not_found ->"/Users/Henri/Genea/GeneWeb-Bases")
+*)
+let bases = ref "."
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
@@ -33,10 +42,6 @@ let level = ref 1
 let version = "1.0"
 
 (* current values *)
-let chapter = ref 0
-let section = ref 0
-let subsection = ref 0
-let subsubsection = ref 0
 let current_level = ref 0
 let nbr = ref 0
 let images_in_page = ref []
@@ -45,19 +50,19 @@ let section = ref 0
 let subsection = ref 0
 let subsubsection = ref 0
 let image_nbr = ref 0
-let images_in_page = ref []
+let _images_in_page = ref []
 let collect_images = ref false
 let wide = ref false
 let section_on_a_tag = ref false
-let highlights = ref []
-let width = ref 7
+let _highlights = ref []
+let _width = ref 7
 let ch_nb_in_fig_nb = ref true
 let immediate = ref false
 let sub = ref false
-let trees = ref false
+let _trees = ref false
 let ep = ref false
 let arbres = ref false
-let sideways = ref false
+let _sideways = ref false
 
 let open_base basename =
   match basename with
@@ -65,14 +70,15 @@ let open_base basename =
       Printf.eprintf "No basename supplied\n";
       exit 1
   | bfile -> (
-      let base = try Some (Gwdb.open_base (bfile ^ ".gwb")) with _ -> None in
+      let bfile = bfile ^ ".gwb" in
+      let base = try Some (Gwdb.open_base bfile) with _ -> None in
       match base with
       | None ->
           Printf.eprintf "Cannot open base %s\n" bfile;
           exit 1
       | Some base -> base)
 
-let my_base = ref (open_base "./chausey")
+let my_base = ref (open_base (Filename.concat !bases !base))
 
 let _strip_nl s =
   let b = Buffer.create 10 in
@@ -200,15 +206,15 @@ let rec dump children l =
     (fun elt ->
       match elt with
       | Text t -> Printf.eprintf "%sTxt: %s\n" (tab l) t
-      | Element (n, a, c) ->
+      | Element (n, _a, c) ->
           Printf.eprintf "%sElt: %s\n" (tab l) n;
           dump c (l + 1))
     children;
   Printf.eprintf "End children:\n"
 
-let dump_tag tag name attributes children =
+let _dump_tag _tag name attributes children =
   Printf.eprintf "..<begin %s\n>" name;
-  List.iter (fun ((a, b), c) -> Printf.eprintf "  attr: %s=%s\n" b c) attributes;
+  List.iter (fun ((_a, b), c) -> Printf.eprintf "  attr: %s=%s\n" b c) attributes;
   dump children 0;
   Printf.eprintf "..<end %s>" name
 
@@ -308,7 +314,8 @@ let split_href href =
         (List.nth tmp 0, if List.length tmp > 1 then List.nth tmp 1 else ""))
       evars
   in
-  let evars = (* & have been escaped !! *)
+  let evars =
+    (* & have been escaped !! *)
     List.map
       (fun (k, v) ->
         ( k,
@@ -463,7 +470,7 @@ let one_page och line = output_string och line
 (* process_tree_cumul accumulates results in a string *)
 
 let rec process_tree_cumul och cumul tree =
-  let tag_a cumul name attributes children =
+  let tag_a cumul _name attributes children =
     (* if p <> "" or n <> "" we have a person *)
     (* it may appear undes a different spelling as part of <a>xxx</a> *)
     (* or we may have a portrait k <> "" *)
@@ -477,12 +484,12 @@ let rec process_tree_cumul och cumul tree =
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
     let href = decode href |> escape in
-    let b, m, p, n, oc, i, k, s, v = split_href href in
+    let b, _m, p, n, oc, i, k, _s, _v = split_href href in
     if !level > 1 then (
       Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
       dump children 0);
     let content =
-      List.fold_left (fun acc c -> process_tree_cumul och cumul c) "" children
+      List.fold_left (fun acc c -> acc ^ (process_tree_cumul och cumul c)) "" children
     in
     let ip =
       match
@@ -514,12 +521,12 @@ let rec process_tree_cumul och cumul tree =
     str
   in
 
-  let tag_img cumul name attributes children =
+  let tag_img _cumul _name attributes _children =
     if !level > 1 then Printf.eprintf "Tag img (cumul)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
     let href = decode href |> escape in
-    let b, m, p, n, oc, i, k, s, v = split_href href in
+    let _b, _m, p, n, oc, i, k, s, _v = split_href href in
     let ip =
       match
         Gwdb.person_of_key !my_base p n
@@ -694,8 +701,7 @@ let rec process_tree_cumul och cumul tree =
                   ^ String.sub content (i + 1) (String.length content - i - 1)
                 else content)
               else content
-            else if highlight_mode then
-              Format.sprintf "{\\bf %s}" content
+            else if highlight_mode then Format.sprintf "{\\bf %s}" content
             else content
           in
           cumul ^ str
@@ -883,8 +889,13 @@ let main () =
   if error > 0 then (
     Printf.eprintf "Error while loading tex templates files (%d)\n" error;
     exit 0);
+  let cmmd = Format.sprintf "cp -R ./%s.gwb ./%s-tmp.gwb" !family !family in
+  let error = Sys.command cmmd in
+  if error > 0 then
+    Printf.eprintf "Error while copying base folder (%d)\n" error;
   let fname_txt, family_out =
-    ( Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb,
+    ( (if !family <> "" then !family ^ ".txt"
+      else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
       if !family <> "" then !family
       else Printf.sprintf "gwtolatex-test%d" !test_nb )
   in

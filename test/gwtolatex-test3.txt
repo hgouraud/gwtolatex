@@ -6,7 +6,7 @@
 \tracingoutput=1
 \makeindex
 
-\input{Generic-inputs/MyEnvironment.tex}
+\input{./Gw2LaTeX-env.tex}
 
 \title{Un aperçu de la généalogie chausiaise}
 \author{Henri Gouraud \\

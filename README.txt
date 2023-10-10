@@ -11,4 +11,16 @@ In its current form, GwToLaTeX must run in the folder containing the target base
 
 Additionnal details will be provided as I progress.
 
-In its current implementation, GwToLaTeX cannot yet produce a pdf file!
+Instass and test
+
+- clone the gwtolatex repo
+- dune build
+- copy your base in the gwtolatex folder (interim solution)
+- dune exec -- gwtolatex -test n to try gwttolatex-testn.ext
+  where ext is txt or html
+  
+Both test files make reference to my base for extraction of surnames/first_names.
+Edit the test files according to your taste.
+
+Report problems through the issue tracker,
+or by mail to me (henri.gouraud@laposte.net).
