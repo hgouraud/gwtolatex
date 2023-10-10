@@ -23,7 +23,7 @@
 
 %( hgname performs \bf or \highlight %)
 %define;hgfull_name(snxx, fnxx, ocxx)
-  <hgname snxx fnxx%if;(ocxx != "0") (ocxx)%end;></hgname>
+  <span mode="highlight">snxx fnxx%if;(ocxx != "0") (ocxx)%end;</span>
 %end;
 
 \hghead{
@@ -95,36 +95,36 @@
     {\it%nn;
     %foreach;xx.nobility_title;, %nobility_title;%end;
     }%nn;
-  %end;
+  %end;%nn;
   %if;(xx.has_birth_date or xx.has_birth_place)
     , %if;xx.is_male;[born]0%elseif;xx.is_female;[born]1%else;[born]2%end;
     %if;xx.has_birth_date; %xx.on_birth_date;%end;
     %if;xx.has_birth_place;, à %xx.birth_place;%end;
-  %end;
+  %end;%nn;
   %if;(xx.has_baptism_date or xx.has_baptism_place)
     , %if;xx.is_male;[baptized]0%elseif;xx.is_female;[baptized]1%nn;
     %else;[baptized]2%end;
     %if;xx.has_baptism_date; %xx.on_baptism_date;%end;
     %if;xx.has_baptism_place;, à %xx.baptism_place;%end;
-  %end;
+  %end;%nn;
   %if;xx.is_dead;, %xx.died;
     %if;(xx.has_death_date) %xx.on_death_date;%end;
     %if;(xx.has_death_place), à %xx.death_place;%end;
-  %end;
+  %end;%nn;
   %if;xx.is_buried;,
     %if;xx.is_male;[buried]0%else;[buried]1%end;
     %if;xx.has_burial_date; %xx.on_burial_date;%end;
     %if;xx.has_burial_place;, à %xx.burial_place;%end;%nl;
-  %end;
+  %end;%nn;
   %if;xx.is_cremated;,
     %if;xx.is_male;[cremated]0%else;[cremated]1%end;
     %if;xx.has_cremation_date; %xx.on_cremation_date;%end;
     %if;xx.has_cremation_place;, à %xx.cremation_place;%end;%nl;
-  %end;
+  %end;%nn;
   %if;xx.computable_death_age;%sp;
     ([age at death:] %xx.death_age;)%nn;
-  %end;
-  %if;xx.has_occupation;, %xx.occupation;%end;
+  %end;%nn;
+  %if;xx.has_occupation;, %xx.occupation;%end;%nn;
   %if;(evar.rel = "on" and xx.has_relations)
     %foreach;xx.relation;%nl;
       (%relation_type;:
@@ -134,7 +134,7 @@
     %foreach;xx.related;%nl;
       (%related_type;: %apply;link(related.var))%nn;
     %end;
-  %end;
+  %end;%nn;
 %end;
 
 %define;married_to(date_place)
@@ -161,18 +161,16 @@
 %define;descendants_by_list(xx, yy, curlev, maxlev, famlev)
   %if;(curlev = 0) %nl;%end;
   %apply;hgfull_name(xx.surname, xx.first_name, xx.occ)%apply;hgindex("0", xx.surname, xx.first_name, xx.occ)%nn;
-  %apply;somebody_long_info("xx").
+  %apply;somebody_long_info("xx").\\
   %incr_count;
-  %apply;lazy_print%with;%nl;%end;
   %foreach;xx.family;
-    \leavevmode \\ %nl;
     %if;(family_cnt != 1 and curlev = 0)%nl;%end;
     %lazy_force;
     %apply;capitalize%with;
-      - %apply;married_to%with;
+    - %apply;married_to%with;
         %if;(on_marriage_date != "") %on_marriage_date;%end;
         %if;(marriage_place != ""), à %marriage_place;,%end;
-      %end;
+      %end;%nn;
     %end;%nl;
     {\bf %spouse.surname; %spouse.first_name; %if(spouse.occ!=0)(%spouse.occ;)%end;}%nn;
     %apply;hgindex("0", spouse.surname, spouse.first_name, spouse.occ)
@@ -200,8 +198,7 @@
         %elseif;(family.desc_level > famlev)
           {\it , [see above]}.
           %apply;lazy_print%with;\\ %nl;%end;
-        %elseif;has_children;, {\it dont}
-            %if;(curlev = 0)\vspace{-0.0cm}%end;
+        %elseif;has_children;, {\it dont}%nn;
             %family.set_infinite_desc_level;
             \begin{hgitemize}
             %foreach;child;

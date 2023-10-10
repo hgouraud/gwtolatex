@@ -308,7 +308,7 @@ let split_href href =
         (List.nth tmp 0, if List.length tmp > 1 then List.nth tmp 1 else ""))
       evars
   in
-  let evars =
+  let evars = (* & have been escaped !! *)
     List.map
       (fun (k, v) ->
         ( k,
@@ -644,6 +644,8 @@ let rec process_tree_cumul och cumul tree =
       | "span" ->
           (* look for potential TeX code *)
           (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
+          (* or \highlight *)
+          (* <span mode="highlight">sn fn%if;(oc != "0") (oc)%end;</span> *)
           (* children is a single string of TeX *)
           (* % might not be there (old format) *)
           if !level = 4 then Printf.eprintf "Span %d\n" (List.length attributes);
@@ -654,6 +656,11 @@ let rec process_tree_cumul och cumul tree =
           let display_none =
             List.exists
               (fun ((_, k), v) -> k = "style" && contains v "display:none")
+              attributes
+          in
+          let highlight_mode =
+            List.exists
+              (fun ((_, k), v) -> k = "mode" && contains v "highlight")
               attributes
           in
           let tex_mode_1 =
@@ -687,6 +694,8 @@ let rec process_tree_cumul och cumul tree =
                   ^ String.sub content (i + 1) (String.length content - i - 1)
                 else content)
               else content
+            else if highlight_mode then
+              Format.sprintf "{\\bf %s}" content
             else content
           in
           cumul ^ str
@@ -725,7 +734,6 @@ let bad_code c = c >= 400
 (*       i     j       *)
 let one_command och line =
   let line = String.sub line 0 (String.length line - 1) in
-  Printf.eprintf "Line: (%s)\n" line;
   let i =
     try String.index_from line 3 ' ' with Not_found -> String.length line - 1
   in
@@ -733,19 +741,16 @@ let one_command och line =
     try String.index_from line 0 '>' with Not_found -> String.length line - 1
   in
   let cmd = if i > 0 then String.sub line 3 (i - 3) else "" in
-  Printf.eprintf "Cmd: (%s) %d %d %d\n" cmd i j (String.length line);
   let param =
     if i > 0 && i < String.length line - 1 && j > 0 && j < String.length line
     then String.sub line (i + 1) (j - i - 1)
     else ""
   in
-  Printf.eprintf "Param: (%s)\n" param;
   let remain =
     if j > 0 && j < String.length line - 1 then
       String.sub line (j + 1) (String.length line - j - 1)
     else ""
   in
-  Printf.eprintf "Remain: (%s)\n" remain;
   let out c param =
     output_string och (Format.sprintf "\\%s{%s}%s\n" c param remain)
   in
@@ -871,8 +876,9 @@ let main () =
   let speclist = Arg.align speclist in
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
-  let tex_dir = Filename.concat !bases "etc" in
-  let cmmd = Format.sprintf "cp -R ./tex %s%stex" tex_dir Filename.dir_sep in
+  (* install tex templates in bases/etc *)
+  let etc_dir = Filename.concat !bases "etc" in
+  let cmmd = Format.sprintf "cp -R ./tex %s" etc_dir in
   let error = Sys.command cmmd in
   if error > 0 then (
     Printf.eprintf "Error while loading tex templates files (%d)\n" error;
