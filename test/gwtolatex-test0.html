@@ -16,7 +16,7 @@ fin du head
 <meta name="format-detection" content="telephone=no" />
 
 
-<hgname Bahurel François>
+<hgname Bahurel François></hgname>
 \index{Bahurel, François}
 , né <a href="Chausey_gfbtcvjhm?templ=tex&m=CAL&yg=1778&mg=2&dg=8&tg=1" class="date">le&nbsp;8&nbsp;février&nbsp;1778</a>, à Saint-Jean-la-Poterie (Morbihan), mort <a href="Chausey_gfbtcvjhm?templ=tex&m=CAL&yg=1836&mg=11&dg=1&tg=1" class="date">le&nbsp;1ᵉʳ&nbsp;novembre&nbsp;1836</a>, à Redon (Ille-et-Vilaine) (à l’âge de 58 ans).
 \leavevmode \\ 
@@ -34,7 +34,6 @@ marié <a href="Chausey_gfbtcvjhm?templ=tex&m=CAL&yg=1810&mg=2&dg=28&tg=1" class
 , morte <a href="Chausey_gfbtcvjhm?templ=tex&m=CAL&yg=1850&mg=2&dg=12&tg=1" class="date">le&nbsp;12&nbsp;février&nbsp;1850</a>, {\it dont}
 \vspace{-0.0cm}
 
-</hgname>
 
 tag a enpty href
 <a href="#content" class="sr-only sr-only-focusable">
@@ -84,12 +83,48 @@ Type: Image_s, name: Cécile.0.Le Guillerm, (0, 0, 0, 0), nb: 4
 aaa bbb ccc \textit{iii} ddd
 <span>aaa <span>bbb</span> ccc <i>iii</i> ddd</span>
 
-
 <div class="container">
   aaa
   bbb
 </div>
+
+\begin{tabular}
+aaa & bbb & ccc\\
+eee & fff & ggg\\
+hhh & \multicolumn{2}{}{iii}\\
+\end{tabular}
+
+<table>
+<tr>
+<td>aaa</td><td>bbb</td><td>ccc</td>
+</tr>
+<tr>
+<td>eee</td><td>fff</td><td>ggg</td>
+</tr>
+<tr>
+<td>hhh</td><td colspan="2">iii</td>
+</tr>
+</table>
+
+
+
+<table>
+<tr>
+<td>
+aaa
+\par
+bbb
+</td>
+<td>
+ccc
+\par
+ddd
+</td>
+<tr>
+</table>
+
+end of test0
 </body>
 </html>
-ccc
+zzz
 

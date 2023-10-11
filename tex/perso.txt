@@ -71,10 +71,10 @@
     {\it {\bf %alias;}}%apply;hgindex(alias, surname, first_name, occ)\\%nl;
   %end;
   %if;has_nobility_titles;
-    {\it 
+    {\it
     %foreach;nobility_title;
-      %if;not is_first;, %end;
-      %nobility_title;
+      %if;not is_first;,%end;
+      %sp;%nobility_title;
     %end;
     }%nl;
   %end;
