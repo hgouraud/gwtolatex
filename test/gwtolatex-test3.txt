@@ -32,7 +32,7 @@ Henri.Gouraud@LaPoste.net \\
 <x Ep Off>
 <x Chapter Listes de descendants>
 <x Section Famille Antoine>
-\index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
+\index{Antoine (Famille) voir Famille Fortin (Chocolat)}
 voir Famille Fortin (Chocolat)
 
 <y works only in descendant trees>
@@ -68,7 +68,7 @@ voir Famille Fortin (Chocolat)
 <split="23 24 32 28 RthenL">
 <title="Arbre descendant d'Albert Marie (Toumagi)">
 <index="Marie, Albert (Toumagi)">
-<a href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045;cgl=on">
+<y href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045;cgl=on">
 <end>
 <x Arbres Off>
 

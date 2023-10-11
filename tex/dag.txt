@@ -10,11 +10,12 @@
 \begin{tabular}{%lll;}
 %foreach;dag_line;
   %foreach;dag_cell;
-    %if;(not is_first) & %end;
-    %if;(dag_cell.colspan > 1)\multicolumn{%dag_cell.colspan;}{
-      %if;dag_cell.is_hr_left;l
-      %elseif;dag_cell.is_hr_right;r
-      %else;c
+    %if;(not is_first) &
+    %end;
+    %if;(dag_cell.colspan > 1)\multicolumn{%dag_cell.colspan;}{%nn;
+      %if;dag_cell.is_hr_left;l%nn;
+      %elseif;dag_cell.is_hr_right;r%nn;
+      %else;c%nn;
       %end;}{%end;
     %if;dag_cell.is_nothing; 
     %elseif;dag_cell.is_bar;|
