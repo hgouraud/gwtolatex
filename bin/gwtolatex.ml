@@ -30,13 +30,10 @@ let livres =
     (try Sys.getenv "GWTL_LIVRES"
      with Not_found -> "/Users/Henri/Genea/Livres")
 
-(*
 let bases =
   ref
     (try Sys.getenv "GWTL_BASES"
      with Not_found ->"/Users/Henri/Genea/GeneWeb-Bases")
-*)
-let bases = ref "."
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
@@ -81,7 +78,8 @@ let open_base basename =
           exit 1
       | Some base -> base)
 
-let my_base = ref (open_base (Filename.concat !bases !base))
+(* TODO find a way to open base remotely *)
+let my_base = ref (open_base (Filename.concat "." !base))
 
 let _strip_nl s =
   let b = Buffer.create 10 in
@@ -506,6 +504,8 @@ let decode s =
    <end>
 *)
 
+let skip_m_cmd = [ "MOD_NOTES" ]
+
 let one_page och line = output_string och line
 
 (* process_tree_cumul accumulates results in a string *)
@@ -525,62 +525,64 @@ let rec process_tree_cumul och cumul tree (row, col) =
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
     let href = decode href |> escape in
-    let b, _m, p, n, oc, i, k, s, _v = split_href href in
+    let b, m, p, n, oc, i, k, s, _v = split_href href in
     if !level = 1 then (
       Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
       dump children 0);
-    let content =
-      List.fold_left
-        (fun acc c -> acc ^ process_tree_cumul och cumul c (row, col))
-        "" children
-    in
-    let ip =
-      match
-        Gwdb.person_of_key !my_base p n
-          (try int_of_string oc with Failure _ -> 0)
-      with
-      | Some ip -> ip
-      | None -> ( try Gwdb.iper_of_string i with Failure _ -> Gwdb.dummy_iper)
-    in
-    let str =
-      let person = Gwdb.poi !my_base ip in
-      let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
-      let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
-      let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-      let ocn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
-      (* TODO verify uppercase! (le Fort), (Le Fort) *)
-      let check = Printf.sprintf "%s %s%s" fn sn ocn in
-      if !level = 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
-      if (fn <> "" || sn <> "") && k = "" then
-        Format.sprintf "{\\bf %s}" content
-        ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
-        ^
-        if check <> content then
-          Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
-        else ""
-      else if b <> !family then Format.sprintf "%s\\footnote{%s}" content href
-      else if s <> "" then (
-        incr image_nbr;
-        let image =
-          ( Images,
-            s,
-            (!chapter, !section, !subsection, !subsubsection),
-            !image_nbr )
-        in
-        if !collect_images then images_in_page := image :: !images_in_page;
-        let str =
-          match !image_label with
-          | 4 ->
-              Format.sprintf "%s\\textsuperscript{%d.%d.%d.%d}" content !chapter
-                !section !subsection !image_nbr
-          | _ ->
-              Format.sprintf "%s\\textsuperscript{%d.%d.%d}" content !chapter
-                !section !image_nbr
-        in
-        str)
-      else content
-    in
-    str
+    if List.mem m skip_m_cmd then cumul
+    else (
+      let content =
+        List.fold_left
+          (fun acc c -> acc ^ process_tree_cumul och cumul c (row, col))
+          "" children
+      in
+      let ip =
+        match
+          Gwdb.person_of_key !my_base p n
+            (try int_of_string oc with Failure _ -> 0)
+        with
+        | Some ip -> ip
+        | None -> ( try Gwdb.iper_of_string i with Failure _ -> Gwdb.dummy_iper)
+      in
+      let str =
+        let person = Gwdb.poi !my_base ip in
+        let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
+        let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
+        let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
+        let ocn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
+        (* TODO verify uppercase! (le Fort), (Le Fort) *)
+        let check = Printf.sprintf "%s %s%s" fn sn ocn in
+        if !level = 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
+        if (fn <> "" || sn <> "") && k = "" then
+          Format.sprintf "{\\bf %s}" content
+          ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
+          ^
+          if check <> content then
+            Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
+          else ""
+        else if b <> !family then Format.sprintf "%s\\footnote{%s}" content href
+        else if s <> "" then (
+          incr image_nbr;
+          let image =
+            ( Images,
+              s,
+              (!chapter, !section, !subsection, !subsubsection),
+              !image_nbr )
+          in
+          if !collect_images then images_in_page := image :: !images_in_page;
+          let str =
+            match !image_label with
+            | 4 ->
+                Format.sprintf "%s\\textsuperscript{%d.%d.%d.%d}" content !chapter
+                  !section !subsection !image_nbr
+            | _ ->
+                Format.sprintf "%s\\textsuperscript{%d.%d.%d}" content !chapter
+                  !section !image_nbr
+          in
+          str)
+        else content
+      in
+      str)
   in
 
   let tag_img _cumul _name attributes _children =
