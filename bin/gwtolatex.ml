@@ -281,7 +281,7 @@ let rec dump children l =
 let dump_tag elt =
   match elt with
   | Element (name, attributes, children) ->
-      Printf.eprintf "<begin %s>/n" name;
+      Printf.eprintf "<begin %s>\n" name;
       List.iter
         (fun ((_a, b), c) -> Printf.eprintf "  attr: %s=%s\n" b c)
         attributes;
@@ -665,7 +665,32 @@ let rec process_tree_cumul och cumul tree (row, col) =
     cumul children
   in
 
-  let print_tree _new_tree = "new tree" in
+  let print_tree new_tree =
+    let tree, _n =
+      (List.fold_left (fun (acc1, r) row ->
+        let str =
+          List.fold_left (fun acc2 (_, s, ty, te, it) ->
+            let cell =
+              (match ty with
+              | "Te" -> "Te: " ^ te
+              | "It" -> "It: " ^ it
+              | "Hl" -> "Hr: " ^ "-l"
+              | "Hr" -> "Hr: " ^ "r-"
+              | "Hc" -> "Hr: " ^ "--"
+              | "Hv" -> "Vr: " ^ "|"
+              | "E" ->  "E: " ^ ""
+              | "Im" -> "Im: " ^ "Image"
+              | _ -> "x" ) ^ (if s > 1 then (Format.sprintf "(%d)" s) else "")
+            in
+              acc2 ^ "[" ^ cell ^ "] "
+          ) "" row
+        in
+        (acc1 ^ ((Format.sprintf "Row %d: (%d) %s"
+            r (List.length row) str), r + 1)
+      ) ("", 1) new_tree)
+    in
+    Format.sprintf "Interim print\\\\\n %s\n" tree
+  in
 
   if !level = 2 then Printf.eprintf "Process tree cumul\n";
   match tree with
@@ -861,59 +886,70 @@ let rec process_tree_cumul och cumul tree (row, col) =
                 cols content
           else cumul ^ content
       (* Trees ********************************* *)
-      | "begintable" ->
-          if !level = 7 then Printf.eprintf "Trees:\n";
+      | "bigtree" ->
+          if !level = 8 then (
+            Printf.eprintf "Trees:\n";
+            dump_tag elt);
           new_tree := [ [] ];
           new_row := [];
-          continue cumul children
-      | "endtable" ->
-          if !level = 7 then Printf.eprintf "End trees:\n";
+          let _ = continue "" children in
           if !new_row <> [] then new_tree := List.rev !new_row :: !new_tree;
-          continue (cumul ^ print_tree (List.rev !new_tree)) children
+          if !level = 8 then (
+            let wid, len =
+              List.fold_left (fun (w0, l) row ->
+                let w1 =
+                  List.fold_left (fun w (_, s, _, _, _) -> (w + s)) 0 row
+                in
+                if l <> 0 then assert (w1 = w0); (w1, l + 1)) (0, 0) !new_tree
+            in
+            Printf.eprintf "End big tree: wid=%d x len=%d\n" wid len);
+          cumul ^ (print_tree (List.rev !new_tree))
       | "cell" ->
+          if !level = 9 then
+            Printf.eprintf "Cell: (%d) %s %s %s\n" !c_span !c_typ !c_txt !c_item;
           if !c_typ <> "" then
-            new_row := (c_width, c_span, c_typ, c_txt, c_item) :: !new_row;
+            new_row := (!c_width, !c_span, !c_typ, !c_txt, !c_item) :: !new_row;
           c_width := 0;
           let span = get_attr attributes "colspan" in
           (c_span := try int_of_string span with Failure _ -> 1);
           c_typ := "";
           c_txt := "";
           c_item := "";
-          continue cumul children
+          continue "" children
       | "celltext" ->
           c_typ := "Te"; (* TODO escape & *)
           c_txt := escape (get_child children);
-          if !level = 8 then Printf.eprintf "Cell txt: %s\n" !c_txt;
-          continue cumul children
+          if !level = 9 then Printf.eprintf "Cell txt: %s\n" !c_txt;
+          continue "" children
       | "cellitem" ->
           c_typ := "It";
           c_item := escape (get_child children);
-          if !level = 8 then Printf.eprintf "Cell item: %s\n" !c_item;
-          continue cumul children
+          if !level = 9 then Printf.eprintf "Cell item: %s\n" !c_item;
+          continue "" children
       | "rule-left" ->
           c_typ := "Hl";
-          continue cumul children
+          continue "" children
       | "rule-right" ->
           c_typ := "Hr";
-          continue cumul children
+          continue "" children
       | "rule-fullcell" ->
           c_typ := "Hc";
-          continue cumul children
+          continue "" children
       | "vbar" ->
           c_typ := "Hv";
-          continue cumul children
+          continue "" children
       | "emptycell" ->
           c_typ := "E";
-          continue cumul children
+          continue "" children
       | "newline" ->
           new_tree := List.rev !new_row :: !new_tree;
           new_row := [];
-          continue cumul children
+          continue "" children
       | "image" ->
           let img = get_child children in
           c_typ := "Im";
           c_txt := !c_txt ^ img;
-          continue cumul children
+          continue "" children
       (* end trees ***************************** *)
       | name when List.mem name dummy_tags_0 ->
           continue cumul children
