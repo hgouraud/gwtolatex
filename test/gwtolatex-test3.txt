@@ -68,7 +68,7 @@ voir Famille Fortin (Chocolat)
 <split="23 24 32 28 RthenL">
 <title="Arbre descendant d'Albert Marie (Toumagi)">
 <index="Marie, Albert (Toumagi)">
-<y href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045;cgl=on">
+<y href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045;cgl=on">Arbre descendant d'Albert Marie (Toumagi)</a>
 <end>
 <x Arbres Off>
 
@@ -93,8 +93,10 @@ voir Famille Fortin (Chocolat)
 <a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1937;templ=tex;w=hg:1045">Régates de 1937\index{Régates, 1937}</a><br>
 <a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1938;templ=tex;w=hg:1045">Régates de 1938\index{Régates, 1938}</a><br>
 \newpage
+<x Width \textwidth>
+<x CollectImages off>
 <a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979\index{Régates, 1979}</a><br>
-
+<x Width 5.1cm>
 \clearpage
 
 \printindex
@@ -104,7 +106,8 @@ voir Famille Fortin (Chocolat)
 <y Run GwToLaTeX du : \date \time>
 \par
 GeneWeb commit : \input{./gw_version.txt}
-GwToLaTeX commit : \input{./version.txt}
+\par
+GwTo\LaTeX{} commit : \input{./version.txt}
 \par
 \par
 <y \hgbaseversion{}

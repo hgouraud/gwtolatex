@@ -4,32 +4,25 @@
 <!-- $Id: /etc/Tex/dag.txt,v TeX.1 2014-09-05 13:15:19 hg Exp $ -->
 <!-- Copyright (c) 1998-2007 INRIA -->
 
-%let;nc;%dag.ncol;%in;
-%let;lll;%for;i;0;nc;l%end;%in;
-
-\begin{tabular}{%lll;}
+<body>
+<begintable>
 %foreach;dag_line;
   %foreach;dag_cell;
-    %if;(not is_first) &
-    %end;
-    %if;(dag_cell.colspan > 1)\multicolumn{%dag_cell.colspan;}{%nn;
-      %if;dag_cell.is_hr_left;l%nn;
-      %elseif;dag_cell.is_hr_right;r%nn;
-      %else;c%nn;
-      %end;}{%end;
-    %if;dag_cell.is_nothing; 
-    %elseif;dag_cell.is_bar;|
-    %elseif;(dag_cell.item != "")%dag_cell.item;
-    %elseif;(dag_cell.text != "")%dag_cell.text;
+    <cell align="%dag_cell.align;" colspan="%dag_cell.colspan;">
+    %if;dag_cell.is_nothing;<emptycell>
+    %elseif;dag_cell.is_bar;<vbar>
+    %elseif;(dag_cell.item != "")<cellitem>%dag_cell.item;</cellitem>
+    %elseif;(dag_cell.text != "")<celltext>%dag_cell.text;</celltext>
     %else;
-      %if;dag_cell.is_hr_left;\rule{\linewidth/2}{0.4pt}
-      %elseif;dag_cell.is_hr_right;\rule{\linewidth}{0.4pt}
-      %else;\rule{\linewidth}{0.4pt}
+      %if;dag_cell.is_hr_left;<rule-left>
+      %elseif;dag_cell.is_hr_right;<rule-right>
+      %else;<rule-fullcell>
       %end;
     %end;
-    %if;(dag_cell.colspan > 1)}%end;
-  %end; \\
+    </cell>
+  %end;
+  <newline>
 %end;
-\end{tabular}
+<endtable>
 </body>
 </html>
