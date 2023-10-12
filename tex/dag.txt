@@ -9,19 +9,19 @@
 %foreach;dag_line;
   %foreach;dag_cell;
     <cell align="%dag_cell.align;" colspan="%dag_cell.colspan;">
-    %if;dag_cell.is_nothing;<emptycell></emptycell>
-    %elseif;dag_cell.is_bar;<vbar></vbar>
+    %if;dag_cell.is_nothing;<emptycell/>
+    %elseif;dag_cell.is_bar;<vbar/>
     %elseif;(dag_cell.item != "")<cellitem>%dag_cell.item;</cellitem>
     %elseif;(dag_cell.text != "")<celltext>%dag_cell.text;</celltext>
     %else;
-      %if;dag_cell.is_hr_left;<rule-left></rule-left>
-      %elseif;dag_cell.is_hr_right;<rule-right></rule-right>
-      %else;<rule-fullcell></rule-fullcell>
+      %if;dag_cell.is_hr_left;<rule-left/>
+      %elseif;dag_cell.is_hr_right;<rule-right/>
+      %else;<rule-fullcell/>
       %end;
     %end;
     </cell>
   %end;
-  <newline></newline>
+  <newline/>
 %end;
 </bigtree>
 </body>
