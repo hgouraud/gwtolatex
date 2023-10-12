@@ -615,6 +615,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
     if !level = 1 then Printf.eprintf "Tag img (cumul)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
+    if !level = 11 then
+      Printf.eprintf "Href: %s\n" href;
     let href = decode href |> escape in
     let _b, _m, p, n, oc, i, k, s, _v = split_href href in
     let ip =
@@ -623,8 +625,12 @@ let rec process_tree_cumul och cumul tree (row, col) =
           (try int_of_string oc with Failure _ -> 0)
       with
       | Some ip -> ip
-      | None -> if i = "" then Gwdb.dummy_iper else Gwdb.iper_of_string i
+      | None -> if i = "" then (
+        Printf.eprintf "Dummy ip!!\n";
+        Gwdb.dummy_iper) else Gwdb.iper_of_string i
     in
+    if !level = 11 then
+      Printf.eprintf "Ip: %s\n" (Gwdb.string_of_iper ip);
     let str =
       let person = Gwdb.poi !my_base ip in
       let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
@@ -637,6 +643,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
           (!chapter, !section, !subsection, !subsubsection),
           !image_nbr )
       in
+      if !level = 11 then
+        Printf.eprintf "Img: %s or %s \n" image_label s;
       incr image_nbr;
       if !collect_images then images_in_page := image :: !images_in_page;
       print_image image
