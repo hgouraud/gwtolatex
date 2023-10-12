@@ -16,7 +16,7 @@
     %else;
       %if;dag_cell.is_hr_left;<rule-left></rule-left>
       %elseif;dag_cell.is_hr_right;<rule-right></rule-right>
-      %else;<rule-fullcell><full-cell>
+      %else;<rule-fullcell></rule-fullcell>
       %end;
     %end;
     </cell>

@@ -120,7 +120,7 @@ let _strip_nl s =
     s;
   Buffer.contents b
 
-let _strip_all_trailing_spaces s =
+let strip_all_trailing_spaces s =
   let b = Buffer.create (String.length s) in
   let len =
     let rec loop i =
@@ -223,38 +223,6 @@ let _find_matching_tag name body =
   in
   match_tag 0 body
 
-(* ignore tag but read children *)
-let dummy_tags_0 = [ "body"; "html" ]
-
-(* ignore tag, skip to end *)
-let dummy_tags_1 = [ "!--"; "bdo"; "samp"; "table"; ]
-
-let dummy_tags_2 =
-  [
-    "col";
-    "!DOCTYPE";
-    "!doc";
-    "imgsrc";
-    "fontcolor";
-    "input";
-    "link";
-    "meta";
-    "nav";
-    "option";
-  ]
-
-let dummy_tags_3 =
-  [
-    "button";
-    "head";
-    "form";
-    "select";
-    "colgroup";
-    "font";
-    "script";
-    "title";
-    "style";
-  ]
 
 (* scan <a href="...">xxx</a> * to extract xxx *)
 let get_a_content line =
@@ -429,6 +397,39 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       let name = Filename.remove_extension name in
       Format.sprintf "\n\\includegraphics[width=%s]{%s/%s.%s}\n"
         !im_width "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images" name ext
+
+(* ignore tag but read children *)
+let dummy_tags_0 = [ "body"; "html"; "center" ]
+
+(* ignore tag, skip to end *)
+let dummy_tags_1 = [ "!--"; "bdo"; "samp"; "table"; ]
+
+let dummy_tags_2 =
+  [
+    "col";
+    "!DOCTYPE";
+    "!doc";
+    "imgsrc";
+    "fontcolor";
+    "input";
+    "link";
+    "meta";
+    "nav";
+    "option";
+  ]
+
+let dummy_tags_3 =
+  [
+    "button";
+    "head";
+    "form";
+    "select";
+    "colgroup";
+    "font";
+    "script";
+    "title";
+    "style";
+  ]
 
 let simple_tag_1 t str =
   let tags =
@@ -665,6 +666,36 @@ let rec process_tree_cumul och cumul tree (row, col) =
     cumul children
   in
 
+  let suppress_multiple_sp str =
+    let b = Buffer.create 100 in
+    let rec loop cond i =
+      if i = String.length str then Buffer.contents b
+      else if str.[i] <> ' ' then (Buffer.add_char b str.[i]; loop true (i + 1))
+      else if cond then (Buffer.add_char b str.[i]; loop false (i + 1))
+      else loop false (i + 1)
+    in loop true 0;
+  in
+  
+  let clean_double_back_slash str =
+    let s =
+      let rec loop s =
+        let i = try (String.rindex s '\\') with Not_found -> -1 in
+        if i = -1 then s
+        else (
+          if !level = 10 then
+            Printf.eprintf "Str: (%d) (%d) %s [%c|%c|%c]\n" i (String.length s) s s.[i - 1] s.[i] s.[i + 1];
+          if (String.length s) > (i + 2) && s.[i - 1] = '\\' then (
+          if !level = 10 then
+            Printf.eprintf "Sub: (%s) (%s)\n" (String.sub s 0 (i - 2)) (String.sub s (i + 1) (String.length s - i - 2));
+          loop ((String.sub s 0 (i - 2)) ^ (String.sub s (i + 1) (String.length s - i - 2))))
+          else s)
+      in loop str
+    in
+    let s = replace '\n' ' ' s in
+    let s = suppress_multiple_sp s in
+    strip_all_trailing_spaces s
+  in
+
   let print_tree new_tree =
     let tree, _n =
       (List.fold_left (fun (acc1, r) row ->
@@ -672,8 +703,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
           List.fold_left (fun acc2 (_, s, ty, te, it) ->
             let cell =
               (match ty with
-              | "Te" -> "Te: " ^ te
-              | "It" -> "It: " ^ it
+              | "Te" -> "Te: " ^ (clean_double_back_slash te)
+              | "It" -> "It: " ^ (clean_double_back_slash it)
               | "Hl" -> "Hr: " ^ "-l"
               | "Hr" -> "Hr: " ^ "r-"
               | "Hc" -> "Hr: " ^ "--"
@@ -685,8 +716,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
               acc2 ^ "[" ^ cell ^ "] "
           ) "" row
         in
-        (acc1 ^ ((Format.sprintf "Row %d: (%d) %s"
-            r (List.length row) str), r + 1)
+        (acc1 ^ (Format.sprintf "Row %d: (%d) %s\\\\\n" r (List.length row) str), (r + 1))
       ) ("", 1) new_tree)
     in
     Format.sprintf "Interim print\\\\\n %s\n" tree
