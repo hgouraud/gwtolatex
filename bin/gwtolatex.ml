@@ -7,7 +7,7 @@ type my_tree =
   | Text of string
   | Element of string * (name * string) list * my_tree list
 
-type im_type = Portrait | Imagek | Images
+type im_type = Portrait | Imagek | Images | Vignette
 
 type _image = {
   im_type : im_type;
@@ -120,7 +120,9 @@ let _strip_nl s =
     s;
   Buffer.contents b
 
-let strip_all_trailing_spaces s =
+let _strip_all_trailing_spaces s =
+  if !level = 14 then
+    Printf.eprintf "Suppress trailing spaces\n";
   let b = Buffer.create (String.length s) in
   let len =
     let rec loop i =
@@ -332,10 +334,14 @@ let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
 
 let split_href href =
+  if !level = 13 then
+    Printf.eprintf "Href1: %s\n" href;
   let parts = String.split_on_char '?' href in
   let href =
     replace ';' '&' (List.nth parts (if List.length parts = 2 then 1 else 0))
   in
+  if !level = 13 then
+    Printf.eprintf "Href2: %s\n" href;
   let evars = String.split_on_char '&' href in
   let evars =
     List.map
@@ -345,16 +351,18 @@ let split_href href =
       evars
   in
   let evars =
-    (* & have been escaped !! *)
+    (* & have been escaped as \&{} !! *)
     List.map
       (fun (k, v) ->
-        ( k,
-          if String.length v > 0 && v.[String.length v - 1] = '\\' then
+        ((if String.length k > 2 && k.[0] = '{' && k.[1] = '}' then
+            String.sub k 2 (String.length k - 2)
+          else k),
+          (if String.length v > 0 && v.[String.length v - 1] = '\\' then
             String.sub v 0 (String.length v - 1)
-          else v ))
+          else v )))
       evars
   in
-  if !level = 1 then
+  if !level = 12 then
     List.iter (fun (k, v) -> Printf.eprintf "%s=(%s)\n" k v) evars;
   let b =
     try List.assoc "b" evars
@@ -382,7 +390,8 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       (match im_type with
       | Portrait -> "Portrait"
       | Images -> "Images"
-      | Imagek -> "Imagek")
+      | Imagek -> "Imagek"
+      | Vignette -> "Vignette")
       name ch sec ssec sssec nb
   in
   match im_type with
@@ -397,6 +406,13 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       let name = Filename.remove_extension name in
       Format.sprintf "\n\\includegraphics[width=%s]{%s/%s.%s}\n"
         !im_width "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images" name ext
+  | Vignette ->
+      let ext = Filename.extension name in
+      let ext = String.sub ext 1 (String.length ext - 1) in
+      let name = Filename.remove_extension name in
+      Format.sprintf "\n\\includegraphics[width=1cm]{%s/%s.%s}\n"
+        "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images" name ext
+ 
 
 (* ignore tag but read children *)
 let dummy_tags_0 = [ "body"; "html"; "center" ]
@@ -546,6 +562,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
     (* which may be an <img src=xxx> *)
     (* TODO m=TT t=xxx p=yyy *)
     (* TODO decode names  p=louis;n=de%20bourbon; *)
+    (* TODO identify vignettes ! -> special width *)
     if !level = 1 then Printf.eprintf "Tag a (cumul)\n";
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
@@ -579,15 +596,23 @@ let rec process_tree_cumul och cumul tree (row, col) =
         (* TODO verify uppercase! (le Fort), (Le Fort) *)
         let check = Printf.sprintf "%s %s%s" fn sn ocn in
         if !level = 1 then Printf.eprintf "Check: (%s), (%s)\n" content check;
-        if (fn <> "" || sn <> "") && k = "" then
-          Format.sprintf "{\\bf %s}" content
+        if (fn <> "" || sn <> "") && s <> "" && k = "" then (
+          if !level = 15 then
+            Printf.eprintf "fn <> '' || sn <> '' && s <> '' && k = ''\n"; 
+            Format.sprintf "{\\bf %s}" content
           ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
           ^
-          if check <> content then
+          if check <> content then 
             Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
-          else ""
-        else if b <> !family then Format.sprintf "%s\\footnote{%s}" content href
+          else "")
+        else if b <> !family then (
+            if !level = 15 then
+              Printf.eprintf "b <> !family\n";
+          Format.sprintf "%s\\footnote{%s}" content href)
         else if s <> "" then (
+            if !level = 15 then
+              Printf.eprintf "s <> ''\n";
+        
           incr image_nbr;
           let image =
             ( Images,
@@ -595,6 +620,13 @@ let rec process_tree_cumul och cumul tree (row, col) =
               (!chapter, !section, !subsection, !subsubsection),
               !image_nbr )
           in
+          if !level = 15 then
+            Printf.eprintf "Img: %s (%s) \n" s
+            (match image with
+            | (Imagek, _, _, _) -> "Imagek"
+            | (Images, _, _, _) -> "Images"
+            | (Portrait, _, _, _) -> "Portrait"
+            | (Vignette, _, _, _) -> "Vignette");
           if !collect_images then images_in_page := image :: !images_in_page;
           let str =
             match !image_label with
@@ -625,9 +657,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
           (try int_of_string oc with Failure _ -> 0)
       with
       | Some ip -> ip
-      | None -> if i = "" then (
-        Printf.eprintf "Dummy ip!!\n";
-        Gwdb.dummy_iper) else Gwdb.iper_of_string i
+      | None -> if i = "" then Gwdb.dummy_iper else Gwdb.iper_of_string i
     in
     if !level = 11 then
       Printf.eprintf "Ip: %s\n" (Gwdb.string_of_iper ip);
@@ -637,16 +667,26 @@ let rec process_tree_cumul och cumul tree (row, col) =
       let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
       let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
       let image_label = Format.sprintf "%s.%d.%s" fn ocn sn in
+      (* TODO identify vignettes ! -> special width *)
+      let vignette = contains s "-vignette" in
       let image =
-        ( (if k <> "" then Imagek else if s <> "" then Images else Portrait),
+        ( (if vignette then Vignette
+           else if k <> "" then Imagek 
+           else if s <> "" then Images 
+           else Portrait),
           (if k <> "" then image_label else s),
           (!chapter, !section, !subsection, !subsubsection),
           !image_nbr )
       in
-      if !level = 11 then
-        Printf.eprintf "Img: %s or %s \n" image_label s;
-      incr image_nbr;
-      if !collect_images then images_in_page := image :: !images_in_page;
+      if !level = 15 then
+        Printf.eprintf "Img: %s or %s (%s) \n" image_label s
+        (match image with
+        | (Imagek, _, _, _) -> "Imagek"
+        | (Images, _, _, _) -> "Images"
+        | (Portrait, _, _, _) -> "Portrait"
+        | (Vignette, _, _, _) -> "Vignette");
+      if not vignette then incr image_nbr;
+      if !collect_images && not vignette then images_in_page := image :: !images_in_page;
       print_image image
     in
     str
@@ -675,6 +715,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
   in
 
   let suppress_multiple_sp str =
+    if !level = 14 then
+      Printf.eprintf "Suppress spaces\n";
     let b = Buffer.create 100 in
     let rec loop cond i =
       if i = String.length str then Buffer.contents b
@@ -685,26 +727,31 @@ let rec process_tree_cumul och cumul tree (row, col) =
   in
   
   let clean_double_back_slash str =
+    if !level = 14 then
+      Printf.eprintf "Clean \\\\\n";
     let s =
       let rec loop s =
         let i = try (String.rindex s '\\') with Not_found -> -1 in
         if i = -1 then s
-        else (
-          if !level = 10 then
-            Printf.eprintf "Str: (%d) (%d) %s [%c|%c|%c]\n" i (String.length s) s s.[i - 1] s.[i] s.[i + 1];
-          if (String.length s) > (i + 2) && s.[i - 1] = '\\' then (
-          if !level = 10 then
-            Printf.eprintf "Sub: (%s) (%s)\n" (String.sub s 0 (i - 2)) (String.sub s (i + 1) (String.length s - i - 2));
-          loop ((String.sub s 0 (i - 2)) ^ (String.sub s (i + 1) (String.length s - i - 2))))
-          else s)
+        else
+          if i > 0 && String.length s > i + 1 then (
+            if !level = 14 then
+              Printf.eprintf "Str: (%d) (%d) %s [%c|%c|%c]\n" i (String.length s) s s.[i - 1] s.[i] s.[i + 1];
+            if (String.length s) > (i + 2) && s.[i - 1] = '\\' then (
+              if !level = 14 then
+                Printf.eprintf "Sub: (%s) (%s)\n" (String.sub s 0 (i - 2)) (String.sub s (i + 1) (String.length s - i - 2));
+              loop ((String.sub s 0 (i - 2)) ^ (String.sub s (i + 1) (String.length s - i - 2))))
+            else s)
+          else s
       in loop str
     in
     let s = replace '\n' ' ' s in
-    let s = suppress_multiple_sp s in
-    strip_all_trailing_spaces s
+    suppress_multiple_sp s
   in
 
   let print_tree new_tree =
+    if !level = 14 then
+      Printf.eprintf "Print tree\n";
     let tree, _n =
       (List.fold_left (fun (acc1, r) row ->
         let str =
@@ -727,6 +774,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
         (acc1 ^ (Format.sprintf "Row %d: (%d) %s\\\\\n" r (List.length row) str), (r + 1))
       ) ("", 1) new_tree)
     in
+    if !level = 14 then
+      Printf.eprintf "Print tree done\n";
     Format.sprintf "Interim print\\\\\n %s\n" tree
   in
 
@@ -1116,8 +1165,13 @@ let print_images och images_list =
   (* TODO manage Wide *)
   List.iter
     (fun (im_type, name, (ch, sec, _ssec, _sssec), nbr) ->
+      let wide = contains name "-wide" in
+      let width =
+        if wide then "\\textwidth"
+        else !im_width
+      in
       match im_type with
-      | Imagek | Portrait -> ()
+      | Imagek | Portrait | Vignette -> ()
       | Images ->
           let name = Filename.remove_extension name in
           let images_dir =
@@ -1126,7 +1180,7 @@ let print_images och images_list =
           output_string och
             (Format.sprintf
                "\\parbox{%s}{\\includegraphics[width=%s]{%s/%s}\\\\\\hglabxa{%d}{%d}{%d}}\n"
-               !im_width !im_width images_dir name ch sec nbr))
+               width width images_dir name ch sec nbr))
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
