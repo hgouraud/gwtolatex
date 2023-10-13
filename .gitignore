@@ -2,3 +2,5 @@ _build
 *.log
 livres
 livres/*
+Chausey*
+

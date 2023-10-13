@@ -554,6 +554,10 @@ let decode s =
 let skip_m_cmd = [ "MOD_NOTES" ]
 let one_page och line = output_string och line
 
+(* b=basename_token *)
+let extract_base _b = !base (* TODO be more clever *)
+
+
 (* process_tree_cumul accumulates results in a string *)
 
 let rec process_tree_cumul och cumul tree (row, col) =
@@ -573,6 +577,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
     let href = try List.assoc "href" attr with Not_found -> "" in
     let href = decode href |> escape in
     let b, m, p, n, oc, i, k, s, _v = split_href href in
+    let b = extract_base b in
     if !level = 1 then (
       Printf.eprintf "Tag a: %d, %s\n" (List.length children) href;
       dump children 0);
@@ -610,7 +615,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
           if check <> content then
             Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
           else "")
-        else if b <> !family then (
+        else if b <> !base then (
           if !level = 15 then Printf.eprintf "b <> !family\n";
           Format.sprintf "%s\\footnote{%s}" content href)
         else if s <> "" then (
@@ -1333,10 +1338,17 @@ let main () =
   flush stderr;
 
   let mode = if !verbose then "" else "-interaction=batchmode" in
+  let cmmd0 =
+    Printf.sprintf "rm livres/%s.aux" family_out
+  in
   let cmmd1 =
     Printf.sprintf "pdflatex -output-directory=livres %s %s.tex" mode family_out
   in
   Printf.eprintf "First pass at pdflatex \n";
+  let error = Sys.command cmmd0 in
+  if error <> 0 then (
+    Printf.eprintf "Error in suppressing .aux file (%d)\n" error;
+    exit 0);
   let error = Sys.command cmmd1 in
   if error <> 0 then (
     Printf.eprintf "Error in pdflatex processing (%d)\n" error;
