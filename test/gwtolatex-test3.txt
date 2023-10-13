@@ -27,8 +27,7 @@ Henri.Gouraud@LaPoste.net \\
 <x Chapter Un peu d'histoire>
 <a href="http://127.0.0.1:2317/Chausey?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
 <x Wide on>
-<x Ch_nb_in_fig_nbr on>
-
+<x ImageLabel 4>
 <x Ep Off>
 <x Chapter Listes de descendants>
 <x Section Famille Antoine>
@@ -39,9 +38,7 @@ voir Famille Fortin (Chocolat)
 <x HighLight Leperchois Pierre>
 
 <a href="http://127.0.0.1:2317/Chausey?m=D;p=francois;n=bahurel;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Famille Bahurel</a>Bahurel (Famille)<br>
-<y Adjust_w 7cm>
 <a href="http://127.0.0.1:2317/Chausey?m=D;p=pierre;n=leperchois;oc=0;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Leperchois, Pierre</a><br>
-<y Adjust_w>
 <x Fiches Off>
 <x Wide Off>
 
@@ -57,7 +54,6 @@ voir Famille Fortin (Chocolat)
 <x Arbres On>
 \input{Chausey-inputs/Notes-arbres.tex}
 <x Newpage>
-<y Ep Off>
 <x Fiches On>
 
 <y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
