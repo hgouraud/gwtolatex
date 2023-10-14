@@ -49,7 +49,7 @@ let c_txt = ref ""
 let c_item = ref ""
 
 (* execution context *)
-let base = ref "chausey"
+let base = ref "Chausey"
 let family = ref ""
 let out_file = ref ""
 let debug = ref (-1)
@@ -70,7 +70,6 @@ let bases =
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
-let level = ref 0
 let version = "1.0"
 
 (* current values *)
@@ -414,10 +413,10 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
         Filename.dir_sep name ext
 
 (* ignore tag but read children *)
-let dummy_tags_0 = [ "body"; "html"; "center" ]
+let dummy_tags_0 = [ "body"; "html"; "center"; "bdo" ]
 
 (* ignore tag, skip to end *)
-let dummy_tags_1 = [ "!--"; "bdo"; "samp"; "table" ]
+let dummy_tags_1 = [ "!--"; "samp"; "table" ]
 
 let dummy_tags_2 =
   [
@@ -559,7 +558,27 @@ let skip_m_cmd = [ "MOD_NOTES" ]
 let one_page och line = output_string och line
 
 (* b=basename_token *)
-let extract_base _b = !base (* TODO be more clever *)
+let extract_base b = 
+ let _b = String.split_on_char '_' b in
+ (* if List.length base > 0 then List.nth b 0 else "" *)
+ !base
+
+let build_index fn sn ocn content check =
+  (* cover cases with sn = . (houses) or X (boats) *)
+  match fn, sn with
+  | fn, "." | fn, "X" ->
+      Format.sprintf "{\\bf %s}" content
+      ^ Format.sprintf "\\index{%s}" fn
+  | "Famille", sn ->
+      Format.sprintf "{\\bf %s}" content
+      ^ Format.sprintf "\\index{%s}" sn
+  | fn, sn ->
+      Format.sprintf "{\\bf %s}" content
+      ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
+      ^
+      if check <> content then
+        Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
+      else ""
 
 (* process_tree_cumul accumulates results in a string *)
 
@@ -612,12 +631,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
         if (fn <> "" || sn <> "") && s <> "" && k = "" then (
           if !debug = 15 then
             Printf.eprintf "fn <> '' || sn <> '' && s <> '' && k = ''\n";
-          Format.sprintf "{\\bf %s}" content
-          ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
-          ^
-          if check <> content then
-            Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
-          else "")
+          build_index fn sn ocn content check)
         else if b <> !base then (
           if !debug = 15 then Printf.eprintf "b <> !family\n";
           Format.sprintf "%s\\footnote{%s}" content href)
@@ -1124,12 +1138,17 @@ let one_command och line =
   let out c param =
     output_string och (Format.sprintf "\\%s{%s}%s\n" c param remain)
   in
+  if !debug = 18 then
+    Printf.eprintf "Command: %s, (%s), %s\n" cmd param remain;
   match cmd with
   | "Adjust_w" ->
       output_string och
         (Format.sprintf "Newwidth {\\bf %s}\n" (* TODO *)
            (if param <> "" then param else "7cm"))
   | "Arbres" -> arbres := param = "on"
+  | "BumpSub" ->
+      if !debug = 17 then Printf.eprintf "BumpSub (%s)\n" param;
+      sub := (param = "on")
   | "Chapter" ->
       if !image_label > 1 then image_nbr := 0;
       out "chapter" param;
@@ -1145,8 +1164,10 @@ let one_command och line =
       highlights := param :: !highlights;
       if !debug = 2 then
         List.iter (fun hl -> Printf.eprintf "Hl1: (%s)\n" hl) !highlights
-  | "ImageLabel" -> (
-      image_label := try int_of_string param with Failure _ -> 3)
+  | "ImageLabels" -> (
+      image_label := (try int_of_string param with Failure _ -> 3);
+      if !debug = 18 then
+        Printf.eprintf "Image labels = %d\n" !image_label)
   | "LaTeX" -> output_string och param
   | "Newpage" -> output_string och "\\newpage"
   | "Section" ->
@@ -1156,7 +1177,6 @@ let one_command och line =
       current_level := 1;
       subsection := 0;
       subsubsection := 0
-  | "Sub" -> sub := param = "on"
   | "SubSection" ->
       if !image_label > 3 then image_nbr := 0;
       out "subsection" param;
@@ -1243,6 +1263,9 @@ let process_one_line och line =
   | '<' -> (
       match line.[1] with
       | 'a' ->
+          if !debug = 17 then
+            Printf.eprintf "Line: %d, (%s) %s\n" !current_level
+              (if !sub then "Sub on" else "Sub off") line;
           let content = get_a_content line in
           let sec =
             (* -> chapter, 1-> section, ... *)
@@ -1293,8 +1316,7 @@ let process_one_line och line =
 
 let show_process_time start =
   let process_time = Unix.gettimeofday () -. start in
-  Printf.eprintf "Done in %.3f s\n" process_time;
-  flush stderr
+  Format.sprintf "%.3f" process_time
 
 let main () =
   let usage =
@@ -1314,7 +1336,7 @@ let main () =
       ( "-index",
         Arg.Int (fun x -> index := x),
         " Number of times makeindex is done." );
-      ("-debug", Arg.Int (fun x -> level := x), " Debug traces level.");
+      ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
       ("-verbose", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
       ("-v", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
       ("-follow", Arg.Set follow, " Produce Pdflatex.");
@@ -1387,7 +1409,7 @@ let main () =
       with End_of_file ->
         close_in ic;
         close_out och));
-  Printf.eprintf "Done txt parsing\n";
+  Printf.eprintf "Done txt parsing in %s s\n" (show_process_time start_time);
   flush stderr;
 
   let mode = if !verbose then "" else "-interaction=batchmode" in
@@ -1401,12 +1423,13 @@ let main () =
   let error = Sys.command cmmd1 in
   if error <> 0 then (
     Printf.eprintf "Error in pdflatex processing (%d)\n" error;
-    show_process_time start_time;
+    Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
     exit 0);
 
   Printf.eprintf "Building index\n";
-  if !test && !index = 0 then
-    (show_process_time start_time; exit 0);
+  if !test && !index = 0 then (
+    Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
+    exit 0);
   (* makeindex does not like absolute paths! *)
   let cmmd2 =
     Printf.sprintf "makeindex livres%s%s.idx" Filename.dir_sep family_out
@@ -1415,7 +1438,7 @@ let main () =
     let error = Sys.command cmmd2 in
     if error <> 0 then (
       Printf.eprintf "Error in makeindex processing (%d)\n" error;
-      show_process_time start_time;
+      Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
       exit 0)
   done;
 
@@ -1423,6 +1446,6 @@ let main () =
   let error = Sys.command cmmd1 in
   if error <> 0 then
     Printf.eprintf "Error in 2nd pdflatex processing (%d)\n" error;
-  show_process_time start_time
+  Printf.eprintf "Process time is %s s\n" (show_process_time start_time)
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

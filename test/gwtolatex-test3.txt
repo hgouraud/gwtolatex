@@ -28,6 +28,7 @@ Henri.Gouraud@LaPoste.net \\
 <a href="http://127.0.0.1:2317/Chausey?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
 <x Wide on>
 <x Ep Off>
+
 <x Chapter Listes de descendants>
 <x Section Famille Antoine>
 \index{Antoine (Famille) voir Famille Fortin (Chocolat)}
@@ -41,6 +42,25 @@ voir Famille Fortin (Chocolat)
 <x Fiches Off>
 <x Wide Off>
 
+<x ImageLabel 4>
+
+<x Chapter Fiches maisons>
+<a href="http://127.0.0.1:2317/Chausey?p=maisons;n=chausey;templ=tex;w=hg:1045">La Grande Île</a>La Grande Île<br>
+<x Section Côté public>
+<x NoFiches>
+<x Sub on>
+<a href="http://127.0.0.1:2317/Chausey?p=la+maison;n=de+la+cale;templ=tex;w=hg:1045">La Maison de la Cale (Pichard)</a>La Maison de la Cale<br>
+<a href="http://127.0.0.1:2317/Chausey?p=le+poste;n=SNSM-CRS;templ=tex;w=hg:1045">Le Poste de secours (SNSM, CRS)</a>Le Poste de secours<br>
+
+<x Section Côté SCI>
+<a href="http://127.0.0.1:2317/Chausey?p=la+maison;n=de+marin;templ=tex;w=hg:1045">La Maison de Marin</a><br>
+<a href="http://127.0.0.1:2317/Chausey?p=la+maison;n=robin;templ=tex;w=hg:1045">Maison Robin (Jacqueline Marie)</a>Maison Robin<br>
+
+<x Section Aneret>
+Deux maisons ont été construites sur le domaine maritime.
+
+<a href="http://127.0.0.1:2317/Chausey?p=la+maison;n=lapie;oc=0;templ=tex;w=hg:1045">La Maison Lapie</a><br>
+
 <x ImageLabel 3>
 
 <x Chapter Fiches individuelles>
@@ -48,18 +68,20 @@ voir Famille Fortin (Chocolat)
 <x Section Lucien Ernouf>
 See famille Ernouf
 \label{Ernouf}
-<x Sub off>
+<x BumpSub off>
 <a href="http://127.0.0.1:2317/Chausey?p=jacques;n=marie;oc=1;templ=tex;w=hg:1045">Marie, Jacques (1)</a><br>
 <a href="http://127.0.0.1:2317/Chausey?p=jules;n=durand;oc=0;templ=tex;w=hg:1045">Durand, Jules</a><br>
 <a href="http://127.0.0.1:2317/Chausey?p=philippe;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Philippe\index{Gouraud, Philippe}</a><br>
+<x BumpSub on>
 <a href="http://127.0.0.1:2317/Chausey?p=henri;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Henri</a><br>
-<Sub on>
+<a href="http://127.0.0.1:2317/Chausey?p=pierre;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Pierre</a><br>
 
 <x Chapter Arbres généalogiques>
 <x Arbres On>
 \input{Chausey-inputs/Notes-arbres.tex}
 <x Newpage>
 <x Fiches On>
+
 
 <y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
 <y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
@@ -73,6 +95,7 @@ See famille Ernouf
 <a href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045;cgl=on">Arbre descendant d'Albert Marie (Toumagi)</a>
 <end>
 <x Arbres Off>
+
 
 \newpage
 

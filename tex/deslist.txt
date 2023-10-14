@@ -63,7 +63,7 @@
 %end;
 
 %define;info2(xx)
-  %xx.title;%xx.dates;%nn;
+  %if;(xx.title!="")%xx.title;%end;%if;(xx.dates!="")%xx.dates;%end;%nn;
 %end;
 
 %define;somebody_spouse_parent1(xx)
@@ -80,10 +80,9 @@
         %if;(spouse.is_male)[son/daughter/child]0
         %else;[son/daughter/child]1%end;
       %and;
-        %apply;somebody_spouse_parent1("father")&nbsp;[and]
-        %apply;somebody_spouse_parent1("mother")
-      %end;
-      }%nn;
+        %apply;somebody_spouse_parent1("father")~[and]~%nn;
+        %apply;somebody_spouse_parent1("mother")%nn;
+      %end;}%nn;
     %end;%nn;
     %if;are_divorced;\\ %nl;... [divorced]0%divorce_date;.%nl;
     %elseif;are_separated;\\ %nl;... [separated]0.%nl;
@@ -165,7 +164,7 @@
   %incr_count;
   %foreach;xx.family;
     %( begin marriage bloc %)
-    %if;(family_cnt=1)\\%else;\\[10pt]%end;%nn;
+    %if;(family_cnt=1)\\%else;\par%end;%nn;
     %apply;capitalize%with;\hspace*{-0.2cm}- %apply;married_to%with;
         %if;(on_marriage_date != "") %on_marriage_date;%end;%nn;
         %if;(marriage_place != ""), à %marriage_place;,%end;%nn;
