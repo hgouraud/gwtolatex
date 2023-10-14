@@ -391,23 +391,27 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       name ch sec ssec sssec nb
   in
   match im_type with
-  | Portrait | Imagek ->
-      Format.sprintf "\n\\includegraphics[width=5cm]{%s/%s.%s}\n"
+  | Portrait | Imagek -> (* TODO manage images location *)
+      Format.sprintf "\n\\includegraphics[width=5cm]{%s%s%s.%s}\n"
         "/Users/Henri/Genea/GeneWeb-Bases/images/chausey/Side"
+        Filename.dir_sep
+        (* includegraphics does not like . in filenames *)
         (lower name |> replace '.' '-' |> replace ' ' '_')
         "jpg"
   | Images ->
       let ext = Filename.extension name in
       let ext = String.sub ext 1 (String.length ext - 1) in
       let name = Filename.remove_extension name in
-      Format.sprintf "\n\\includegraphics[width=%s]{%s/%s.%s}\n" !im_width
-        "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images" name ext
+      Format.sprintf "\n\\includegraphics[width=%s]{%s%s%s.%s}\n" !im_width
+        "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images"
+        Filename.dir_sep name ext
   | Vignette ->
       let ext = Filename.extension name in
       let ext = String.sub ext 1 (String.length ext - 1) in
       let name = Filename.remove_extension name in
-      Format.sprintf "\n\\includegraphics[width=1cm]{%s/%s.%s}\n"
-        "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images" name ext
+      Format.sprintf "\n\\includegraphics[width=1cm]{%s%s%s.%s}\n"
+        "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images"
+        Filename.dir_sep name ext
 
 (* ignore tag but read children *)
 let dummy_tags_0 = [ "body"; "html"; "center" ]
@@ -557,7 +561,6 @@ let one_page och line = output_string och line
 (* b=basename_token *)
 let extract_base _b = !base (* TODO be more clever *)
 
-
 (* process_tree_cumul accumulates results in a string *)
 
 let rec process_tree_cumul och cumul tree (row, col) =
@@ -619,8 +622,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
           if !level = 15 then Printf.eprintf "b <> !family\n";
           Format.sprintf "%s\\footnote{%s}" content href)
         else if s <> "" then (
+          let vignette = contains s "-vignette" in
           if !level = 15 then Printf.eprintf "s <> ''\n";
-          if k = "" then incr image_nbr;
+          if k = "" && not vignette then incr image_nbr;
           let image =
             ( Images,
               s,
@@ -634,16 +638,19 @@ let rec process_tree_cumul och cumul tree (row, col) =
               | Images, _, _, _ -> "Images"
               | Portrait, _, _, _ -> "Portrait"
               | Vignette, _, _, _ -> "Vignette");
-          if k = "" && !collect_images then
+          if !collect_images && k = "" && not vignette then
             images_in_page := image :: !images_in_page;
           let str =
             match !image_label with
-            | 1 -> Format.sprintf "%s\\textsuperscript{%d}" content !image_nbr
+            | 1 -> Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d)}}" content !image_nbr
+            | 3 ->
+                Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}" content !chapter
+                  !section !image_nbr
             | 4 ->
-                Format.sprintf "%s\\textsuperscript{%d.%d.%d.%d}" content
+                Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d.%d)}}" content
                   !chapter !section !subsection !image_nbr
             | _ ->
-                Format.sprintf "%s\\textsuperscript{%d.%d.%d}" content !chapter
+                Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}" content !chapter
                   !section !image_nbr
           in
           str)
@@ -676,6 +683,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
       let image_label = Format.sprintf "%s.%d.%s" fn ocn sn in
       (* TODO identify vignettes ! -> special width *)
       let vignette = contains s "-vignette" in
+      if not vignette then incr image_nbr;
       let image =
         ( (if vignette then Vignette
           else if k <> "" then Imagek
@@ -692,7 +700,6 @@ let rec process_tree_cumul och cumul tree (row, col) =
           | Images, _, _, _ -> "Images"
           | Portrait, _, _, _ -> "Portrait"
           | Vignette, _, _, _ -> "Vignette");
-      if not vignette then incr image_nbr;
       if !collect_images && not vignette then
         images_in_page := image :: !images_in_page;
       print_image image
@@ -1192,7 +1199,7 @@ let print_images och images_list =
   output_string och (Format.sprintf "\\par\n");
   (* TODO manage Wide *)
   List.iter
-    (fun (im_type, name, (ch, sec, _ssec, _sssec), nbr) ->
+    (fun (im_type, name, (ch, sec, ssec, _sssec), nbr) ->
       let wide = contains name "-wide" in
       let width = if wide then "\\textwidth" else !im_width in
       match im_type with
@@ -1202,16 +1209,32 @@ let print_images och images_list =
           let images_dir =
             "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images"
           in
+          (*
+          \newcommand{\hglaba}   [3]{\raisebox{.6ex}{\small (#1.#2.#3)}}
+          \newcommand{\hglabsa}  [3]{\raisebox{.6ex}{\small (#3)}}
+          \newcommand{\hglabxa}  [3]{#1.#2.#3\label{f#1#2#3}}
+          \newcommand{\hglabxsa} [3]{#3\label{f#1#2#3}}
+          \newcommand{\hgrefa}   [3]{#1.#2.#3\label{f#1#2#3}}
+          \newcommand{\hgrefsa}  [3]{#3\label{f#1#2#3}}
+          \newcommand{\hglabb}   [4]{\raisebox{.6ex}{\small (#1.#2.#3.#4)}}
+          \newcommand{\hglabsb}  [4]{\raisebox{.6ex}{\small (#4)}}
+          \newcommand{\hglabxb}  [4]{#1.#2.#3.#4\label{f#1#2#3#4}}
+          \newcommand{\hglabxsb} [4]{#4\label{f#1#2#3#4}}
+          \newcommand{\hgrefb}   [4]{#1.#2.#3.#4\label{f#1#2#3#4}}
+          \newcommand{\hgrefsb}  [4]{#4\label{f#1#2#3#4}}
+          *)
           let label =
             match !image_label with
-            | 1 -> Format.sprintf "\\\\\\hglabxsa{%d}{%d}{%d}}" ch sec nbr
-            | 4 -> Format.sprintf "\\\\\\hglabxa{%d}{%d}{%d}}" ch sec nbr
-            | _ -> Format.sprintf "\\\\\\hglabxa{%d}{%d}{%d}}" ch sec nbr
+            | 1 -> Format.sprintf "\\\\\\hglabxsa{%d}{%d}{%d}" ch sec nbr
+            | 3 -> Format.sprintf "\\\\\\hglabxa{%d}{%d}{%d}" ch sec nbr
+            | 4 ->
+                Format.sprintf "\\\\\\hglabxb{%d}{%d}{%d}{%d}" ch sec ssec nbr
+            | _ -> Format.sprintf "\\\\\\hglabxa{%d}{%d}{%d}" ch sec nbr
           in
           output_string och
             (Format.sprintf
-               "\\parbox{%s}{\\includegraphics[width=%s]{%s/%s}%s\n" width width
-               images_dir name label))
+               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}%s}\n" width width
+               images_dir Filename.dir_sep name label))
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
@@ -1222,15 +1245,35 @@ let process_one_line och line =
       | 'a' ->
           let content = get_a_content line in
           let sec =
+            (* -> chapter, 1-> section, ... *)
             match !current_level with
-            | 0 -> ""
-            | 1 -> "sub"
-            | 2 -> "subsub"
-            | _ -> "subsubsub"
+            | 0 ->
+                incr section;
+                ""
+            | 1 ->
+                if !sub then (
+                  incr subsection;
+                  "sub")
+                else (
+                  incr section;
+                  "")
+            | 2 ->
+                if !sub then (
+                  incr subsubsection;
+                  "subsub")
+                else (
+                  incr subsection;
+                  "sub")
+            | _ ->
+                if !sub then "subsubsub"
+                else (
+                  incr subsubsection;
+                  "subsub")
           in
+          if !image_label > !current_level + 1 then image_nbr := 0;
           let index =
-            if String.contains line '\\' then ""
-            else Format.sprintf "\\index{%s}" content
+            if String.contains line '\\' then "" (* index manually done *)
+            else Format.sprintf "\\index{%s}" content (* automatic index *)
           in
           output_string och
             (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
@@ -1247,6 +1290,11 @@ let process_one_line och line =
       | 'y' -> output_string och ""
       | _ -> output_string och (line ^ "\n"))
   | _ -> output_string och (line ^ "\n")
+
+let show_process_time start =
+  let process_time = Unix.gettimeofday () -. start in
+  Printf.eprintf "Done in %.3f s\n" process_time;
+  flush stderr
 
 let main () =
   let usage =
@@ -1279,10 +1327,12 @@ let main () =
       ("-debug", Arg.Unit (fun () -> debug := true), " Debug mode.");
     ]
   in
+  let start_time = Unix.gettimeofday () in
   let speclist = List.sort compare speclist in
   let speclist = Arg.align speclist in
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
+
   (* install tex templates in bases/etc *)
   let etc_dir = Filename.concat !bases "etc" in
   let cmmd = Format.sprintf "cp -R ./tex %s" etc_dir in
@@ -1290,11 +1340,13 @@ let main () =
   if error > 0 then (
     Printf.eprintf "Error while loading tex templates files (%d)\n" error;
     exit 0);
+
   (if !family <> "" then
    let cmmd = Format.sprintf "cp -R ./%s.gwb ./%s-tmp.gwb" !family !family in
    let error = Sys.command cmmd in
    if error > 0 then
      Printf.eprintf "Error while copying base folder (%d)\n" error);
+
   let fname_txt, family_out =
     ( (if !family <> "" then !family ^ ".txt"
       else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
@@ -1315,9 +1367,11 @@ let main () =
   in
   let ic = open_in_bin fname_in in
   if not !debug then Sys.enable_runtime_warnings false;
+
   Printf.eprintf "\nThis is GwToLaTeX version %s on %s (%d)\n" version fname_in
     !level;
   flush stderr;
+
   (match mode with
   | "html" ->
       let body = really_input_string ic (in_channel_length ic) in
@@ -1338,21 +1392,19 @@ let main () =
   flush stderr;
 
   let mode = if !verbose then "" else "-interaction=batchmode" in
-  let cmmd0 =
-    Printf.sprintf "rm livres/%s.aux" family_out
-  in
+  let cmmd0 = Printf.sprintf "rm livres/%s.aux" family_out in
   let cmmd1 =
     Printf.sprintf "pdflatex -output-directory=livres %s %s.tex" mode family_out
   in
+
   Printf.eprintf "First pass at pdflatex \n";
-  let error = Sys.command cmmd0 in
-  if error <> 0 then (
-    Printf.eprintf "Error in suppressing .aux file (%d)\n" error;
-    exit 0);
+  let _ = Sys.command cmmd0 in
   let error = Sys.command cmmd1 in
   if error <> 0 then (
     Printf.eprintf "Error in pdflatex processing (%d)\n" error;
+    show_process_time start_time;
     exit 0);
+
   Printf.eprintf "Building index\n";
   if !test && !index = 0 then exit 0;
   (* makeindex does not like absolute paths! *)
@@ -1363,14 +1415,14 @@ let main () =
     let error = Sys.command cmmd2 in
     if error <> 0 then (
       Printf.eprintf "Error in makeindex processing (%d)\n" error;
+      show_process_time start_time;
       exit 0)
   done;
+
   Printf.eprintf "Second pass at pdflatex \n";
   let error = Sys.command cmmd1 in
-  if error <> 0 then (
+  if error <> 0 then
     Printf.eprintf "Error in 2nd pdflatex processing (%d)\n" error;
-    exit 0);
-  Printf.eprintf "Done all\n";
-  flush stderr
+  show_process_time start_time
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

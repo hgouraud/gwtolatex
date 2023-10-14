@@ -21,6 +21,7 @@ The source material for the book is a text file containing :
       | "LaTeX" -> issues a LaTeX command
       | "Newpage" -> newpage
       | "Sideways" -> print page sideways (wip)
+      | "Sub" -> "on/off" if off, do not increment subsection level
       | "Section" -> new section
       | "SubSection" -> new subsection
       | "SubSubSection" -> new subsubsection

@@ -27,7 +27,6 @@ Henri.Gouraud@LaPoste.net \\
 <x Chapter Un peu d'histoire>
 <a href="http://127.0.0.1:2317/Chausey?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
 <x Wide on>
-<x ImageLabel 4>
 <x Ep Off>
 <x Chapter Listes de descendants>
 <x Section Famille Antoine>
@@ -42,13 +41,19 @@ voir Famille Fortin (Chocolat)
 <x Fiches Off>
 <x Wide Off>
 
+<x ImageLabel 3>
+
 <x Chapter Fiches individuelles>
 <x CollectImages on>
+<x Section Lucien Ernouf>
+See famille Ernouf
 \label{Ernouf}
+<x Sub off>
 <a href="http://127.0.0.1:2317/Chausey?p=jacques;n=marie;oc=1;templ=tex;w=hg:1045">Marie, Jacques (1)</a><br>
 <a href="http://127.0.0.1:2317/Chausey?p=jules;n=durand;oc=0;templ=tex;w=hg:1045">Durand, Jules</a><br>
 <a href="http://127.0.0.1:2317/Chausey?p=philippe;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Philippe\index{Gouraud, Philippe}</a><br>
 <a href="http://127.0.0.1:2317/Chausey?p=henri;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Henri</a><br>
+<Sub on>
 
 <x Chapter Arbres généalogiques>
 <x Arbres On>
