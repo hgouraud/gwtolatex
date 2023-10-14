@@ -965,7 +965,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
               else Format.sprintf "{\\bf %s}" content)
             else content
           in
-          cumul ^ str ^ "\n"
+          cumul ^ str
       | "div" ->
           (* <div class="container" style="column-count:2;column-gap:50px"> *)
           (* <div class="column"> *)
@@ -1405,7 +1405,8 @@ let main () =
     exit 0);
 
   Printf.eprintf "Building index\n";
-  if !test && !index = 0 then exit 0;
+  if !test && !index = 0 then
+    (show_process_time start_time; exit 0);
   (* makeindex does not like absolute paths! *)
   let cmmd2 =
     Printf.sprintf "makeindex livres%s%s.idx" Filename.dir_sep family_out

@@ -83,7 +83,7 @@
         %apply;somebody_spouse_parent1("father")&nbsp;[and]
         %apply;somebody_spouse_parent1("mother")
       %end;
-      }
+      }%nn;
     %end;%nn;
     %if;are_divorced;\\ %nl;... [divorced]0%divorce_date;.%nl;
     %elseif;are_separated;\\ %nl;... [separated]0.%nl;
@@ -146,7 +146,7 @@
     %elseif;are_pacs;[pacsed%t to:::date_place]0%nn;
     %elseif;is_no_sexes_check;[relationship%t to:::date_place]0%nn;
     %elseif;is_no_mention;date_place [with]%nn;
-    %end;
+    %end;%nn;
   %else;
     %if;are_married;[married%t to:::date_place]1%nn;
     %elseif;are_not_married;[relationship%t to:::date_place]1%nn;
@@ -159,31 +159,33 @@
 %end;
 
 %define;descendants_by_list(xx, yy, curlev, maxlev, famlev)
-  %if;(curlev = 0) %nl;%end;
+  %if;(curlev = 0) %nl;\hspace*{-0.2cm}%end;
   %apply;hgfull_name(xx.surname, xx.first_name, xx.occ)%apply;hgindex("0", xx.surname, xx.first_name, xx.occ)%nn;
-  %apply;somebody_long_info("xx").\\
+  %apply;somebody_long_info("xx").
   %incr_count;
   %foreach;xx.family;
-    %apply;capitalize%with; - %apply;married_to%with;
+    %( begin marriage bloc %)
+    %if;(family_cnt=1)\\%else;\\[10pt]%end;%nn;
+    %apply;capitalize%with;\hspace*{-0.2cm}- %apply;married_to%with;
         %if;(on_marriage_date != "") %on_marriage_date;%end;%nn;
         %if;(marriage_place != ""), à %marriage_place;,%end;%nn;
       %end;%nn;
     %end;%nn;
-    %sp;{\bf %spouse.surname; %spouse.first_name; %if(spouse.occ!=0)(%spouse.occ;)%end;}%nn;
+    %sp;{\bf %spouse.surname; %spouse.first_name;%if(spouse.occ!=0) (%spouse.occ;)%end;}%nn;
     %apply;hgindex("0", spouse.surname, spouse.first_name, spouse.occ)%nn;
     %apply;somebody_long_info("spouse")%nn;
     %if;spouse.has_parents;
       %if;(spouse.father.first_name != "Famille")
-        %apply;somebody_spouse_parent()
+        %apply;somebody_spouse_parent()%nn;
       %end;%nn;
     %end;%nn;
     %if;(evar.witn = "on" and has_witnesses)%nl;([witness/witnesses]1:
       %foreach;witness;
         %if;(not is_first),%nl;%end;
         %apply;link(witness.var)
-      %end;)%sq;
+      %end;)%nn;
     %end;%nn;
-    %if;(evar.comm = "on" and has_comment)%nl;(%comment;)%end;
+    %if;(evar.comm = "on" and has_comment)%nl;(%comment;)%end;%nn;
     %if;(curlev < maxlev)
       %if;(curlev = 0 or
            evar.t = "M" and xx.is_male or
@@ -195,18 +197,19 @@
         %elseif;(family.desc_level > famlev)
           {\it , [see above]}.
           %apply;lazy_print%with;\\ %nl;%end;
-        %elseif;has_children;, {\it dont}%nn;
+        %elseif;has_children;, {\it dont :}%nn;
+        %(end marriage bloc %)
             %family.set_infinite_desc_level;
             \begin{hgitemize}
             %foreach;child;
               \item
               %if;(evar.alwsurn = "yes")
-                %apply;descendants_by_list("child", "child", curlev+1, maxlev, famlev+1)
+                %apply;descendants_by_list("child", "child", curlev+1, maxlev, famlev+1)%nn;
               %else;
-                %apply;descendants_by_list("child", "child_name", curlev+1, maxlev, famlev+1)
-              %end;
+                %apply;descendants_by_list("child", "child_name", curlev+1, maxlev, famlev+1)%nn;
+              %end;%nn;
               %( end item %)
-            %end;
+            %end;%nn;
             \end{hgitemize}
             %if;(curlev = 0)%nl;\par%nl;
             %end;
@@ -214,8 +217,9 @@
       %end; %( curlev=0 %)
     %else;%nl;
       %apply;lazy_print%with; %nl;%end;
-    %end; %( curlev < maxlev%)
-  %end; %( foreach family %)
+    %end;%nn;
+    %( curlev < maxlev%)
+  %end;%nn; %( foreach family %)
 %end;
 
 %define;by_list(xx)
