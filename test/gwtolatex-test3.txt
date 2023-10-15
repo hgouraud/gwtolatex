@@ -42,7 +42,7 @@ voir Famille Fortin (Chocolat)
 <x Fiches Off>
 <x Wide Off>
 
-<x ImageLabel 4>
+<x ImageLabels 4>
 
 <x Chapter Fiches maisons>
 <a href="http://127.0.0.1:2317/Chausey?p=maisons;n=chausey;templ=tex;w=hg:1045">La Grande Île</a>La Grande Île<br>
@@ -61,7 +61,7 @@ Deux maisons ont été construites sur le domaine maritime.
 
 <a href="http://127.0.0.1:2317/Chausey?p=la+maison;n=lapie;oc=0;templ=tex;w=hg:1045">La Maison Lapie</a><br>
 
-<x ImageLabel 3>
+<x ImageLabels 3>
 
 <x Chapter Fiches individuelles>
 <x CollectImages on>

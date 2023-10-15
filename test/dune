@@ -1,2 +1,19 @@
-(test
- (name gwtolatex))
+(executable
+ (name test)
+ (libraries
+  ezcurl
+  markup
+  unidecode
+  geneweb.gwdb-legacy
+  geneweb.sosa_zarith
+  geneweb)
+  (preprocess (pps ppx_deriving.show))
+  (modules
+    test
+    test_gwtolatex)
+)
+
+(rule
+  (action (run ./test.exe) )
+  (alias runtest)
+)

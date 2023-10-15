@@ -7,9 +7,13 @@ The source material for the book is a text file containing :
   other LaTeX commands whiwch may be inserted anywhere in the document.
 - a succession of <tag ...> 
   * <a href= ...>Nnn</a> queries to a GeneWeb data base.
+      Creates a new section or subsection.
+      Depending on the "Sub" command (see below), increments the
+      subsection level or not.
       Analysis of p= and n= identifies person being queried. 
       Entry \index{N, p} is created.
-      If Nnn is different from "N, p", then additional Entry \index{Nnn, see n, p} is created
+      If Nnn is different from "N, p", then additional 
+      Entry \index{Nnn, see n, p} is created
   * <x Command parameter> issues a command to GwToLaTeX.
       parameter can be "on/off" or a string
       | "Arbres" -> "on/off"
@@ -21,7 +25,9 @@ The source material for the book is a text file containing :
       | "LaTeX" -> issues a LaTeX command
       | "Newpage" -> newpage
       | "Sideways" -> print page sideways (wip)
-      | "Sub" -> "on/off" if off, do not increment subsection level
+      | "Sub" -> "on/off" if off, do not increment subsection level.
+                  usefull is a section has been manually inserted and
+                  is followed by automatic <a ...> (sub)sections
       | "Section" -> new section
       | "SubSection" -> new subsection
       | "SubSubSection" -> new subsubsection

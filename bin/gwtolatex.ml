@@ -759,6 +759,22 @@ let rec process_tree_cumul och cumul tree (row, col) =
     loop true 0
   in
 
+  let replace_utf8_bar str =
+    let rec loop s =
+      let i = try String.rindex s '\xE0' with Not_found -> -1 in
+      if !debug = 23 then Printf.eprintf "Str: (%d) %s\n" i str;
+      if i = -1 then s
+      else if i > 0 && String.length s > i + 3 then (
+        if String.length s > i + 2 && s.[i + 1] = '\x94' && s.[i + 2] = '\x82' then (
+          loop
+            (String.sub s 0 (i - 2) ^ "|"
+            ^ String.sub s (i + 3) (String.length s - i - 3)))
+        else s)
+      else s
+    in
+    loop str
+  in
+   
   let clean_double_back_slash str =
     if !debug = 14 then Printf.eprintf "Clean \\\\\n";
     let s =
@@ -786,11 +802,76 @@ let rec process_tree_cumul och cumul tree (row, col) =
       loop str
     in
     let s = replace '\n' ' ' s in
-    suppress_multiple_sp s
+    let s = suppress_multiple_sp s in
+    replace_utf8_bar s
+  in
+
+  let _split_row_with_vbar tree =
+    let print_cell cell =
+      match cell with 
+      |(w, s, ty, te, it) ->
+        Printf.eprintf "(%d, %d, %s, %s, %s) " w s
+        ty (clean_double_back_slash te) (clean_double_back_slash it)
+    in
+
+    let scan_row_for_bar row =
+      List.exists (fun (_, _, _, te, it) ->
+        let yes =  (String.contains te '|') || (String.contains it '|') in
+        if !debug = 22 && yes then
+          Printf.eprintf "Cell: %s in %s, %s\n" "Bar" te it;
+        not yes
+      ) row
+    in
+
+
+    let get_part n str =
+      let i = try String.index str '|' with Not_found -> -1 in
+      if i = -1 then 
+        let i = try String.index str '\xE2' with Not_found -> -1 in
+        if i = -1 then str
+        else
+          if str.[i+1] = '\x94' && str.[i+2] = '\x82'
+          then 
+            if n = 1 then ""
+            else String.sub str (i + 3) (String.length str - i - 3)
+          else str
+      else
+        if n = 1 then "" else
+          if String.length str > i
+            then ((String.sub str (i + 1) (String.length str - i - 1)))
+            else ""
+    in
+
+    let copy_row row n =
+        List.map (fun (w, s, ty, te, it) ->
+          (w, s,
+            (if n = 1 then
+              match ty with
+              | "Te" -> "Hv2"
+              | "It" -> "Hv2"
+              | _ -> ty
+            else ty),
+            (match ty with
+            | "Te" -> get_part n te
+            | _ -> te),
+            (match ty with
+            | "It" -> get_part n it
+            | _ -> it)
+           )) row
+    in
+
+    List.fold_left
+      (fun acc row ->
+        if !debug = 22 && scan_row_for_bar row then (
+          Printf.eprintf "\nRow: "; (List.iter (fun c -> print_cell c) row));
+        if scan_row_for_bar row && false then (
+          (copy_row row 1) :: (copy_row row 2) :: acc)
+        else row :: acc
+      ) [] (List.rev tree)
   in
 
   let print_tree new_tree =
-    if !debug = 14 then Printf.eprintf "Print tree\n";
+    if !debug = 9 then Printf.eprintf "Print tree (%d)\n" (List.length new_tree);
     let tree, _n =
       List.fold_left
         (fun (acc1, r) row ->
@@ -799,17 +880,19 @@ let rec process_tree_cumul och cumul tree (row, col) =
               (fun acc2 (_, s, ty, te, it) ->
                 let cell =
                   (match ty with
-                  | "Te" -> "Te: " ^ clean_double_back_slash te
-                  | "It" -> "It: " ^ clean_double_back_slash it
-                  | "Hl" -> "Hr: " ^ "-l"
-                  | "Hr" -> "Hr: " ^ "r-"
-                  | "Hc" -> "Hr: " ^ "--"
-                  | "Hv" -> "Vr: " ^ "|"
-                  | "E" -> "E: " ^ ""
-                  | "Im" -> "Im: " ^ "Image"
+                  | "Te" -> "Te " ^ clean_double_back_slash te
+                  | "It" -> "It " ^ clean_double_back_slash it
+                  | "Hl" -> "Hr " ^ "-l"
+                  | "Hr" -> "Hr " ^ "r-"
+                  | "Hc" -> "Hr " ^ "--"
+                  | "Hv1" -> "Vr1 " ^ "x|x"
+                  | "Hv2" -> "Vr2 " ^ "y|y"
+                  | "E" -> "E" ^ ""
+                  | "Im" -> "Im " ^ "Image"
                   | _ -> "x")
                   ^ if s > 1 then Format.sprintf "(%d)" s else ""
                 in
+                if ! debug = 23 then Printf.eprintf "Cell2: %s\n" cell;
                 acc2 ^ "[" ^ cell ^ "] ")
               "" row
           in
@@ -817,8 +900,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
             r + 1 ))
         ("", 1) new_tree
     in
-    if !debug = 14 then Printf.eprintf "Print tree done\n";
-    Format.sprintf "Interim print\\\\\n %s\n" tree
+    if !debug = 9 then Printf.eprintf "Print tree done\n";
+    Format.sprintf "Interim print (%d)\\\\\n %s\n" (String.length tree) tree
   in
 
   if !debug = 2 then Printf.eprintf "Process tree cumul\n";
@@ -1070,7 +1153,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
           c_typ := "Hc";
           continue "" children
       | "vbar" ->
-          c_typ := "Hv";
+          c_typ := "Hv1";
           continue "" children
       | "emptycell" ->
           c_typ := "E";
@@ -1199,6 +1282,8 @@ let one_http_call och line =
     try String.index_from line (url_beg + 1) '"' with Not_found -> 0
   in
   let url = String.sub line (url_beg + 1) (url_end - url_beg - 1) in
+  if !debug = 19 then
+    Printf.eprintf "Url: (%s)\n" url;
   let resp = Ezcurl.get ~url () in
   match resp with
   | Ok { Ezcurl.code; body; _ } ->
@@ -1211,9 +1296,9 @@ let one_http_call och line =
         let _ = process_html och body in
         ())
   | Error (_, msg) ->
-      Printf.eprintf "error when fetching %s:\n  %s\n%!" url msg;
+      Printf.eprintf "error when fetching %s:\n  %s\n%!" (escape url) (escape msg);
       output_string och
-        (Format.sprintf "Error when fetching %s:\n %s\n" url msg)
+        (Format.sprintf "Error when fetching %s:\n %s\n" (escape url) (escape msg))
 
 let print_images och images_list =
   output_string och (Format.sprintf "\\par\n");
