@@ -2,7 +2,7 @@
 
 # Variables for packagers.
 PREFIX=/usr
-DISTRIB_DIR=distribution
+DISTRIB_DIR=gw2l_dist
 BUILD_DIR=_build/
 
 # [BEGIN] Generated files section
@@ -20,7 +20,7 @@ bin/gwrepl/.depend:
 # [End] Generated files section
 
 GENERATED_FILES_DEP = \
-	dune-workspace \
+	dune-workspace
 
 generated: $(GENERATED_FILES_DEP)
 
@@ -45,15 +45,19 @@ distrib:
 	dune build -p gwtolatex
 	mkdir $(DISTRIB_DIR)
 	mkdir $(DISTRIB_DIR)/etc
-	mkdir $(DISTRIB_DIR)/livres
-	cp $(BUILD_DIR)default/bin/gwtolatex.exe $(DISTRIB_DIR)/gwl$(EXT);
-	cp -R ./tex $(DISTRIB_DIR)/etc;
+	mkdir $(DISTRIB_DIR)/tmp-aux
+	cp $(BUILD_DIR)default/bin/gwtolatex.exe $(DISTRIB_DIR)/gwtolatex$(EXT)
+	cp -R ./tex $(DISTRIB_DIR)/etc
+	cp ./gwl.sh $(DISTRIB_DIR)
+	cp ./Gw2LaTeX-env.tex $(DISTRIB_DIR)
+	cp ../geneweb/hd/etc/version.txt $(DISTRIB_DIR)/gw_version.txt
+	cp ./version.txt $(DISTRIB_DIR)
 
 clean:
 	@echo -n "Cleaning…"
 	@$(RM) $(GENERATED_FILES_DEP)
 	@$(RM) -r $(DISTRIB_DIR)
-	@$(RM) livres/*
+	@$(RM) tmp-aux/*
 	@dune clean
 	@echo " Done."
 .PHONY: clean

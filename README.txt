@@ -56,8 +56,6 @@ The launch parameters are:
 
 In its current form, GwToLaTeX must run in the folder containing the target base.
 
-Additional details will be provided as I progress.
-
 Install and test
 
 - clone the gwtolatex repo
@@ -66,8 +64,19 @@ Install and test
 - dune exec -- gwtolatex -test n to try gwttolatex-testn.ext
   where ext is txt or html
 
-A distribution folder is in preparation. The executable should be named gwl.exe
-  
+Make distribution will create a folder gwl_dist containing the necessary components
+Copy or move this folder into your bases folder.
+Create a folder bases/Livres containing the input file Xxxx.txt and possible supplemental
+associated to \input{file} commands that may appear in Xxxx.txt.
+Run the gwl.sh script after editing your preferences.
+The resulting .pdf file would be moved into the Livres folder
+
+Warning:
+Running pdftolatex is rather tricky and assumes that you have some knowledge of TeX and LaTeX behaviours. The Web is a good source of information, but usually rather obscure.
+Trial and error is your friend.
+
+The -v option provides interactive mode for pdftolatex, helping you to understand where the problem may come from.
+
 Test files make reference to my base for extraction of surnames/first_names.
 Edit the test files according to your own base.
 

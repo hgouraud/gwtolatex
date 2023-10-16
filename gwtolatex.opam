@@ -13,6 +13,7 @@ depends: [
   "ocaml"
   "dune" {>= "3.6"}
   "ezcurl"
+  "ounit"
   "odoc" {with-doc}
 ]
 build: [

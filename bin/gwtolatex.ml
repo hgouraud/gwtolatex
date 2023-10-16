@@ -57,17 +57,9 @@ let second = ref false
 let index = ref 0
 let verbose = ref false
 
-(* TODO manage Livres and bases references. ? env variables? *)
-let livres =
-  ref
-    (try Sys.getenv "GWTL_LIVRES"
-     with Not_found -> "/Users/Henri/Genea/Livres")
-
-let bases =
-  ref
-    (try Sys.getenv "GWTL_BASES"
-     with Not_found -> "/Users/Henri/Genea/GeneWeb-Bases")
-
+(* Assumes we are running in bases folder GeneWeb security constraint *)
+let livres = ref (try Sys.getenv "GWTL_LIVRES" with Not_found -> "./Livres")
+let bases = ref (try Sys.getenv "GWTL_BASES" with Not_found -> "./")
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
@@ -558,8 +550,10 @@ let build_index fn sn ocn content check =
       Format.sprintf "{\\bf %s}" content
       ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
       ^
-      if check <> content then
-        Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
+      if
+        check <> content (* TODO parametrize this *)
+        && sn <> "." && sn <> "X" && sn <> "?" && fn <> "?"
+      then Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
       else ""
 
 (* process_tree_cumul accumulates results in a string *)
@@ -744,35 +738,38 @@ let rec process_tree_cumul och cumul tree (row, col) =
   in
 
   let replace_utf8_bar str =
-    let str2 =
-      let rec loop s =
-        let i = try String.index s '\xE2' with Not_found -> -1 in
-        if i = -1 then s
-        else if i >= 0 && String.length s > i + 3 then
-          if String.length s > i + 2 && s.[i + 1] = '\x94' && s.[i + 2] = '\x82'
-          then
-            loop
-              ((if i = 0 then "" else String.sub s 0 (i - 1))
-              ^ "|"
-              ^ String.sub s (i + 3) (String.length s - i - 3))
-          else s
+    let rec loop s =
+      let i = try String.index s '\xE2' with Not_found -> -1 in
+      if i = -1 then s
+      else if i >= 0 && String.length s > i + 2 then
+        if String.length s > i + 2 && s.[i + 1] = '\x94' && s.[i + 2] = '\x82'
+        then
+          loop
+            ((if i = 0 then "" else String.sub s 0 i)
+            ^ "|"
+            ^
+            if String.length s > i + 3 then
+              String.sub s (i + 3) (String.length s - i - 3)
+            else "")
         else s
-      in
-      loop str
+      else s
     in
-    str2
+    loop str
   in
 
   let clean_double_back_slash str =
     let s =
       let rec loop s =
-        let i = try String.rindex s '\\' with Not_found -> -1 in
+        let i = try String.index s '\\' with Not_found -> -1 in
         if i = -1 then s
-        else if i > 0 && String.length s > i + 1 then
-          if String.length s > i + 2 && s.[i - 1] = '\\' then
+        else if i >= 0 && String.length s > i + 1 then
+          if s.[i + 1] = '\\' then
             loop
-              (String.sub s 0 (i - 2)
-              ^ String.sub s (i + 1) (String.length s - i - 1))
+              (String.sub s 0 i
+              ^
+              if String.length s > i + 2 then
+                String.sub s (i + 2) (String.length s - i - 2)
+              else "")
           else s
         else s
       in
@@ -1383,18 +1380,21 @@ let main () =
 
   (* install tex templates in bases/etc *)
   let etc_dir = Filename.concat !bases "etc" in
-  let cmmd = Format.sprintf "cp -R ./tex %s" etc_dir in
-  let error = Sys.command cmmd in
+  let do_load_tex_files =
+    Format.sprintf "cp -R ./gw2l_dist/etc/tex %s" etc_dir
+  in
+  let error = Sys.command do_load_tex_files in
   if error > 0 then (
     Printf.eprintf "Error while loading tex templates files (%d)\n" error;
     exit 0);
 
-  (if !family <> "" then
-   let cmmd = Format.sprintf "cp -R ./%s.gwb ./%s-tmp.gwb" !family !family in
-   let error = Sys.command cmmd in
-   if error > 0 then
-     Printf.eprintf "Error while copying base folder (%d)\n" error);
-
+  (* Not needed if we run in Bases_dir
+     if !family <> "" then (
+     let cmmd = Format.sprintf "cp -R ./%s.gwb ./%s-tmp.gwb" !family !family in
+     let error = Sys.command cmmd in
+     if error > 0 then
+       Printf.eprintf "Error while copying base folder (%d)\n" error);
+  *)
   let fname_txt, family_out =
     ( (if !family <> "" then !family ^ ".txt"
       else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
@@ -1405,7 +1405,7 @@ let main () =
   let fname_all = Filename.concat !livres (!family ^ ".txt") in
   let fname_out =
     if !out_file <> "" then !out_file
-    else Filename.concat "livres" (family_out ^ ".tex")
+    else Filename.concat "Livres" (family_out ^ ".tex")
   in
   let mode, fname_in, och =
     if Sys.file_exists fname_txt then
@@ -1416,8 +1416,8 @@ let main () =
   let ic = open_in_bin fname_in in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  Printf.eprintf "\nThis is GwToLaTeX version %s on %s (%d)\n" version fname_in
-    !debug;
+  Printf.eprintf "\nThis is GwToLaTeX version %s on %s to %s (%d)\n" version
+    fname_in fname_out !debug;
   flush stderr;
 
   (match mode with
@@ -1440,9 +1440,10 @@ let main () =
   flush stderr;
 
   let mode = if !verbose then "" else "-interaction=batchmode" in
-  let do_rm_aux = Printf.sprintf "rm livres/%s.aux" family_out in
+  let do_rm_aux = Printf.sprintf "rm ./gw2l_dist/tmp-aux/%s.aux" family_out in
   let do_pdflatex =
-    Printf.sprintf "pdflatex -output-directory=livres %s %s.tex" mode family_out
+    Printf.sprintf "pdflatex -output-directory=./gw2l_dist/tmp-aux %s %s" mode
+      fname_out
   in
 
   Printf.eprintf "First pass at pdflatex \n";
@@ -1461,7 +1462,8 @@ let main () =
     exit 0);
   (* makeindex does not like absolute paths! *)
   let do_makeindex =
-    Printf.sprintf "makeindex livres%s%s.idx" Filename.dir_sep family_out
+    Printf.sprintf "makeindex ./gw2l_dist/tmp_aux/%s%s.idx" Filename.dir_sep
+      family_out
   in
   for _i = 0 to !index do
     let error = Sys.command do_makeindex in
@@ -1480,6 +1482,11 @@ let main () =
     let error = Sys.command do_makeindex in
     if error <> 0 then
       Printf.eprintf "Error in makeindex processing (%d)\n" error);
+
+  let pdf_name = Filename.remove_extension fname_out ^ ".pdf" in
+  let do_move_pdf = Printf.sprintf "mv %s ./Livres" pdf_name in
+  let error = Sys.command do_move_pdf in
+  if error <> 0 then Printf.eprintf "Error in moving pdf file (%d)\n" error;
 
   Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
   flush stderr

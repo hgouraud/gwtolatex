@@ -6,7 +6,8 @@
   unidecode
   geneweb.gwdb-legacy
   geneweb.sosa_zarith
-  geneweb)
+  geneweb
+  oUnit)
  (preprocess
   (pps ppx_deriving.show))
  (modules test test_gwtolatex))

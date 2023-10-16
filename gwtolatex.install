@@ -1,0 +1,11 @@
+lib: [
+  "_build/install/default/lib/gwtolatex/META"
+  "_build/install/default/lib/gwtolatex/dune-package"
+  "_build/install/default/lib/gwtolatex/opam"
+]
+bin: [
+  "_build/install/default/bin/gwtolatex"
+]
+doc: [
+  "_build/install/default/doc/gwtolatex/README.txt"
+]
