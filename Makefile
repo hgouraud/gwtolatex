@@ -45,7 +45,7 @@ distrib:
 	dune build -p gwtolatex
 	mkdir $(DISTRIB_DIR)
 	mkdir $(DISTRIB_DIR)/etc
-	mkdir $(DISTRIB_DIR)/tmp-aux
+	mkdir $(DISTRIB_DIR)/tmp
 	cp $(BUILD_DIR)default/bin/gwtolatex.exe $(DISTRIB_DIR)/gwtolatex$(EXT)
 	cp -R ./tex $(DISTRIB_DIR)/etc
 	cp ./gwl.sh $(DISTRIB_DIR)
@@ -57,7 +57,7 @@ clean:
 	@echo -n "Cleaning…"
 	@$(RM) $(GENERATED_FILES_DEP)
 	@$(RM) -r $(DISTRIB_DIR)
-	@$(RM) tmp-aux/*
+	@$(RM) tmp/*
 	@dune clean
 	@echo " Done."
 .PHONY: clean

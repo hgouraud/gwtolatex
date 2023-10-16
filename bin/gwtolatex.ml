@@ -1440,9 +1440,9 @@ let main () =
   flush stderr;
 
   let mode = if !verbose then "" else "-interaction=batchmode" in
-  let do_rm_aux = Printf.sprintf "rm ./gw2l_dist/tmp-aux/%s.aux" family_out in
+  let do_rm_aux = Printf.sprintf "rm ./gw2l_dist/tmp/%s.aux" family_out in
   let do_pdflatex =
-    Printf.sprintf "pdflatex -output-directory=./gw2l_dist/tmp-aux %s %s" mode
+    Printf.sprintf "pdflatex -output-directory=./gw2l_dist/tmp %s %s" mode
       fname_out
   in
 
@@ -1462,7 +1462,7 @@ let main () =
     exit 0);
   (* makeindex does not like absolute paths! *)
   let do_makeindex =
-    Printf.sprintf "makeindex ./gw2l_dist/tmp_aux/%s%s.idx" Filename.dir_sep
+    Printf.sprintf "makeindex ./gw2l_dist/tmp%s%s.idx" Filename.dir_sep
       family_out
   in
   for _i = 0 to !index do
