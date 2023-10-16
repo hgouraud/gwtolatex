@@ -1,4 +1,6 @@
 (* Copyright (c) 2013 H.Gouraud *)
+open Gwtolatex
+
 type name = string * string
 
 (* TODO suppress (pages liées) and (modifier) in m=NOTES *)
@@ -145,20 +147,6 @@ let _strip_all_trailing_spaces s =
   in
   loop 0
 
-let contains str sub =
-  let strlen = String.length str in
-  let sublen = String.length sub in
-  let rec aux i1 i2 =
-    if i1 = sublen then true
-    else if i2 = strlen then false
-    else if String.unsafe_get str i2 = String.unsafe_get sub i1 then
-      aux (i1 + 1) (i2 + 1)
-    else false
-  in
-  let rec loop i =
-    if i + sublen <= strlen then aux 0 i || loop (i + 1) else false
-  in
-  loop 0
 
 let chop_body n body = String.sub body 0 (min n (String.length body))
 
@@ -236,14 +224,6 @@ let _dump_tag elt =
       Printf.eprintf "<end %s>\n" name
   | Text s -> Printf.eprintf "Text elt: (%s)\n" s
 
-(* in str, replace car x by car y *)
-let replace x y str =
-  let b = Buffer.create 40 in
-  String.iter
-    (fun c -> if c = x then Buffer.add_char b y else Buffer.add_char b c)
-    str;
-  Buffer.contents b
-
 let unaccent_utf_8 lower s i =
   let fns =
     if lower then fun n s -> (String.lowercase_ascii s, n) else fun n s -> (s, n)
@@ -285,27 +265,6 @@ by prepending a backslash; for the other three,
 use the macros \textasciitilde, \textasciicircum, and \textbackslash.
 *)
 
-let escape str =
-  let special =
-    [
-      ('&', "\\&{}");
-      ('%', "\\%{}");
-      ('#', "\\#{}");
-      ('~', "\\~{}");
-      ('^', "\\^{}");
-      ('_', "\\_{}");
-      (* dont escape $, {, } and \, we need them in the content *)
-    ]
-  in
-  let b = Buffer.create 100 in
-  String.iter
-    (fun c ->
-      try
-        let s = List.assoc c special in
-        Buffer.add_string b s
-      with Not_found -> Buffer.add_char b c)
-    str;
-  Buffer.contents b
 
 let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
@@ -313,7 +272,7 @@ let get_att_list attributes =
 let split_href href =
   let parts = String.split_on_char '?' href in
   let href =
-    replace ';' '&' (List.nth parts (if List.length parts = 2 then 1 else 0))
+    Sutil.replace ';' '&' (List.nth parts (if List.length parts = 2 then 1 else 0))
   in
   let evars = String.split_on_char '&' href in
   let evars =
@@ -371,7 +330,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       Format.sprintf "\n\\includegraphics[width=5cm]{%s%s%s.%s}\n"
         "/Users/Henri/Genea/GeneWeb-Bases/images/chausey/Side" Filename.dir_sep
         (* includegraphics does not like . in filenames *)
-        (lower name |> replace '.' '-' |> replace ' ' '_')
+        (lower name |> Sutil.replace '.' '-' |> Sutil.replace ' ' '_')
         "jpg"
   | Images ->
       let ext = Filename.extension name in
@@ -421,85 +380,7 @@ let dummy_tags_3 =
     "style";
   ]
 
-let simple_tag_1 t str =
-  let tags =
-    [
-      ("i", "textit");
-      ("u", "underline");
-      ("b", "bf");
-      ("em", "it");
-      ("strong", "bf");
-      ("big", "large");
-      ("small", "small");
-      ("tiny", "tiny");
-      ("tt", "tt");
-    ]
-  in
-  let cmd =
-    try List.assoc t tags
-    with Not_found ->
-      Printf.eprintf "funny tag 1 %s\n" t;
-      "underline"
-  in
-  if str <> "" then Format.sprintf "{\\%s %s}" cmd str else ""
 
-let _simple_tag_2 t str =
-  let tags =
-    [ ("b", "bf"); ("small", "scriptsize"); ("tiny", "tiny"); ("tt", "tt") ]
-  in
-  let cmd =
-    try List.assoc t tags
-    with Not_found ->
-      Printf.eprintf "funny tag 2 %s\n" t;
-      "underline"
-  in
-  if str <> "" then Format.sprintf "{\\%s %s}" cmd str else ""
-
-(* convert %xx utf-8 notation *)
-let decode s =
-  let hexa_val conf =
-    match conf with
-    | '0' .. '9' -> Char.code conf - Char.code '0'
-    | 'a' .. 'f' -> Char.code conf - Char.code 'a' + 10
-    | 'A' .. 'F' -> Char.code conf - Char.code 'A' + 10
-    | _ -> 0
-  in
-  let rec need_decode i =
-    if i < String.length s then
-      match s.[i] with '%' -> true | _ -> need_decode (succ i)
-    else false
-  in
-  let rec compute_len i i1 =
-    if i < String.length s then
-      let i =
-        match s.[i] with
-        | '%' when i + 2 < String.length s -> i + 3
-        | _ -> succ i
-      in
-      compute_len i (succ i1)
-    else i1
-  in
-  let rec copy_decode_in s1 i i1 =
-    if i < String.length s then
-      let i =
-        match s.[i] with
-        | '%' when i + 2 < String.length s ->
-            let v = (hexa_val s.[i + 1] * 16) + hexa_val s.[i + 2] in
-            Bytes.set s1 i1 (Char.chr v);
-            i + 3
-        | x ->
-            Bytes.set s1 i1 x;
-            succ i
-      in
-      copy_decode_in s1 i (succ i1)
-    else Bytes.unsafe_to_string s1
-  in
-  if need_decode 0 then
-    let len = compute_len 0 0 in
-    let s1 = Bytes.create len in
-    let s = copy_decode_in s1 0 0 in
-    s
-  else s
 
 (* process commands to build a full page page *)
 (* used for tree displays and large images *)
@@ -539,22 +420,6 @@ let extract_base b =
   (* if List.length base > 0 then List.nth b 0 else "" *)
   !base
 
-let build_index fn sn ocn content check =
-  (* cover cases with sn = . (houses) or X (boats) *)
-  match (fn, sn) with
-  | fn, "." | fn, "X" ->
-      Format.sprintf "{\\bf %s}" content ^ Format.sprintf "\\index{%s}" fn
-  | "Famille", sn ->
-      Format.sprintf "{\\bf %s}" content ^ Format.sprintf "\\index{%s}" sn
-  | fn, sn ->
-      Format.sprintf "{\\bf %s}" content
-      ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
-      ^
-      if
-        check <> content (* TODO parametrize this *)
-        && sn <> "." && sn <> "X" && sn <> "?" && fn <> "?"
-      then Format.sprintf "\\index{%s, voir %s, %s%s}" content sn fn ocn
-      else ""
 
 (* process_tree_cumul accumulates results in a string *)
 
@@ -572,7 +437,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
     (* TODO identify vignettes ! -> special width *)
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
-    let href = decode href |> escape in
+    let href = Sutil.decode href |> Lutil.escape in
     let b, m, p, n, oc, i, k, s, _v = split_href href in
     let b = extract_base b in
     if List.mem m skip_m_cmd then cumul
@@ -600,10 +465,10 @@ let rec process_tree_cumul och cumul tree (row, col) =
         (* TODO verify uppercase! (le Fort), (Le Fort) *)
         let check = Printf.sprintf "%s %s%s" fn sn ocn in
         if (fn <> "" || sn <> "") && s <> "" && k = "" then
-          build_index fn sn ocn content check
+          Lutil.build_index fn sn ocn content check
         else if b <> !base then Format.sprintf "%s\\footnote{%s}" content href
         else if s <> "" then (
-          let vignette = contains s "-vignette" in
+          let vignette = Sutil.contains s "-vignette" in
           if k = "" && not vignette then incr image_nbr;
           let image =
             ( Images,
@@ -637,7 +502,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
   let tag_img _cumul _name attributes _children =
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
-    let href = decode href |> escape in
+    let href = Sutil.decode href |> Lutil.escape in
     let _b, _m, p, n, oc, i, k, s, _v = split_href href in
     let ip =
       match
@@ -654,7 +519,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
       let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
       let image_label = Format.sprintf "%s.%d.%s" fn ocn sn in
       (* TODO identify vignettes ! -> special width *)
-      let vignette = contains s "-vignette" in
+      let vignette = Sutil.contains s "-vignette" in
       if not vignette then incr image_nbr;
       let image =
         ( (if vignette then Vignette
@@ -678,15 +543,6 @@ let rec process_tree_cumul och cumul tree (row, col) =
       "" children
   in
 
-  let get_attr attributes attr =
-    List.fold_left
-      (fun c ((_, k), v) -> if k = attr then v ^ c else c)
-      "" attributes
-  in
-
-  let test_attr attributes attr value =
-    List.exists (fun ((_, k), v) -> k = attr && v = value) attributes
-  in
 
   let continue cumul children =
     List.fold_left
@@ -694,203 +550,15 @@ let rec process_tree_cumul och cumul tree (row, col) =
       cumul children
   in
 
-  let suppress_multiple_sp str =
-    let b = Buffer.create 100 in
-    let rec loop cond i =
-      if i = String.length str then Buffer.contents b
-      else if str.[i] <> ' ' then (
-        Buffer.add_char b str.[i];
-        loop true (i + 1))
-      else if cond then (
-        Buffer.add_char b str.[i];
-        loop false (i + 1))
-      else loop false (i + 1)
-    in
-    loop true 0
-  in
-
-  let suppress_trailing_sp str =
-    let b = Buffer.create 100 in
-    let rec loop cond i =
-      if i = 0 then (
-        Buffer.add_char b str.[i];
-        Buffer.to_seq b |> List.of_seq |> List.rev
-        |> List.map (fun c -> String.make 1 c)
-        |> String.concat "")
-      else if str.[i] = ' ' && cond then loop cond (i - 1)
-      else (
-        Buffer.add_char b str.[i];
-        loop false (i - 1))
-    in
-    loop true (String.length str - 1)
-  in
-
-  let suppress_leading_sp str =
-    let b = Buffer.create 100 in
-    let rec loop cond i =
-      if i = String.length str then Buffer.contents b
-      else if str.[i] = ' ' && cond then loop cond (i + 1)
-      else (
-        Buffer.add_char b str.[i];
-        loop false (i + 1))
-    in
-    loop true 0
-  in
-
-  let replace_utf8_bar str =
-    let rec loop s =
-      let i = try String.index s '\xE2' with Not_found -> -1 in
-      if i = -1 then s
-      else if i >= 0 && String.length s > i + 2 then
-        if String.length s > i + 2 && s.[i + 1] = '\x94' && s.[i + 2] = '\x82'
-        then
-          loop
-            ((if i = 0 then "" else String.sub s 0 i)
-            ^ "|"
-            ^
-            if String.length s > i + 3 then
-              String.sub s (i + 3) (String.length s - i - 3)
-            else "")
-        else s
-      else s
-    in
-    loop str
-  in
-
-  let clean_double_back_slash str =
-    let s =
-      let rec loop s =
-        let i = try String.index s '\\' with Not_found -> -1 in
-        if i = -1 then s
-        else if i >= 0 && String.length s > i + 1 then
-          if s.[i + 1] = '\\' then
-            loop
-              (String.sub s 0 i
-              ^
-              if String.length s > i + 2 then
-                String.sub s (i + 2) (String.length s - i - 2)
-              else "")
-          else s
-        else s
-      in
-      loop str
-    in
-    let s = replace '\n' ' ' s in
-    suppress_multiple_sp s
-  in
 
   let _print_cell cell =
     match cell with
     | w, s, ty, te, it ->
         Printf.eprintf "(%d, %d, %s, %s, %s) " w s ty
-          (clean_double_back_slash te)
-          (clean_double_back_slash it)
+          (Sutil.clean_double_back_slash te)
+          (Sutil.clean_double_back_slash it)
   in
 
-  let scan_row_for_bar row =
-    let utf8_bar = String.of_seq (List.to_seq [ '\xE2'; '\x94'; '\x82' ]) in
-    List.fold_left
-      (fun (lr, bar) (_, _, _, te, it) ->
-        let i = try String.index te '|' with Not_found -> -1 in
-        let j = try String.index it '|' with Not_found -> -1 in
-        let k = try String.index te '\xE2' with Not_found -> -1 in
-        let l = try String.index it '\xE2' with Not_found -> -1 in
-        let left_right =
-          if i = 0 || j = 0 || k = 0 || l = 0 then 0
-          else if i = -1 && j = -1 && k = -1 && l = -1 then -1
-          else 1
-        in
-        let bar =
-          bar || String.contains te '|' || String.contains it '|'
-          || contains te utf8_bar || contains it utf8_bar
-        in
-        let lr =
-          match (lr, left_right) with
-          | -1, 0 -> 0
-          | 0, -1 -> 0
-          | 0, 0 -> 0
-          | -1, 1 -> 1
-          | 1, -1 -> 1
-          | 1, 1 -> 1
-          | _, _ -> -1
-        in
-        (lr, bar))
-      (-1, false) row
-  in
-
-  let get_part lr side str =
-    let str = clean_double_back_slash str in
-    let str = suppress_trailing_sp str in
-    let str = suppress_leading_sp str in
-    let str = replace_utf8_bar str in
-    let res =
-      match (lr, side) with
-      | 0, "left" -> String.sub str 1 (String.length str - 1)
-      | 0, "right" -> String.sub str 1 (String.length str - 1)
-      | 1, "left" -> String.sub str 0 (String.length str - 1)
-      | 1, "right" -> String.sub str 0 (String.length str - 1)
-      | _, _ -> str
-    in
-    res
-  in
-
-  let copy_row row lr side =
-    List.map
-      (fun (w, s, ty, te, it) ->
-        ( w,
-          s,
-          (if side = "bar" then match ty with "Te" | "It" -> "Hv2" | _ -> ty
-          else ty),
-          (if side = "bar" then ""
-          else match ty with "Te" -> get_part lr side te | _ -> te),
-          if side = "bar" then ""
-          else match ty with "It" -> get_part lr side it | _ -> it ))
-      row
-  in
-
-  let split_rows_with_vbar tree =
-    List.fold_left
-      (fun acc row ->
-        let lr, bar = scan_row_for_bar row in
-        (* lr = 0 -> | xxx, lr = 1 -> xxx |, lr = -1 -> xxx *)
-        if bar then
-          if lr = 0 then copy_row row lr "bar" :: copy_row row lr "right" :: acc
-          else copy_row row lr "left" :: copy_row row lr "bar" :: acc
-        else row :: acc)
-      [] (List.rev tree)
-  in
-
-  let print_tree tree =
-    let tree = split_rows_with_vbar tree in
-    let tree, _n =
-      List.fold_left
-        (fun (acc1, r) row ->
-          let str =
-            List.fold_left
-              (fun acc2 (_, s, ty, te, it) ->
-                let cell =
-                  (match ty with
-                  | "Te" -> "Te " ^ clean_double_back_slash te
-                  | "It" -> "It " ^ clean_double_back_slash it
-                  | "Hl" -> "Hr " ^ "-l"
-                  | "Hr" -> "Hr " ^ "r-"
-                  | "Hc" -> "Hr " ^ "--"
-                  | "Hv1" -> "Vr1 " ^ "|"
-                  | "Hv2" -> "Vr2 " ^ "|"
-                  | "E" -> "E" ^ ""
-                  | "Im" -> "Im " ^ "Image"
-                  | _ -> "x")
-                  ^ if s > 1 then Format.sprintf "(%d)" s else ""
-                in
-                acc2 ^ "[" ^ cell ^ "] ")
-              "" row
-          in
-          ( acc1 ^ Format.sprintf "Row %d: (%d) %s\\\\\n" r (List.length row) str,
-            r + 1 ))
-        ("", 1) tree
-    in
-    Format.sprintf "Interim print (%d)\\\\\n %s\n" (String.length tree) tree
-  in
 
   match tree with
   | Text s -> cumul ^ s
@@ -899,7 +567,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
       | ("i" | "u" | "b" | "em" | "tt" | "strong" | "tiny" | "small" | "big") as
         t ->
           let content = get_child children in
-          cumul ^ simple_tag_1 t content
+          cumul ^ Lutil.simple_tag_1 t content
       | "br" -> cumul ^ " \\\\\n"
       | "sup" ->
           let content = get_child children in
@@ -923,8 +591,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
       | "h3" ->
           let content = get_child children in
           let str =
-            if contains content ">Bateaux<" then "\n\\par\\hgbato{Bateaux}"
-            else if contains content ">Propriétaires<" then
+            if Sutil.contains content ">Bateaux<" then "\n\\par\\hgbato{Bateaux}"
+            else if Sutil.contains content ">Propriétaires<" then
               "\n\\par\\hgbato{Propriétaires}"
             else Format.sprintf "\\subsubsection{%s}" content
           in
@@ -998,9 +666,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
           (* <span mode="highlight">sn fn%if;(oc != "0") (oc)%end;</span> *)
           (* children is a single string of TeX *)
           (* % might not be there (old format) *)
-          let display_none = test_attr attributes "style" "display:none" in
-          let highlight_mode = test_attr attributes "mode" "highlight" in
-          let tex_mode_1 = test_attr attributes "mode" "tex" in
+          let display_none = Hutil.test_attr attributes "style" "display:none" in
+          let highlight_mode = Hutil.test_attr attributes "mode" "highlight" in
+          let tex_mode_1 = Hutil.test_attr attributes "mode" "tex" in
           let str =
             let content = get_child children in
             let tex_mode_2 =
@@ -1009,8 +677,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
             in
             if display_none then
               if String.length content > 3 && (tex_mode_1 || tex_mode_2) then
-                let content = replace '[' '{' content in
-                let content = replace ']' '}' content in
+                let content = Sutil.replace '[' '{' content in
+                let content = Sutil.replace ']' '}' content in
                 let content =
                   if tex_mode_2 then
                     String.sub content 4 (String.length content - 7)
@@ -1035,8 +703,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
           (* <div class="container" style="column-count:2;column-gap:50px"> *)
           (* <div class="column"> *)
           (* <div class="row"> *)
-          let clas = get_attr attributes "class" in
-          let sty = get_attr attributes "style" in
+          let clas = Hutil.get_attr attributes "class" in
+          let sty = Hutil.get_attr attributes "style" in
           let sty = String.split_on_char ';' sty in
           let sty =
             List.map
@@ -1053,13 +721,13 @@ let rec process_tree_cumul och cumul tree (row, col) =
               with Failure _ -> 0
             with Not_found -> 0
           in
-          let tabl = if contains clas "columns" then (0, 0) else (row, col) in
+          let tabl = if Sutil.contains clas "columns" then (0, 0) else (row, col) in
           let content =
             List.fold_left
               (fun acc c -> acc ^ process_tree_cumul och cumul c tabl)
               "" children
           in
-          if contains clas "container" && cols > 1 then
+          if Sutil.contains clas "container" && cols > 1 then
             cumul
             ^ Format.sprintf "\n\\begin{multicols}{%d}\n%s\n\\end{multicols}\n"
                 cols content
@@ -1070,12 +738,12 @@ let rec process_tree_cumul och cumul tree (row, col) =
           new_row := [];
           let _ = continue "" children in
           if !new_row <> [] then new_tree := List.rev !new_row :: !new_tree;
-          cumul ^ print_tree (List.rev !new_tree)
+          cumul ^ Trees.print_tree (List.rev !new_tree)
       | "cell" ->
           if !c_typ <> "" || !c_txt <> "" || !c_item <> "" then
             new_row := (!c_width, !c_span, !c_typ, !c_txt, !c_item) :: !new_row;
           c_width := 0;
-          let span = get_attr attributes "colspan" in
+          let span = Hutil.get_attr attributes "colspan" in
           (c_span := try int_of_string span with Failure _ -> 1);
           c_typ := "";
           c_txt := "";
@@ -1083,12 +751,11 @@ let rec process_tree_cumul och cumul tree (row, col) =
           continue "" children
       | "celltext" ->
           c_typ := "Te";
-          (* TODO escape & *)
-          c_txt := escape (get_child children);
+          c_txt := Lutil.escape (get_child children);
           continue "" children
       | "cellitem" ->
           c_typ := "It";
-          c_item := escape (get_child children);
+          c_item := Lutil.escape (get_child children);
           continue "" children
       | "rule-left" ->
           c_typ := "Hl";
@@ -1235,18 +902,18 @@ let one_http_call och line =
         let _ = process_html och body in
         ()
   | Error (_, msg) ->
-      Printf.eprintf "error when fetching %s:\n  %s\n%!" (escape url)
-        (escape msg);
+      Printf.eprintf "error when fetching %s:\n  %s\n%!" (Lutil.escape url)
+        (Lutil.escape msg);
       output_string och
-        (Format.sprintf "Error when fetching %s:\n %s\n" (escape url)
-           (escape msg))
+        (Format.sprintf "Error when fetching %s:\n %s\n" (Lutil.escape url)
+           (Lutil.escape msg))
 
 let print_images och images_list =
   output_string och (Format.sprintf "\\par\n");
   (* TODO manage Wide *)
   List.iter
     (fun (im_type, name, (ch, sec, ssec, _sssec), nbr) ->
-      let wide = contains name "-wide" in
+      let wide = Sutil.contains name "-wide" in
       let width = if wide then "\\textwidth" else !im_width in
       match im_type with
       | Imagek | Portrait | Vignette -> ()
@@ -1360,7 +1027,6 @@ let main () =
         " Number of times makeindex is done." );
       ("-second", Arg.Set second, " Run Pdflatex a second time.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
-      ("-verbose", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
       ("-v", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
       ("-follow", Arg.Set follow, " Run Pdflatex.");
       ("-pdf", Arg.Set follow, " Run Pdflatex.");
@@ -1405,7 +1071,7 @@ let main () =
   let fname_all = Filename.concat !livres (!family ^ ".txt") in
   let fname_out =
     if !out_file <> "" then !out_file
-    else Filename.concat "Livres" (family_out ^ ".tex")
+    else Filename.concat "./gw2l_dist/tmp" (family_out ^ ".tex")
   in
   let mode, fname_in, och =
     if Sys.file_exists fname_txt then
@@ -1488,6 +1154,7 @@ let main () =
   let error = Sys.command do_move_pdf in
   if error <> 0 then Printf.eprintf "Error in moving pdf file (%d)\n" error;
 
+  Printf.eprintf "Result file in ./Livres/%s.pdf\n" !family;
   Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
   flush stderr
 

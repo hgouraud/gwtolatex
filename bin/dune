@@ -1,6 +1,6 @@
 (executable
- (public_name gwtolatex)
- (name gwtolatex)
+ (public_name gwl)
+ (name gwl)
  (libraries
   gwtolatex
   ezcurl
