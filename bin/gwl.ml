@@ -55,6 +55,7 @@ let base = ref "Chausey"
 let family = ref ""
 let out_file = ref ""
 let debug = ref (-1)
+let dev = ref false
 let second = ref false
 let index = ref 0
 let verbose = ref false
@@ -745,6 +746,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
           c_width := 0;
           let span = Hutil.get_attr attributes "colspan" in
           (c_span := try int_of_string span with Failure _ -> 1);
+          (* TODO undestand why some span are -1 *)
+          if !c_span = -1 then c_span := 1;
           c_typ := "";
           c_txt := "";
           c_item := "";
@@ -952,6 +955,7 @@ let print_images och images_list =
   output_string och (Format.sprintf "\\par\n")
 
 let process_one_line och line =
+  if !debug = 1 then Printf.eprintf "Line: %s\n" line;
   match line.[0] with
   | '<' -> (
       match line.[1] with
@@ -1026,6 +1030,7 @@ let main () =
         Arg.Int (fun x -> index := x),
         " Number of times makeindex is done." );
       ("-second", Arg.Set second, " Run Pdflatex a second time.");
+      ("-dev", Arg.Set dev, " Run in the GitHub repo.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
       ("-v", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
       ("-follow", Arg.Set follow, " Run Pdflatex.");
@@ -1045,24 +1050,34 @@ let main () =
   Arg.parse speclist anonfun usage;
 
   (* install tex templates in bases/etc *)
+  let dist_dir =
+    if !dev then "."
+    else "gw2l_dist"
+  in
   let etc_dir = Filename.concat !bases "etc" in
+  let tex_dir =
+    String.concat Filename.dir_sep [ dist_dir; "tex" ]
+  in
   let do_load_tex_files =
-    Format.sprintf "cp -R ./gw2l_dist/etc/tex %s" etc_dir
+    Format.sprintf "cp -R %s %s" tex_dir etc_dir
   in
   let error = Sys.command do_load_tex_files in
   if error > 0 then (
     Printf.eprintf "Error while loading tex templates files (%d)\n" error;
     exit 0);
 
-  (* Not needed if we run in Bases_dir
-     if !family <> "" then (
-     let cmmd = Format.sprintf "cp -R ./%s.gwb ./%s-tmp.gwb" !family !family in
-     let error = Sys.command cmmd in
-     if error > 0 then
-       Printf.eprintf "Error while copying base folder (%d)\n" error);
-  *)
+(*
+  let tmp_dir = Filename.concat dist_dir "tmp" in
+  try if Sys.is_directory tmp_dir then ()
+  with Sys_error _ -> (
+    Printf.eprintf "Creating tmp dir\n";
+    try Sys.mkdir tmp_dir 766 with Sys_error _ -> (
+      Printf.eprintf "Error in creating tmp dir\n"; exit 0));
+*)
+
   let fname_txt, family_out =
-    ( (if !family <> "" then !family ^ ".txt"
+    ( (if !family <> "" then
+      Filename.concat !livres (!family ^ ".txt")
       else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
       if !family <> "" then !family
       else Printf.sprintf "gwtolatex-test%d" !test_nb )
@@ -1070,8 +1085,7 @@ let main () =
   let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
   let fname_all = Filename.concat !livres (!family ^ ".txt") in
   let fname_out =
-    if !out_file <> "" then !out_file
-    else Filename.concat "./gw2l_dist/tmp" (family_out ^ ".tex")
+    String.concat Filename.dir_sep [ dist_dir; "tmp"; (family_out ^ ".tex")]
   in
   let mode, fname_in, och =
     if Sys.file_exists fname_txt then
@@ -1106,10 +1120,13 @@ let main () =
   flush stderr;
 
   let mode = if !verbose then "" else "-interaction=batchmode" in
-  let do_rm_aux = Printf.sprintf "rm ./gw2l_dist/tmp/%s.aux" family_out in
+  let fname =
+    String.concat Filename.dir_sep [ dist_dir; "tmp"; (family_out ^ ".aux")]
+  in
+  let do_rm_aux = Printf.sprintf "rm %s" fname in
   let do_pdflatex =
-    Printf.sprintf "pdflatex -output-directory=./gw2l_dist/tmp %s %s" mode
-      fname_out
+    Printf.sprintf "pdflatex -output-directory=%s %s %s"
+    (String.concat Filename.dir_sep [ dist_dir; "tmp"]) mode fname_out
   in
 
   Printf.eprintf "First pass at pdflatex \n";
@@ -1127,10 +1144,10 @@ let main () =
     Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
     exit 0);
   (* makeindex does not like absolute paths! *)
-  let do_makeindex =
-    Printf.sprintf "makeindex ./gw2l_dist/tmp%s%s.idx" Filename.dir_sep
-      family_out
+  let fname =
+    String.concat Filename.dir_sep [ dist_dir; "tmp"; (family_out ^ ".idx")]
   in
+  let do_makeindex = Printf.sprintf "makeindex %s" fname in
   for _i = 0 to !index do
     let error = Sys.command do_makeindex in
     if error <> 0 then (
@@ -1149,12 +1166,16 @@ let main () =
     if error <> 0 then
       Printf.eprintf "Error in makeindex processing (%d)\n" error);
 
-  let pdf_name = Filename.remove_extension fname_out ^ ".pdf" in
-  let do_move_pdf = Printf.sprintf "mv %s ./Livres" pdf_name in
+  let fname = Filename.basename fname_out |> Filename.remove_extension in
+  let pdf_name = 
+    String.concat Filename.dir_sep [ dist_dir; "tmp"; (fname ^ ".pdf")]
+  in
+  let dir = if !dev then "test" else !livres in
+  let do_move_pdf = Printf.sprintf "mv %s %s" pdf_name dir in
   let error = Sys.command do_move_pdf in
   if error <> 0 then Printf.eprintf "Error in moving pdf file (%d)\n" error;
 
-  Printf.eprintf "Result file in ./Livres/%s.pdf\n" !family;
+  Printf.eprintf "Result file is in %s\n" (Filename.concat dir (fname ^ ".pdf"));
   Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
   flush stderr
 

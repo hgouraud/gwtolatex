@@ -1,18 +1,18 @@
 (* tree construction tools *)
 (* v1  Henri, 2023/10/16 *)
 
-let row_width row =
+let row_width row _n =
   List.fold_left (fun w (_, s, _, _, _) -> w + s) 0 row
 
 let test_tree_width tree =
-  let rec loop first w0 tree =
+  let rec loop first i w0 tree =
     match tree with
-    | [] -> true
-    | row :: tree -> let w = row_width row in
-        if first then loop false w tree
-        else if w <> w0 then false
-        else loop false w0 tree
-  in loop true 0 tree
+    | [] -> (i, w0, w0, true)
+    | row :: tree -> let w = row_width row i in
+        if first then loop false (i + 1) w tree
+        else if w <> w0 then (i + 1, w, w0, false)
+        else loop false (i + 1) w0 tree
+  in loop true 0 0 tree
 
 let get_part lr side str =
   let str = Sutil.clean_double_back_slash str in
@@ -85,8 +85,9 @@ let split_rows_with_vbar tree =
 
 
 let print_tree tree =
-  if not (test_tree_width tree) then (
-    Printf.eprintf "Unbalanced tree \n"; exit 1);
+  let i, w, w0, ok = test_tree_width tree in
+  if not ok then (
+    Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0; exit 1);
   let tree = split_rows_with_vbar tree in
   let tree, _n =
     List.fold_left
