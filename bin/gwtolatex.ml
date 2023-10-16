@@ -53,6 +53,7 @@ let base = ref "Chausey"
 let family = ref ""
 let out_file = ref ""
 let debug = ref (-1)
+let second = ref false
 let index = ref 0
 let verbose = ref false
 
@@ -1350,6 +1351,7 @@ let main () =
       ("-bases", Arg.String (fun x -> bases := x), " Where are bases.");
       ("-base", Arg.String (fun x -> base := x), " Choose base.");
       ("-family", Arg.String (fun x -> family := x), " Choose family.");
+      ("-famille", Arg.String (fun x -> family := x), " Choose family.");
       ( "-livres",
         Arg.String (fun x -> livres := x),
         " Where are the families files." );
@@ -1359,10 +1361,12 @@ let main () =
       ( "-index",
         Arg.Int (fun x -> index := x),
         " Number of times makeindex is done." );
+      ("-second", Arg.Set second, " Run Pdflatex a second time.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
       ("-verbose", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
       ("-v", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
-      ("-follow", Arg.Set follow, " Produce Pdflatex.");
+      ("-follow", Arg.Set follow, " Run Pdflatex.");
+      ("-pdf", Arg.Set follow, " Run Pdflatex.");
       ( "-test",
         Arg.Int
           (fun x ->
@@ -1436,39 +1440,48 @@ let main () =
   flush stderr;
 
   let mode = if !verbose then "" else "-interaction=batchmode" in
-  let cmmd0 = Printf.sprintf "rm livres/%s.aux" family_out in
-  let cmmd1 =
+  let do_rm_aux = Printf.sprintf "rm livres/%s.aux" family_out in
+  let do_pdflatex =
     Printf.sprintf "pdflatex -output-directory=livres %s %s.tex" mode family_out
   in
 
   Printf.eprintf "First pass at pdflatex \n";
-  let _ = Sys.command cmmd0 in
-  let error = Sys.command cmmd1 in
+  flush stderr;
+  let _ = Sys.command do_rm_aux in
+  let error = Sys.command do_pdflatex in
   if error <> 0 then (
     Printf.eprintf "Error in pdflatex processing (%d)\n" error;
     Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
     exit 0);
 
   Printf.eprintf "Building index\n";
+  flush stderr;
   if !test && !index = 0 then (
     Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
     exit 0);
   (* makeindex does not like absolute paths! *)
-  let cmmd2 =
+  let do_makeindex =
     Printf.sprintf "makeindex livres%s%s.idx" Filename.dir_sep family_out
   in
   for _i = 0 to !index do
-    let error = Sys.command cmmd2 in
+    let error = Sys.command do_makeindex in
     if error <> 0 then (
       Printf.eprintf "Error in makeindex processing (%d)\n" error;
       Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
       exit 0)
   done;
 
-  Printf.eprintf "Second pass at pdflatex \n";
-  let error = Sys.command cmmd1 in
-  if error <> 0 then
-    Printf.eprintf "Error in 2nd pdflatex processing (%d)\n" error;
-  Printf.eprintf "Process time is %s s\n" (show_process_time start_time)
+  if !second then (
+    Printf.eprintf "Second pass at pdflatex \n";
+    flush stderr;
+    let error = Sys.command do_pdflatex in
+    if error <> 0 then
+      Printf.eprintf "Error in 2nd pdflatex processing (%d)\n" error;
+    let error = Sys.command do_makeindex in
+    if error <> 0 then
+      Printf.eprintf "Error in makeindex processing (%d)\n" error);
+
+  Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
+  flush stderr
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)
