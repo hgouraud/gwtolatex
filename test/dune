@@ -1,6 +1,7 @@
 (executable
  (name test)
  (libraries
+  gwtolatex
   ezcurl
   markup
   unidecode
