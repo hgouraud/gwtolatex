@@ -7,13 +7,11 @@
   geneweb.gwdb-legacy
   geneweb.sosa_zarith
   geneweb)
-  (preprocess (pps ppx_deriving.show))
-  (modules
-    test
-    test_gwtolatex)
-)
+ (preprocess
+  (pps ppx_deriving.show))
+ (modules test test_gwtolatex))
 
 (rule
-  (action (run ./test.exe) )
-  (alias runtest)
-)
+ (action
+  (run ./test.exe))
+ (alias runtest))
