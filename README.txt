@@ -21,7 +21,8 @@ The source material for the book is a text file containing :
       | "ImageLabel" -> nbr of items in image numbering (ch, sec, ssec, i_nbr)
       | "CollectImages" -> "on/off", collect_images to be printed at end of page
       | "HighLight" ->
-      | "ImageLabel" -> 
+      | "ImageLabel" ->
+      | "Input" -> read the param file, scanning for %%%LIVRES%%%
       | "LaTeX" -> issues a LaTeX command
       | "Newpage" -> newpage
       | "Sideways" -> print page sideways (wip)
@@ -41,18 +42,20 @@ This package includes test and example files named gwtolatex-testn.{txt/html}
 The html files contain only <a ... > tags and do not produce any pdf output.
 
 The launch parameters are:
- - base (wip)
- - bases (wip)
- - livres (wip)
- - follow process the resulting LaTeX code with pdflatex
- - index n repeat n times the index construction
- - family name of the .txt file to be processed in not in etst mode
- - test n read file gwtolatex-testn.ext
- - o output file. if not specified livres/family.pdf
- - level debug level (for my personnal use!!)
- - debug (wip)
- - v run pdflatex in verbose mode
- - help as usual
+ -base (wip, is in fact defined in the <a commands in the input file)
+ -bases (wip, for the time being "."; implies gwl is executed in bases)
+ -livres location of input file and .pdf result
+ -follow process the resulting LaTeX code with pdflatex
+ -index n repeat n times the index construction
+ -family name of the .txt file to be processed if not in test mode
+ -famille idem
+ -test n read file gwtolatex-testn.ext
+ -o output file. if not specified livres/family.pdf
+ -level debug level (for my personnal use!!)
+ -debug (wip)
+ -dev run from the repo otherwise from the distrib dir
+ -v run pdflatex in verbose mode
+ -help as usual
 
 In its current form, GwToLaTeX must run in the folder containing the target base.
 
@@ -64,10 +67,12 @@ Install and test
 - dune exec -- gwtolatex -test n to try gwttolatex-testn.ext
   where ext is txt or html
 
-Make distribution will create a folder gwl_dist containing the necessary components
+Make distribution will create a folder gw2l_dist containing the necessary components
 Copy or move this folder into your bases folder.
-Create a folder bases/Livres containing the input file Xxxx.txt and possible supplemental
-associated to \input{file} commands that may appear in Xxxx.txt.
+Create a folder Livres containing the input file Xxxx.txt and possible supplemental files
+associated to <x Input file> commands that may appear in Xxxx.txt.
+In those files, the macro %%%LIVRES%%% will be replaced by the value of the -livres
+start parameter.
 Run the gwl.sh script after editing your preferences.
 The resulting .pdf file would be moved into the Livres folder
 

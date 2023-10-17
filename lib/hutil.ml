@@ -8,6 +8,3 @@ let get_attr attributes attr =
   List.fold_left
     (fun c ((_, k), v) -> if k = attr then v ^ c else c)
     "" attributes
-
-
-

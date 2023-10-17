@@ -2,5 +2,6 @@
  (name gwtolatex)
  (public_name gwtolatex)
  (synopsis "GeneWebToLaTeX library")
- (preprocess (action (run %{bin:cppo} -D UNIX %{input-file})))
-)
+ (preprocess
+  (action
+   (run %{bin:cppo} -D UNIX %{input-file}))))

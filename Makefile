@@ -46,8 +46,8 @@ distrib:
 	mkdir $(DISTRIB_DIR)
 	mkdir $(DISTRIB_DIR)/etc
 	mkdir $(DISTRIB_DIR)/tmp
-	cp $(BUILD_DIR)default/bin/gwtolatex.exe $(DISTRIB_DIR)/gwtolatex$(EXT)
-	cp -R ./tex $(DISTRIB_DIR)/etc
+	cp $(BUILD_DIR)default/bin/gwl.exe $(DISTRIB_DIR)/gwl$(EXT)
+	cp -R ./tex $(DISTRIB_DIR)
 	cp ./gwl.sh $(DISTRIB_DIR)
 	cp ./Gw2LaTeX-env.tex $(DISTRIB_DIR)
 	cp ../geneweb/hd/etc/version.txt $(DISTRIB_DIR)/gw_version.txt

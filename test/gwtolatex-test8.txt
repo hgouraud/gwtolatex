@@ -1,0 +1,18 @@
+\documentclass[a4paper]{book}
+
+\tracingcommands=1
+\tracingparagraphs=1 
+\tracingmacros=1
+\tracingoutput=1
+\makeindex
+
+\input{./Gw2LaTeX-env.tex}
+
+\begin{document}
+\WarningsOff*
+
+<x Chapter Cartes, plans et cadastre>
+<x Section Cartes et plans>
+<x Input ./%%%LIVRES%%%/Chausey-inputs/Notes-cartes.tex>
+
+\end{document}

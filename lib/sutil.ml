@@ -55,6 +55,28 @@ let replace x y str =
     str;
   Buffer.contents b
 
+let replace_str line sub1 sub2 =
+  if String.length sub1 > 0 && String.length line > 0 then
+    let i = try String.index line sub1.[0] with Not_found -> -1 in
+    if i >= 0 && String.length line > String.length sub1 then
+      let yes =
+        let rec loop ok j =
+          if j = String.length sub1 then true
+          else if i + j = String.length line then false
+          else if sub1.[j] <> line.[i + j] then false
+          else loop ok (j + 1)
+        in
+        loop true 0
+      in
+      if yes then
+        String.sub line 0 i ^ sub2
+        ^ String.sub line
+            (i + String.length sub1)
+            (String.length line - i - String.length sub1)
+      else line
+    else line
+  else line
+
 let contains str sub =
   let strlen = String.length str in
   let sublen = String.length sub in
@@ -149,4 +171,3 @@ let clean_double_back_slash str =
   in
   let s = replace '\n' ' ' s in
   suppress_multiple_sp s
-

@@ -148,7 +148,6 @@ let _strip_all_trailing_spaces s =
   in
   loop 0
 
-
 let chop_body n body = String.sub body 0 (min n (String.length body))
 
 (* returns content between matching tags, and following body *)
@@ -266,14 +265,14 @@ by prepending a backslash; for the other three,
 use the macros \textasciitilde, \textasciicircum, and \textbackslash.
 *)
 
-
 let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
 
 let split_href href =
   let parts = String.split_on_char '?' href in
   let href =
-    Sutil.replace ';' '&' (List.nth parts (if List.length parts = 2 then 1 else 0))
+    Sutil.replace ';' '&'
+      (List.nth parts (if List.length parts = 2 then 1 else 0))
   in
   let evars = String.split_on_char '&' href in
   let evars =
@@ -381,8 +380,6 @@ let dummy_tags_3 =
     "style";
   ]
 
-
-
 (* process commands to build a full page page *)
 (* used for tree displays and large images *)
 (* various commands govern the layout *)
@@ -420,7 +417,6 @@ let extract_base b =
   let _b = String.split_on_char '_' b in
   (* if List.length base > 0 then List.nth b 0 else "" *)
   !base
-
 
 (* process_tree_cumul accumulates results in a string *)
 
@@ -544,13 +540,11 @@ let rec process_tree_cumul och cumul tree (row, col) =
       "" children
   in
 
-
   let continue cumul children =
     List.fold_left
       (fun acc c -> acc ^ process_tree_cumul och cumul c (row, col))
       cumul children
   in
-
 
   let _print_cell cell =
     match cell with
@@ -559,7 +553,6 @@ let rec process_tree_cumul och cumul tree (row, col) =
           (Sutil.clean_double_back_slash te)
           (Sutil.clean_double_back_slash it)
   in
-
 
   match tree with
   | Text s -> cumul ^ s
@@ -592,7 +585,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
       | "h3" ->
           let content = get_child children in
           let str =
-            if Sutil.contains content ">Bateaux<" then "\n\\par\\hgbato{Bateaux}"
+            if Sutil.contains content ">Bateaux<" then
+              "\n\\par\\hgbato{Bateaux}"
             else if Sutil.contains content ">Propriétaires<" then
               "\n\\par\\hgbato{Propriétaires}"
             else Format.sprintf "\\subsubsection{%s}" content
@@ -667,7 +661,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
           (* <span mode="highlight">sn fn%if;(oc != "0") (oc)%end;</span> *)
           (* children is a single string of TeX *)
           (* % might not be there (old format) *)
-          let display_none = Hutil.test_attr attributes "style" "display:none" in
+          let display_none =
+            Hutil.test_attr attributes "style" "display:none"
+          in
           let highlight_mode = Hutil.test_attr attributes "mode" "highlight" in
           let tex_mode_1 = Hutil.test_attr attributes "mode" "tex" in
           let str =
@@ -722,7 +718,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
               with Failure _ -> 0
             with Not_found -> 0
           in
-          let tabl = if Sutil.contains clas "columns" then (0, 0) else (row, col) in
+          let tabl =
+            if Sutil.contains clas "columns" then (0, 0) else (row, col)
+          in
           let content =
             List.fold_left
               (fun acc c -> acc ^ process_tree_cumul och cumul c tabl)
@@ -863,6 +861,17 @@ let one_command och line =
   | "HighLight" -> highlights := param :: !highlights
   | "ImageLabels" -> (
       image_label := try int_of_string param with Failure _ -> 3)
+  | "Input" -> (
+      let param = Sutil.replace_str param "%%%LIVRES%%%" !livres in
+      if !debug = 2 then Printf.eprintf "Param: %s\n" param;
+      let ic = open_in param in
+      try
+        while true do
+          let line = input_line ic in
+          let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
+          output_string och (line ^ "\n")
+        done
+      with End_of_file -> close_in ic)
   | "LaTeX" -> output_string och param
   | "Newpage" -> output_string och "\\newpage"
   | "Section" ->
@@ -956,6 +965,11 @@ let print_images och images_list =
 
 let process_one_line och line =
   if !debug = 1 then Printf.eprintf "Line: %s\n" line;
+  let line =
+    if Sutil.contains line "%%%LIVRES%%%" then
+      Sutil.replace_str line "%%%LIVRES%%%" !livres
+    else line
+  in
   match line.[0] with
   | '<' -> (
       match line.[1] with
@@ -1050,23 +1064,16 @@ let main () =
   Arg.parse speclist anonfun usage;
 
   (* install tex templates in bases/etc *)
-  let dist_dir =
-    if !dev then "."
-    else "gw2l_dist"
-  in
+  let dist_dir = if !dev then "." else "gw2l_dist" in
   let etc_dir = Filename.concat !bases "etc" in
-  let tex_dir =
-    String.concat Filename.dir_sep [ dist_dir; "tex" ]
-  in
-  let do_load_tex_files =
-    Format.sprintf "cp -R %s %s" tex_dir etc_dir
-  in
+  let tex_dir = String.concat Filename.dir_sep [ dist_dir; "tex" ] in
+  let do_load_tex_files = Format.sprintf "cp -R %s %s" tex_dir etc_dir in
   let error = Sys.command do_load_tex_files in
   if error > 0 then (
     Printf.eprintf "Error while loading tex templates files (%d)\n" error;
     exit 0);
 
-(*
+  (*
   let tmp_dir = Filename.concat dist_dir "tmp" in
   try if Sys.is_directory tmp_dir then ()
   with Sys_error _ -> (
@@ -1074,10 +1081,8 @@ let main () =
     try Sys.mkdir tmp_dir 766 with Sys_error _ -> (
       Printf.eprintf "Error in creating tmp dir\n"; exit 0));
 *)
-
   let fname_txt, family_out =
-    ( (if !family <> "" then
-      Filename.concat !livres (!family ^ ".txt")
+    ( (if !family <> "" then Filename.concat !livres (!family ^ ".txt")
       else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
       if !family <> "" then !family
       else Printf.sprintf "gwtolatex-test%d" !test_nb )
@@ -1085,7 +1090,7 @@ let main () =
   let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
   let fname_all = Filename.concat !livres (!family ^ ".txt") in
   let fname_out =
-    String.concat Filename.dir_sep [ dist_dir; "tmp"; (family_out ^ ".tex")]
+    String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".tex" ]
   in
   let mode, fname_in, och =
     if Sys.file_exists fname_txt then
@@ -1121,12 +1126,13 @@ let main () =
 
   let mode = if !verbose then "" else "-interaction=batchmode" in
   let fname =
-    String.concat Filename.dir_sep [ dist_dir; "tmp"; (family_out ^ ".aux")]
+    String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".aux" ]
   in
   let do_rm_aux = Printf.sprintf "rm %s" fname in
   let do_pdflatex =
     Printf.sprintf "pdflatex -output-directory=%s %s %s"
-    (String.concat Filename.dir_sep [ dist_dir; "tmp"]) mode fname_out
+      (String.concat Filename.dir_sep [ dist_dir; "tmp" ])
+      mode fname_out
   in
 
   Printf.eprintf "First pass at pdflatex \n";
@@ -1145,7 +1151,7 @@ let main () =
     exit 0);
   (* makeindex does not like absolute paths! *)
   let fname =
-    String.concat Filename.dir_sep [ dist_dir; "tmp"; (family_out ^ ".idx")]
+    String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".idx" ]
   in
   let do_makeindex = Printf.sprintf "makeindex %s" fname in
   for _i = 0 to !index do
@@ -1167,8 +1173,8 @@ let main () =
       Printf.eprintf "Error in makeindex processing (%d)\n" error);
 
   let fname = Filename.basename fname_out |> Filename.remove_extension in
-  let pdf_name = 
-    String.concat Filename.dir_sep [ dist_dir; "tmp"; (fname ^ ".pdf")]
+  let pdf_name =
+    String.concat Filename.dir_sep [ dist_dir; "tmp"; fname ^ ".pdf" ]
   in
   let dir = if !dev then "test" else !livres in
   let do_move_pdf = Printf.sprintf "mv %s %s" pdf_name dir in
