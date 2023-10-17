@@ -21,6 +21,7 @@
 \usepackage{calc}
 \usepackage{fp}
 \usepackage{adjustbox}
+\usepackage{framed}
 \usepackage{color}
 \usepackage{parskip}
 \usepackage{datetime}
@@ -273,5 +274,9 @@
 }
 
 \def\changemargin#1#2{\list{}{\rightmargin#2\leftmargin#1}\item[]}
-\let\endchangemargin=\endlist 
+\let\endchangemargin=\endlist
+
+\setlength{\fboxsep}{0pt}
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1}
 

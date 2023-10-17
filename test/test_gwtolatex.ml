@@ -8,12 +8,47 @@ let suite =
            ( "backslash" >:: fun _ ->
              let test aaa bbb =
                let ccc = Sutil.clean_double_back_slash bbb in
-               if aaa <> ccc then Printf.eprintf "Fail: %s %s\n" aaa ccc;
+               if aaa <> ccc then Printf.eprintf "Fail: (%s) (%s)\n" aaa ccc;
                assert (aaa = ccc)
              in
              test "abc def" "abc \\\\def";
              test "abc def" "\\\\abc \\\\def";
-             test "abc def" "abc def\\\\" );
+             test "abc def" "abc def\\\\";
+             test "" "\\\\";
+             test "\\" "\\";
+             test "\n" "\\\\\n";
+             test "" "";
+             test "" "\\\\";
+             test "\\" "\\";
+             test "\n" "\\\\\n";
+             test "" "";
+             test "\\&{}1968 Sylvie" "\\&{}1968 Sylvie";
+             test "\\&{}1968  Sylvie1 Sautin 1946  "
+               "\\&{}1968 \\\\ Sylvie1 Sautin 1946 \\\\ \\\\";
+             test "\\&{}1968  Sylvie2 Sautin 1946  "
+               "\\&{}1968 \\\\ Sylvie2 Sautin 1946 \\\\ \\\\" );
+           ( "backslash 2" >:: fun _ ->
+             let test aaa bbb =
+               let ccc = Sutil.clean_double_back_slash_2 bbb in
+               if aaa <> ccc then Printf.eprintf "Fail: (%s) (%s)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             test "\\&{}1968 \\\\ Sylvie1 Sautin 1946 \\\\"
+               "\\&{}1968 \\\\ Sylvie1 Sautin 1946 \\\\ \\\\";
+             test "\\&{}1968 \\\\ Sylvie2 Sautin 1946 \\\\xx"
+               "\\&{}1968 \\\\ Sylvie2 Sautin 1946 \\\\ \\\\xx";
+             test "\\&{}1968 \\\\ Sylvie3 Sautin 1946 \\\\"
+               "\\&{}1968 \\\\ Sylvie3 Sautin 1946 \\\\ \\\\\n";
+             test "" "" );
+           ( "backslash 3" >:: fun _ ->
+             let test aaa bbb =
+               let ccc = Sutil.clean_leading_double_back_slash bbb in
+               if aaa <> ccc then Printf.eprintf "Fail: (%s) (%s)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             test "aaa" "\\\\aaa";
+             test "bbb" "bbb";
+             test "" "" );
            ( "suppress_multiple_sp" >:: fun _ ->
              let test aaa bbb =
                let ccc = Sutil.suppress_multiple_sp bbb in
@@ -22,7 +57,8 @@ let suite =
              in
              test "abc def" "abc     def";
              test " abc def" "    abc     def";
-             test "abc def " "abc def    " );
+             test "abc def " "abc def    ";
+             test "" "" );
            ( "suppress_leading_sp" >:: fun _ ->
              let test aaa bbb =
                let ccc = Sutil.suppress_leading_sp bbb in
@@ -31,7 +67,8 @@ let suite =
              in
              test "1abc def" "1abc def";
              test "2abc def" "    2abc def";
-             test "3abc   def" "3abc   def" );
+             test "3abc   def" "3abc   def";
+             test "" "" );
            ( "suppress_trailing_sp" >:: fun _ ->
              let test aaa bbb =
                let ccc = Sutil.suppress_trailing_sp bbb in
@@ -40,19 +77,8 @@ let suite =
              in
              test "1abc def" "1abc def    ";
              test "    2abc def" "    2abc def   ";
-             test "3abc   def  \n" "3abc   def  \n" );
-           ( "replace_utf8_bar" >:: fun _ ->
-             let test aaa bbb =
-               let ccc = Sutil.replace_utf8_bar bbb in
-               if aaa <> ccc then Printf.eprintf "Fail:(%s) (%s)\n" aaa ccc;
-               assert (aaa = ccc)
-             in
-             let utf8_bar =
-               String.of_seq (List.to_seq [ '\xE2'; '\x94'; '\x82' ])
-             in
-             test "1abc | def" ("1abc " ^ utf8_bar ^ " def");
-             test "2abc |" ("2abc " ^ utf8_bar);
-             test "| 3def" (utf8_bar ^ " 3def") );
+             test "3abc   def  \n" "3abc   def  \n";
+             test "" "" );
            ( "replace_str" >:: fun _ ->
              let test aaa bbb sub1 sub2 =
                let ccc = Sutil.replace_str bbb sub1 sub2 in
@@ -66,5 +92,145 @@ let suite =
              test "1abc  ghi" "1abc def ghi" "def" "";
              test "xyz 2ghi" "def 2ghi" "def" "xyz";
              test "3abc xyz" "3abc def" "def" "xyz" );
+           ( "replace_utf8_bar" >:: fun _ ->
+             let test aaa bbb =
+               let ccc = Sutil.replace_utf8_bar bbb in
+               if aaa <> ccc then Printf.eprintf "Fail:(%s) (%s)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             let utf8_bar =
+               String.of_seq (List.to_seq [ '\xE2'; '\x94'; '\x82' ])
+             in
+             test "1abc | def" ("1abc " ^ utf8_bar ^ " def");
+             test "2abc |" ("2abc " ^ utf8_bar);
+             test "| 3def" (utf8_bar ^ " 3def") );
+           ( "get_nb_full_col" >:: fun _ ->
+             let cols =
+               [
+                 "E1";
+                 "E2";
+                 "E3";
+                 "F4";
+                 "F5";
+                 "F6";
+                 "E7";
+                 "E8";
+                 "F9";
+                 "F10";
+                 "F11";
+                 "E12";
+               ]
+             in
+             let test l res b n =
+               let ccc = Trees.get_nb_full_col cols b n in
+               if ccc <> res then
+                 Printf.eprintf "Fail: %s res: (%d) (%d)\n" l ccc res;
+               assert (ccc = res)
+             in
+             test "a" 0 0 1;
+             test "b" 0 0 2;
+             test "b" 0 0 3;
+             test "c" 1 0 4;
+             test "d" 2 3 2 );
+           ( "is_empty_col" >:: fun _ ->
+             let row =
+               [
+                 (0, 1, "E", "1", "");
+                 (0, 2, "E", "2", "");
+                 (0, 3, "It", "4", "");
+                 (0, 1, "E", "7", "");
+                 (0, 1, "E", "8", "");
+                 (0, 3, "It", "9", "");
+                 (0, 1, "E", "12", "");
+               ]
+             in
+             let test res n =
+               let ccc = Trees.is_empty_col row n in
+               assert (ccc = res)
+             in
+             test true 1;
+             test true 2;
+             test true 3;
+             test false 4;
+             test true 8;
+             test false 10;
+             test true 12;
+             test false 14 );
+           ( "find_empty_columns" >:: fun _ ->
+             let row1 =
+               [
+                 (0, 1, "E", "1", "");
+                 (0, 2, "E", "2", "");
+                 (0, 3, "It", "4", "");
+                 (0, 1, "E", "7", "");
+                 (0, 1, "E", "8", "");
+                 (0, 3, "It", "9", "");
+                 (0, 1, "E", "12", "");
+               ]
+             in
+             let row2 =
+               [
+                 (0, 1, "E", "1", "");
+                 (0, 2, "E", "2", "");
+                 (0, 3, "It", "4", "");
+                 (0, 1, "E", "7", "");
+                 (0, 1, "E", "8", "");
+                 (0, 3, "It", "9", "");
+                 (0, 1, "E", "12", "");
+               ]
+             in
+             let row3 =
+               [
+                 (0, 1, "E", "1", "");
+                 (0, 2, "E", "2", "");
+                 (0, 3, "It", "4", "");
+                 (0, 1, "It", "7", "");
+                 (0, 1, "It", "8", "");
+                 (0, 3, "It", "9", "");
+                 (0, 1, "E", "12", "");
+               ]
+             in
+             let my_tree = [ row1; row2 ] in
+             let cols1 =
+               [
+                 "E1";
+                 "E2";
+                 "E3";
+                 "F4";
+                 "F5";
+                 "F6";
+                 "E7";
+                 "E8";
+                 "F9";
+                 "F10";
+                 "F11";
+                 "E12";
+               ]
+             in
+             let cols2 =
+               [
+                 "E1";
+                 "E2";
+                 "E3";
+                 "F4";
+                 "F5";
+                 "F6";
+                 "F7";
+                 "F8";
+                 "F9";
+                 "F10";
+                 "F11";
+                 "E12";
+               ]
+             in
+             let test res one_tree =
+               let ccc = Trees.find_empty_columns one_tree in
+               if ccc <> res then
+                 List.iter (fun c -> Printf.eprintf "%s, " c) ccc;
+               assert (ccc = res)
+             in
+             test cols1 my_tree;
+             let my_tree2 = [ row1; row3 ] in
+             test cols2 my_tree2 );
          ];
   ]

@@ -5,11 +5,11 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github hgouraud/gwtolatex))
 
-(authors "Author Name")
+(authors "Henri Gouraud")
 
-(maintainers "Maintainer Name")
+(maintainers "Henri Gouraud")
 
 (license LICENSE)
 
@@ -17,7 +17,7 @@
 
 (package
  (name gwtolatex)
- (synopsis "A short synopsis")
+ (synopsis "GeneWeb to LaTeX")
  (description "A longer description")
  (depends ocaml dune ezcurl ounit)
  (tags

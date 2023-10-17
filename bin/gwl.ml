@@ -55,6 +55,7 @@ let base = ref "Chausey"
 let family = ref ""
 let out_file = ref ""
 let debug = ref (-1)
+let mode = ref 0
 let dev = ref false
 let second = ref false
 let index = ref 0
@@ -86,7 +87,13 @@ let sub = ref false
 let _trees = ref false
 let ep = ref false
 let arbres = ref false
-let _sideways = ref false
+let sideways = ref false
+let textwidth = ref 15.5 (* in cm *)
+let textheight = ref 25.5
+let margin = ref 2.5
+let fontsize = ref ""
+let hrule = ref true
+
 (*let first_tr = ref true
   let first_td = ref true
   let td_nbr = ref 0*)
@@ -737,7 +744,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
           new_row := [];
           let _ = continue "" children in
           if !new_row <> [] then new_tree := List.rev !new_row :: !new_tree;
-          cumul ^ Trees.print_tree (List.rev !new_tree)
+          cumul
+          ^ Trees.print_tree (List.rev !new_tree) !mode !textwidth !textheight
+              !margin !debug !fontsize !sideways
       | "cell" ->
           if !c_typ <> "" || !c_txt <> "" || !c_item <> "" then
             new_row := (!c_width, !c_span, !c_typ, !c_txt, !c_item) :: !new_row;
@@ -858,7 +867,9 @@ let one_command och line =
   | "CollectImages" -> collect_images := param = "on"
   | "Ep" -> ep := param = "on"
   | "Fiches" -> section_on_a_tag := param = "on"
+  | "FontSize" -> fontsize := param
   | "HighLight" -> highlights := param :: !highlights
+  | "Hrule" -> hrule := param = "on"
   | "ImageLabels" -> (
       image_label := try int_of_string param with Failure _ -> 3)
   | "Input" -> (
@@ -874,6 +885,7 @@ let one_command och line =
       with End_of_file -> close_in ic)
   | "LaTeX" -> output_string och param
   | "Newpage" -> output_string och "\\newpage"
+  | "Sideways" -> sideways := true
   | "Section" ->
       if !image_label > 2 then image_nbr := 0;
       out "section" param;
@@ -964,7 +976,6 @@ let print_images och images_list =
   output_string och (Format.sprintf "\\par\n")
 
 let process_one_line och line =
-  if !debug = 1 then Printf.eprintf "Line: %s\n" line;
   let line =
     if Sutil.contains line "%%%LIVRES%%%" then
       Sutil.replace_str line "%%%LIVRES%%%" !livres
@@ -1013,7 +1024,7 @@ let process_one_line och line =
           if !collect_images && !images_in_page <> [] then
             print_images och !images_in_page;
           images_in_page := [];
-          output_string och (Format.sprintf "\\hrule\n")
+          if !hrule then output_string och (Format.sprintf "\\par\\hrule\n")
       | 'b' -> one_page och line
       | 'x' -> one_command och line
       | 'y' -> output_string och ""
@@ -1046,6 +1057,7 @@ let main () =
       ("-second", Arg.Set second, " Run Pdflatex a second time.");
       ("-dev", Arg.Set dev, " Run in the GitHub repo.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
+      ("-mode", Arg.Int (fun x -> mode := x), " Print tree mode.");
       ("-v", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
       ("-follow", Arg.Set follow, " Run Pdflatex.");
       ("-pdf", Arg.Set follow, " Run Pdflatex.");
@@ -1064,7 +1076,8 @@ let main () =
   Arg.parse speclist anonfun usage;
 
   (* install tex templates in bases/etc *)
-  let dist_dir = if !dev then "." else "gw2l_dist" in
+  (* on excute dans le repo (dev) ou dans bases_dir *)
+  let dist_dir = if !dev then "." else "./gw2l_dist" in
   let etc_dir = Filename.concat !bases "etc" in
   let tex_dir = String.concat Filename.dir_sep [ dist_dir; "tex" ] in
   let do_load_tex_files = Format.sprintf "cp -R %s %s" tex_dir etc_dir in

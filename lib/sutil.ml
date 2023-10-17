@@ -107,19 +107,21 @@ let suppress_multiple_sp str =
   loop true 0
 
 let suppress_trailing_sp str =
-  let b = Buffer.create 100 in
-  let rec loop cond i =
-    if i = 0 then (
-      Buffer.add_char b str.[i];
-      Buffer.to_seq b |> List.of_seq |> List.rev
-      |> List.map (fun c -> String.make 1 c)
-      |> String.concat "")
-    else if str.[i] = ' ' && cond then loop cond (i - 1)
-    else (
-      Buffer.add_char b str.[i];
-      loop false (i - 1))
-  in
-  loop true (String.length str - 1)
+  if str <> "" then
+    let b = Buffer.create 100 in
+    let rec loop cond i =
+      if i = 0 then (
+        Buffer.add_char b str.[i];
+        Buffer.to_seq b |> List.of_seq |> List.rev
+        |> List.map (fun c -> String.make 1 c)
+        |> String.concat "")
+      else if str.[i] = ' ' && cond then loop cond (i - 1)
+      else (
+        Buffer.add_char b str.[i];
+        loop false (i - 1))
+    in
+    loop true (String.length str - 1)
+  else str
 
 let suppress_leading_sp str =
   let b = Buffer.create 100 in
@@ -151,23 +153,64 @@ let replace_utf8_bar str =
   in
   loop str
 
+let clean_double_back_slash_2 str =
+  let str =
+    replace '\n' ' ' str |> suppress_trailing_sp |> suppress_multiple_sp
+  in
+  let str =
+    let rec loop j s =
+      let i = try String.index_from s j '\\' with Not_found -> -1 in
+      if i = -1 then s
+      else if i >= 0 && String.length s > i + 4 then
+        if
+          s.[i + 1] = '\\'
+          && s.[i + 2] = ' '
+          && s.[i + 3] = '\\'
+          && s.[i + 4] = '\\'
+        then
+          loop i
+            (String.sub s 0 i ^ "\\\\"
+            ^
+            if String.length s > i + 2 then
+              String.sub s (i + 5) (String.length s - i - 5)
+            else "")
+        else loop (i + 1) s
+      else s
+    in
+    loop 0 str
+  in
+  str
+
+let clean_leading_double_back_slash str =
+  let i = try String.index str '\\' with Not_found -> -1 in
+  if i = 0 && String.length str > i + 1 && str.[i + 1] = '\\' then
+    String.sub str 0 i
+    ^
+    if String.length str > i + 2 then
+      String.sub str (i + 2) (String.length str - i - 2)
+    else ""
+  else str
+
 let clean_double_back_slash str =
-  let s =
-    let rec loop s =
-      let i = try String.index s '\\' with Not_found -> -1 in
+  let str =
+    let rec loop j s =
+      let i = try String.index_from s j '\\' with Not_found -> -1 in
       if i = -1 then s
       else if i >= 0 && String.length s > i + 1 then
         if s.[i + 1] = '\\' then
-          loop
+          loop i
             (String.sub s 0 i
             ^
             if String.length s > i + 2 then
               String.sub s (i + 2) (String.length s - i - 2)
             else "")
-        else s
+        else loop (i + 1) s
       else s
     in
-    loop str
+    loop 0 str
   in
-  let s = replace '\n' ' ' s in
-  suppress_multiple_sp s
+  str
+
+let clean_item str =
+  replace '\n' ' ' str |> suppress_multiple_sp |> suppress_leading_sp
+  |> suppress_trailing_sp
