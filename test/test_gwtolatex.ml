@@ -59,6 +59,21 @@ let suite =
              test " abc def" "    abc     def";
              test "abc def " "abc def    ";
              test "" "" );
+           ( "get item length" >:: fun _ ->
+             let test aaa bbb =
+               let ccc = Trees.get_item_length bbb in
+               if aaa <> ccc then Printf.eprintf "Fail:(%d) (%d)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             test 8 "1abc def";
+             test 5 "2abc \\\\ def";
+             test 7 "2abcxx \\\\ def";
+             test 7 "2abc \\\\ 2defxx\\\\";
+             test 11 "2abc \\\\ defxx\\\\abcdefghijk";
+             test 12 "2abc \\\\ abcdefghijk\\\\abc";
+             test 10 "3abc   def\\\\";
+             test 0 ""
+            );
            ( "suppress_leading_sp" >:: fun _ ->
              let test aaa bbb =
                let ccc = Sutil.suppress_leading_sp bbb in
@@ -104,7 +119,7 @@ let suite =
              test "1abc | def" ("1abc " ^ utf8_bar ^ " def");
              test "2abc |" ("2abc " ^ utf8_bar);
              test "| 3def" (utf8_bar ^ " 3def") );
-           ( "get_nb_full_col" >:: fun _ ->
+           ( "get_nb_full_col_in_span" >:: fun _ ->
              let cols =
                [
                  "E1";
@@ -122,7 +137,7 @@ let suite =
                ]
              in
              let test l res b n =
-               let ccc = Trees.get_nb_full_col cols b n in
+               let ccc = Trees.get_nb_full_col_in_span cols b n in
                if ccc <> res then
                  Printf.eprintf "Fail: %s res: (%d) (%d)\n" l ccc res;
                assert (ccc = res)
@@ -135,13 +150,13 @@ let suite =
            ( "is_empty_col" >:: fun _ ->
              let row =
                [
-                 (0, 1, "E", "1", "");
-                 (0, 2, "E", "2", "");
-                 (0, 3, "It", "4", "");
-                 (0, 1, "E", "7", "");
-                 (0, 1, "E", "8", "");
-                 (0, 3, "It", "9", "");
-                 (0, 1, "E", "12", "");
+                 (0, 1, "E", "1", "", "");
+                 (0, 2, "E", "2", "", "");
+                 (0, 3, "It", "4", "", "");
+                 (0, 1, "E", "7", "", "");
+                 (0, 1, "E", "8", "", "");
+                 (0, 3, "It", "9", "", "");
+                 (0, 1, "E", "12", "", "");
                ]
              in
              let test res n =
@@ -159,35 +174,35 @@ let suite =
            ( "find_empty_columns" >:: fun _ ->
              let row1 =
                [
-                 (0, 1, "E", "1", "");
-                 (0, 2, "E", "2", "");
-                 (0, 3, "It", "4", "");
-                 (0, 1, "E", "7", "");
-                 (0, 1, "E", "8", "");
-                 (0, 3, "It", "9", "");
-                 (0, 1, "E", "12", "");
+                 (0, 1, "E", "1", "", "");
+                 (0, 2, "E", "2", "", "");
+                 (0, 3, "It", "4", "", "");
+                 (0, 1, "E", "7", "", "");
+                 (0, 1, "E", "8", "", "");
+                 (0, 3, "It", "9", "", "");
+                 (0, 1, "E", "12", "", "");
                ]
              in
              let row2 =
                [
-                 (0, 1, "E", "1", "");
-                 (0, 2, "E", "2", "");
-                 (0, 3, "It", "4", "");
-                 (0, 1, "E", "7", "");
-                 (0, 1, "E", "8", "");
-                 (0, 3, "It", "9", "");
-                 (0, 1, "E", "12", "");
+                 (0, 1, "E", "1", "", "");
+                 (0, 2, "E", "2", "", "");
+                 (0, 3, "It", "4", "", "");
+                 (0, 1, "E", "7", "", "");
+                 (0, 1, "E", "8", "", "");
+                 (0, 3, "It", "9", "", "");
+                 (0, 1, "E", "12", "", "");
                ]
              in
              let row3 =
                [
-                 (0, 1, "E", "1", "");
-                 (0, 2, "E", "2", "");
-                 (0, 3, "It", "4", "");
-                 (0, 1, "It", "7", "");
-                 (0, 1, "It", "8", "");
-                 (0, 3, "It", "9", "");
-                 (0, 1, "E", "12", "");
+                 (0, 1, "E", "1", "", "");
+                 (0, 2, "E", "2", "", "");
+                 (0, 3, "It", "4", "", "");
+                 (0, 1, "It", "7", "", "");
+                 (0, 1, "It", "8", "", "");
+                 (0, 3, "It", "9", "", "");
+                 (0, 1, "E", "12", "", "");
                ]
              in
              let my_tree = [ row1; row2 ] in

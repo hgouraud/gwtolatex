@@ -11,6 +11,7 @@
 \begin{document}
 \WarningsOff*
 
+<x Tree on>
 <x Hrule off>
 <a href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=TV&v=2&templ=tex;w=hg:1045">Arbre descendant d'Henri</a>
 
@@ -18,6 +19,6 @@
 <x Newpage>
 <x FontSize tiny>
 <x Sideways on>
-<a href="http://127.0.0.1:2317/Chausey_xolieymqd?m=RLM&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri</a>
+<y href="http://127.0.0.1:2317/Chausey_xolieymqd?m=RLM&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri</a>
 
 \end{document}

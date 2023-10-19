@@ -2,7 +2,7 @@
 (* v1  Henri, 2023/10/16 *)
 
 let rule_thickns = "0.5pt"
-let row_width row _n = List.fold_left (fun w (_, s, _, _, _) -> w + s) 0 row
+let row_width row _n = List.fold_left (fun w (_, s, _, _, _, _) -> w + s) 0 row
 
 let test_tree_width tree =
   let rec loop first i w0 tree =
@@ -21,7 +21,7 @@ let is_empty_col row i =
   let rec loop j row =
     match row with
     | [] -> false
-    | (_, s, ty, _, _) :: row ->
+    | (_, s, ty, _, _, _) :: row ->
         if j + s < i then loop (j + s) row
         else
           let rec loop1 k =
@@ -42,7 +42,7 @@ let find_empty_columns tree =
         if first then
           let cols, _ =
             List.fold_left
-              (fun (acc, j) (_, s, ty, _, _) ->
+              (fun (acc, j) (_, s, ty, _, _, _) ->
                 let cells =
                   (* j is column number, starts at 1 *)
                   let rec loop1 c_cols k =
@@ -90,7 +90,7 @@ let get_part lr side str =
 let scan_row_for_bar row =
   let utf8_bar = String.of_seq (List.to_seq [ '\xE2'; '\x94'; '\x82' ]) in
   List.fold_left
-    (fun (lr, bar) (_, _, _, te, it) ->
+    (fun (lr, bar) (_, _, _, te, it, _im) ->
       let i = try String.index te '|' with Not_found -> -1 in
       let j = try String.index it '|' with Not_found -> -1 in
       let k = try String.index te '\xE2' with Not_found -> -1 in
@@ -119,27 +119,31 @@ let scan_row_for_bar row =
 
 let copy_row row lr side =
   List.map
-    (fun (w, s, ty, te, it) ->
+    (fun (w, s, ty, te, it, im) ->
       ( w,
         s,
         (if side = "bar" then match ty with "Te" | "It" -> "Hv2" | _ -> ty
         else ty),
         (if side = "bar" then ""
-        else match ty with "Te" -> get_part lr side te | _ -> te),
-        if side = "bar" then ""
-        else match ty with "It" -> get_part lr side it | _ -> it ))
+        else match ty with "Te" -> get_part lr side te | _ -> te ),
+        (if side = "bar" then ""
+        else match ty with "It" -> get_part lr side it | _ -> it ),
+        (if side = "bar" then ""
+        else match ty with "Im" -> get_part lr side im | _ -> im )))
     row
 
 let print_row row =
   Printf.eprintf "Row:\n";
   List.iter
-    (fun (_, s, ty, te, it) ->
+    (fun (_, s, ty, te, it, im) ->
       let te = Sutil.clean_double_back_slash_2 te |> Sutil.clean_item in
       let it = Sutil.clean_double_back_slash_2 it |> Sutil.clean_item in
-      Printf.eprintf "[ (%d) %s te:%s it:%s ], " s ty te it)
+      Printf.eprintf "[ (%d) %s te:%s it:%s im:%s], " s ty te it im)
     row;
   Printf.eprintf "\n"
 
+(* in fact, the extra | appears as :              *)
+(* <a href ...>|</a><br><a href ...>content</a>   *)
 let split_rows_with_vbar tree =
   List.fold_left
     (fun acc row ->
@@ -151,7 +155,7 @@ let split_rows_with_vbar tree =
       else row :: acc)
     [] (List.rev tree)
 
-let get_nb_full_col cols b s =
+let get_nb_full_col_in_span cols b s =
   let rec loop i n cols =
     match cols with
     | [] -> n
@@ -162,8 +166,106 @@ let get_nb_full_col cols b s =
         else n
   in
   loop 0 0 cols
+  
+let get_item_length str =
+  let len = String.length str in
+  let rec loop i l1 l2 =
+    if i = len then (max l1 l2)
+    else if i < len - 1 && str.[i] = '\\' && str.[i + 1] = '\\' then
+      loop (i + 2) 0 (max l1 l2)
+    else loop (i + 1) (l1 + 1) l2
+  in loop 0 0 0
 
-let print_tree tree mode textwidth textheight _margin debug fontsize sideways =
+(* find the largest item in a given column *)
+let get_col_width _row _c =
+  1.0
+
+let carwidth = 0.3
+
+let reset_cell_width cols row textwidth imwidth=
+  let nb_f_col =
+    let rec loop i n cols =
+      match cols with
+      | [] -> n
+      | c :: cols ->
+          if c.[0] = 'F' then loop (i + 1) (n + 1) cols else loop (i + 1) n cols
+    in
+    loop 0 0 cols
+  in
+  let total_width =
+    let rec loop i n cols =
+      match row with
+      | [] -> n
+      | (_, _, ty, te, it, _im) :: row ->
+          if ty = "It" || ty = "Te" || ty = "Im"
+          then loop (i + 1)
+          (n +.
+            (max imwidth
+              (((Float.of_int (get_item_length te)) *. carwidth) +.
+               ((Float.of_int (get_item_length it)) *. carwidth)
+              )))
+          cols
+          else loop (i + 1) n row
+    in
+    loop 0 0. row
+  in
+  let unit_width = textwidth /. (Float.of_int nb_f_col) in
+  let rec loop new_row c row =
+    match row with
+    | [] -> List.rev new_row
+    | (_w, s, ty, te, it, im) :: row ->
+      let width =
+        (get_nb_full_col_in_span cols c s |> Float.of_int) *.
+        unit_width *.
+        (get_col_width row c) /. (* TODO ??? *)
+        total_width
+      in
+      loop ((width, s, ty, te, it, im) :: new_row) (c + s) row
+  in loop [] 0 row
+
+(* <a href="base?m=IM&p=first_name&n=surname&occ=noc&k=first_name.noc.surname" *)
+(* <a href="base?m=IM;s=test/filaname.jpg"> *)
+(* ATTENTION assumes .jpg portrait file extension *)
+(* TODO query the base for resl extension ?? *)
+let get_img_name base im =
+  let _ext_l = [ ".jpg"; ".jpeg"; ".bnp" ] in
+  let ext = ".jpg" in
+  let where = "images" in (* or src *)
+  let _b, _m, _p, _n, _oc, _i, k, _s, _v = Hutil.split_href im in
+  Format.sprintf "%s" (String.concat Filename.dir_sep ["."; where; base; (k ^ ext)])
+
+
+let expand_cells tree =
+  let rec expand row new_row =
+    match row with
+    | (w1, s1, ty1, te1, it1, im1) :: (w2, s2, ty2, te2, it2, im2) :: (w3, s3, ty3, te3, it3, im3) :: row -> (
+        match (ty1, ty2, ty3) with
+        | "X", ty2, "X" ->
+            if s1 >= 2 && s3 >= 2 then
+              expand
+                ([ (w2, s2 + 2, ty2, te2, it2, im2); (w3, s3 - 1, ty3, te3, it3, im3) ] @ row)
+                ([ (w1, s1 - 1, ty1, te1, it1, im1) ] @ new_row)
+            else
+              expand
+                ([ (w2, s2, ty2, te2, it2, im2); (w3, s3, ty3, te3, it3, im3) ] @ row)
+                ([ (w1, s1, ty1, te1, it1, im1) ] @ new_row)
+        | _ ->
+            expand
+                ([ (w2, s2, ty2, te2, it2, im2); (w3, s3, ty3, te3, it3, im3) ] @ row)
+                ([ (w1, s1, ty1, te1, it1, im1) ] @ new_row))
+    | _ -> List.rev (List.rev row @ new_row)
+  in
+  let tree =
+    let rec loop tree new_tree =
+      match tree with
+      | [] -> new_tree
+      | row :: tree -> loop tree (expand row [] :: new_tree)
+    in loop tree []
+  in List.rev tree
+
+
+let print_tree base tree mode textwidth textheight _margin
+debug fontsize sideways imgwidth =
   if debug <> 0 then Printf.eprintf "Print Tree mode=%d\n" mode;
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
@@ -171,7 +273,8 @@ let print_tree tree mode textwidth textheight _margin debug fontsize sideways =
     exit 1);
   if mode = 1 then
     let cols = find_empty_columns tree in
-    let tree = split_rows_with_vbar tree in
+    (*let tree = split_rows_with_vbar tree in*)
+    let tree = expand_cells tree in
     let non_empty_col_nbr =
       List.fold_left (fun a c -> if c.[0] = 'F' then a + 1 else a) 0 cols
     in
@@ -211,19 +314,21 @@ let print_tree tree mode textwidth textheight _margin debug fontsize sideways =
           (* print_row row; *)
           let _, row_str =
             List.fold_left
-              (fun (c, acc2) (_, s, ty, te, it) ->
+              (fun (c, acc2) (_, s, ty, te, it, im) ->
                 let colspan_b =
                   if s > 1 then Format.sprintf "\\multicolumn{%d}{c}{" s else ""
                 in
                 let colspan_e = if s > 1 then "}" else "" in
                 (* compute new_wid taking into account empty columns *)
-                let nb_full_col = get_nb_full_col cols c s in
+                let nb_full_col = get_nb_full_col_in_span cols c s in
                 let new_wid = cell_wid *. Float.of_int nb_full_col in
-                (* for testing purposes, add \\fbox{ to parbox_b and } to parbox_e *)
+                (* for testing purposes, add \\fbox{ to minipage_b and } to minipage_e *)
+                let fbox_b = if debug = 1 then "\\fbox{" else "" in
+                let fbox_e = if debug = 1 then "}" else "" in
                 let minipage_b =
-                  Format.sprintf "\\fbox{\\begin{minipage}{%1.2fcm}" new_wid
+                  Format.sprintf "%s\\begin{minipage}{%1.2fcm}" fbox_b new_wid
                 in
-                let minipage_e = Format.sprintf "\\end{minipage}}" in
+                let minipage_e = Format.sprintf "\\end{minipage}%s" fbox_e in
                 let font_b =
                   if fontsize = "" then "" else "\\" ^ fontsize ^ "{"
                 in
@@ -281,7 +386,12 @@ let print_tree tree mode textwidth textheight _margin debug fontsize sideways =
                           "\\begin{center}\\rule{%s}{%s}\\end{center}"
                           rule_thickns "0.5cm"
                     | "E" -> ""
-                    | "Im" -> "Image"
+                    | "Im" ->
+                        Format.sprintf
+                          {|\\begin{center}
+                          \\includegraphics[width=%1.2fcm]{%s}
+                          \\end{center}|}
+                          imgwidth (get_img_name base im)
                     | _ -> "??")
                   ^ Format.sprintf "%s%s" minipage_e colspan_e
                   (* end of cell *)
@@ -300,7 +410,7 @@ let print_tree tree mode textwidth textheight _margin debug fontsize sideways =
         (fun (acc1, r) row ->
           let str =
             List.fold_left
-              (fun acc2 (_, s, ty, te, it) ->
+              (fun acc2 (_, s, ty, te, it, im) ->
                 let cell =
                   (match ty with
                   | "Te" -> "Te " ^ Sutil.clean_double_back_slash te
@@ -311,7 +421,7 @@ let print_tree tree mode textwidth textheight _margin debug fontsize sideways =
                   | "Hv1" -> "Vr1 " ^ "|"
                   | "Hv2" -> "Vr2 " ^ "|"
                   | "E" -> "E" ^ ""
-                  | "Im" -> "Im " ^ "Image"
+                  | "Im" -> "Im " ^ im
                   | _ -> "x")
                   ^ if s > 1 then Format.sprintf "(%d)" s else ""
                 in
