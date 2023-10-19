@@ -3,7 +3,7 @@ open Gwtolatex
 
 type name = string * string
 
-(* TODO suppress (pages liées) and (modifier) in m=NOTES *)
+(* TODO suppress (pages li√©es) and (modifier) in m=NOTES *)
 (* TODO suppress "base chausey ..." *)
 type my_tree =
   | Text of string
@@ -50,7 +50,7 @@ let c_item = ref ""
 let c_img = ref ""
 
 (* execution context *)
-let base = ref "Chausey"
+let base = ref "chausey"
 let family = ref ""
 let out_file = ref ""
 let debug = ref (-1)
@@ -96,6 +96,10 @@ let imgwidth_default = 5.1
 let imgwidth = ref imgwidth_default
 let vignwidth = ref 1.0
 let unit = ref "cm"
+let offset = ref false
+let xoffset = ref 0.0
+let yoffset = ref 0.0
+
 
 let first_tr = ref true
 let first_td = ref true
@@ -366,20 +370,14 @@ let dummy_tags_3 =
 
    <begin page>
    <sideways="1">
-   <title="Arbre ascendant d'Eugénie Collet">
-   <index="Collet, Eugénie (ep Vaillant)">
+   <title="Arbre ascendant d'Eug√©nie Collet">
+   <index="Collet, Eug√©nie (ep Vaillant)">
    <href="http://127.0.0.1:2317/Chausey?m=A;p=eugenie (x);n=collet;v=5;siblings=on;notes=on;t=T;after=;before=;dag=on;templ=tex;w=hg:1045">
    <end>
 *)
 
 let skip_m_cmd = [ "MOD_NOTES" ]
 let one_page och line = output_string och line
-
-(* b=basename_token *)
-let extract_base b =
-  let _b = String.split_on_char '_' b in
-  (* if List.length base > 0 then List.nth b 0 else "" *)
-  !base
 
 (* process_tree_cumul accumulates results in a string *)
 
@@ -397,9 +395,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
     (* TODO identify vignettes ! -> special width *)
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
-    let href = Sutil.decode href |> Lutil.escape in
-    let b, m, p, n, oc, i, k, s, _v = Hutil.split_href href in
-    let b = extract_base b in
+    let href = Sutil.decode href in
+    let b, m, p, n, oc, i, k, s, _v, t = Hutil.split_href href in
+    
     if List.mem m skip_m_cmd then cumul
     else
       let content =
@@ -426,7 +424,10 @@ let rec process_tree_cumul och cumul tree (row, col) =
         let check = Printf.sprintf "%s %s%s" fn sn ocn in
         if (fn <> "" || sn <> "") && s <> "" && k = "" then
           Lutil.build_index fn sn ocn content check
-        else if b <> !base then Format.sprintf "%s\\footnote{%s}" content href
+        else if m = "D" && t = "V" then
+          Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
+        else if (String.lowercase_ascii b) <> (String.lowercase_ascii !base) then
+          Format.sprintf "%s\\footnote{%s}" content (Lutil.escape href)
         else if s <> "" then (
           let vignette = Sutil.contains s "-vignette" in
           if k = "" && not vignette then incr image_nbr;
@@ -462,8 +463,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
   let tag_img _cumul _name attributes _children =
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
-    let href = Sutil.decode href |> Lutil.escape in
-    let _b, _m, p, n, oc, i, k, s, _v = Hutil.split_href href in
+    let href = Sutil.decode href in
+    let _b, _m, p, n, oc, i, k, s, _v, _t = Hutil.split_href href in
     let ip =
       match
         Gwdb.person_of_key !my_base p n
@@ -551,8 +552,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
           let str =
             if Sutil.contains content ">Bateaux<" then
               "\n\\par\\hgbato{Bateaux}"
-            else if Sutil.contains content ">Propriétaires<" then
-              "\n\\par\\hgbato{Propriétaires}"
+            else if Sutil.contains content ">Propri√©taires<" then
+              "\n\\par\\hgbato{Propri√©taires}"
             else Format.sprintf "\\subsubsection{%s}" content
           in
           cumul ^ if content <> "" then str else ""
@@ -815,11 +816,8 @@ let one_command och line =
            (if param <> "" then param else "7cm"))
   | "Arbres" -> (
       if param = "on" || param = "On" then (
-          imgwidth := 1.5; arbres := true;
-          if !debug = 3 then Printf.eprintf "Tree %s, %2.2f\n" param !imgwidth)
-      else (
-          imgwidth := imgwidth_default; arbres := false;
-          if !debug = 3 then Printf.eprintf "Tree %s, %2.2f\n" param !imgwidth))
+          imgwidth := 1.5; arbres := true)
+      else (imgwidth := imgwidth_default; arbres := false))
   | "BumpSub" -> sub := param = "on" || param = "On"
   | "Chapter" ->
       if !image_label > 1 then image_nbr := 0;
@@ -840,7 +838,6 @@ let one_command och line =
   | "ImageWidth" -> imgwidth := (Float.of_string param)
   | "Input" -> (
       let param = Sutil.replace_str param "%%%LIVRES%%%" !livres in
-      if !debug = 2 then Printf.eprintf "Param: %s\n" param;
       let ic = open_in param in
       try
         while true do
@@ -873,16 +870,17 @@ let one_command och line =
       current_level := 3
   | "Trees" -> (
       if param = "on" || param = "On" then (
-          imgwidth := 1.5; arbres := true;
-          if !debug = 3 then Printf.eprintf "Tree %s, %2.2f\n" param !imgwidth)
-      else (
-          imgwidth := imgwidth_default; arbres := false;
-          if !debug = 3 then Printf.eprintf "Tree %s, %2.2f\n" param !imgwidth))
+          imgwidth := 1.5; arbres := true)
+      else (imgwidth := imgwidth_default; arbres := false))
   | "Version" -> output_string och (version ^ "\n")
   | "WideImage" ->
       if param = "on" || param = "On" then (imgwidth := !textwidth; wide := true)
       else (imgwidth := imgwidth_default; wide := false)
   | "TextWidth" -> textwidth := (Float.of_string param)
+  | "Xoffset" -> (offset := true; xoffset := Float.of_string param)
+  | "Yoffset" -> (offset := true; yoffset := Float.of_string param)
+  | "Offset" -> if param = "on" || param = "On" then offset := true
+      else (offset := false; xoffset := 0.0; yoffset := 0.0)
   | "Unit" -> unit := param
   | _ -> output_string och (Format.sprintf "%%%s%s\n" cmd remain)
 
@@ -892,22 +890,35 @@ let one_http_call och line =
     try String.index_from line (url_beg + 1) '"' with Not_found -> 0
   in
   let url = String.sub line (url_beg + 1) (url_end - url_beg - 1) in
-  let resp = Ezcurl.get ~url () in
-  match resp with
-  | Ok { Ezcurl.code; body; _ } ->
-      if bad_code code then (
-        Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
+  let parts = String.split_on_char '?' line in
+  if List.length parts > 1 then 
+    let evars = String.split_on_char  '&' (Sutil.replace ';' '&' ( List.nth parts 1)) in
+    let evars =
+      List.map (fun kv ->
+        let parts = String.split_on_char '=' kv in
+        if List.length parts > 1 then (List.nth parts 0, List.nth parts 1)
+        else List.nth parts 0, "") evars
+    in
+    if try (List.assoc "m" evars) = "D" && (List.assoc "t" evars ) = "V" 
+       with Not_found -> false
+    then output_string och "Command m=D;t=V is not available (yet)\\\\\n"
+  else (
+    let resp = Ezcurl.get ~url () in
+    match resp with
+    | Ok { Ezcurl.code; body; _ } ->
+        if bad_code code then (
+          Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
+          output_string och
+            (Format.sprintf "Bad code when fetching %s: %d!\n" url code))
+        else
+          let _ = process_html och body in
+          ()
+    | Error (_, msg) ->
+        Printf.eprintf "error when fetching %s:\n  %s\n%!" (Lutil.escape url)
+          (Lutil.escape msg);
         output_string och
-          (Format.sprintf "Bad code when fetching %s: %d!\n" url code))
-      else
-        let _ = process_html och body in
-        ()
-  | Error (_, msg) ->
-      Printf.eprintf "error when fetching %s:\n  %s\n%!" (Lutil.escape url)
-        (Lutil.escape msg);
-      output_string och
-        (Format.sprintf "Error when fetching %s:\n %s\n" (Lutil.escape url)
-           (Lutil.escape msg))
+          (Format.sprintf "Error when fetching %s:\n %s\n" (Lutil.escape url)
+             (Lutil.escape msg)))
 
 let print_images och images_list =
   output_string och (Format.sprintf "\\par\n");

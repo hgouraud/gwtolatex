@@ -78,7 +78,8 @@ See famille Ernouf
 <x Newpage>
 <x Trees on>
 <x Arbres on>
-<a href="http://127.0.0.1:2317/Chausey?m=D;p=henri;n=gouraud;v=3;t=T;dag=on;templ=tex;w=hg:1045;cgl=on">Arbre descendant d'Henri Gouraud</a>
+<a href="http://127.0.0.1:2317/Chausey?m=D;p=henri;n=gouraud;v=3;t=TV;dag=on;templ=tex;w=hg:1045;cgl=on">Arbre descendant d'Henri Gouraud</a>
+<a href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=TV&v=3&templ=tex;w=hg:1045">Arbre descendant d'Henri</a>
 
 <x Sideways on>
 <x FontSize small>

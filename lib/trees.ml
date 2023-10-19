@@ -231,7 +231,7 @@ let get_img_name base im =
   let _ext_l = [ ".jpg"; ".jpeg"; ".bnp" ] in
   let ext = ".jpg" in
   let where = "images" in (* or src *)
-  let _b, _m, _p, _n, _oc, _i, k, _s, _v = Hutil.split_href im in
+  let _b, _m, _p, _n, _oc, _i, k, _s, _v, _t = Hutil.split_href im in
   Format.sprintf "%s" (String.concat Filename.dir_sep ["."; where; base; (k ^ ext)])
 
 
@@ -266,7 +266,7 @@ let expand_cells tree =
 
 let print_tree base tree mode textwidth textheight _margin
 debug fontsize sideways imgwidth =
-  if debug <> 0 then Printf.eprintf "Print Tree mode=%d\n" mode;
+  if debug <> 0 then Printf.eprintf "Print Tree mode=%d, depth=%d\n" mode (List.length tree);
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
