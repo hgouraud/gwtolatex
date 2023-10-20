@@ -4,4 +4,13 @@
  (synopsis "GeneWebToLaTeX library")
  (preprocess
   (action
-   (run %{bin:cppo} -D UNIX %{input-file}))))
+   (run %{bin:cppo} -D UNIX %{input-file})))
+(libraries
+  ezcurl
+  markup
+  unidecode
+  geneweb.gwdb-legacy
+  geneweb.sosa_zarith
+  geneweb)
+
+)

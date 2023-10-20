@@ -47,6 +47,38 @@ let decode s =
     s
   else s
 
+let contains_index str sub =
+  let strlen = String.length str in
+  let sublen = String.length sub in
+  let rec aux i1 i2 =
+    if i1 = sublen then i2 - sublen
+    else if i2 = strlen then -1
+    else if String.unsafe_get str i2 = String.unsafe_get sub i1
+    then aux (i1 + 1) (i2 + 1)
+    else -1
+  in
+  let rec loop i =
+    if i + sublen <= strlen then
+      let r = aux 0 i in
+      if r <> -1 then r else loop (i + 1)
+    else -1
+  in loop 0
+
+let contains str sub =
+  let strlen = String.length str in
+  let sublen = String.length sub in
+  let rec aux i1 i2 =
+    if i1 = sublen then true
+    else if i2 = strlen then false
+    else if String.unsafe_get str i2 = String.unsafe_get sub i1
+    then aux (i1 + 1) (i2 + 1)
+    else false
+  in
+  let rec loop i =
+    if i + sublen <= strlen then aux 0 i || loop (i + 1)
+    else false
+  in loop 0
+
 (* in str, replace car x by car y *)
 let replace x y str =
   let b = Buffer.create 40 in
@@ -76,21 +108,6 @@ let replace_str line sub1 sub2 =
       else line
     else line
   else line
-
-let contains str sub =
-  let strlen = String.length str in
-  let sublen = String.length sub in
-  let rec aux i1 i2 =
-    if i1 = sublen then true
-    else if i2 = strlen then false
-    else if String.unsafe_get str i2 = String.unsafe_get sub i1 then
-      aux (i1 + 1) (i2 + 1)
-    else false
-  in
-  let rec loop i =
-    if i + sublen <= strlen then aux 0 i || loop (i + 1) else false
-  in
-  loop 0
 
 let suppress_multiple_sp str =
   let b = Buffer.create 100 in
@@ -214,3 +231,35 @@ let clean_double_back_slash str =
 let clean_item str =
   replace '\n' ' ' str |> suppress_multiple_sp |> suppress_leading_sp
   |> suppress_trailing_sp
+
+let unaccent_utf8 lower s i =
+  let fns =
+    if lower then fun n s -> (String.lowercase_ascii s, n) else fun n s -> (s, n)
+  in
+  let fnc =
+    if lower then fun n c -> (String.make 1 @@ Char.lowercase_ascii c, n)
+    else fun n c -> (String.make 1 c, n)
+  in
+  let s, n =
+    Unidecode.decode fns fnc
+      (fun n -> (String.sub s i (n - i), n))
+      s i (String.length s)
+  in
+  if lower then (String.lowercase_ascii s, n) else (s, n)
+
+let lower s =
+  let rec copy special i len =
+    if i = String.length s then Buff.get len
+    else if Char.code s.[i] < 0x80 then
+      match s.[i] with
+      | ('a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '.' | '-' | '_' ) as c ->
+          let len = if special then Buff.store len ' ' else len in
+          let c = Char.lowercase_ascii c in
+          copy false (i + 1) (Buff.store len c)
+      | _ -> copy (len <> 0) (i + 1) len
+    else
+      let len = if special then Buff.store len ' ' else len in
+      let t, j = unaccent_utf8 true s i in
+      copy false j (Buff.mstore len t)
+  in
+  copy false 0 0

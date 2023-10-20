@@ -106,7 +106,11 @@ let suite =
              test "abc%" "abc%" "%%%" "xyz";
              test "1abc  ghi" "1abc def ghi" "def" "";
              test "xyz 2ghi" "def 2ghi" "def" "xyz";
-             test "3abc xyz" "3abc def" "def" "xyz" );
+             test "3abc xyz" "3abc def" "def" "xyz";
+             test "4abc_def" "4abc\\_{}def" "\\_{}" "_";
+             test "5abc  def" "5abc xyz def" "xyz" "";
+             test "6abc xyz def" "6abc xyz def" "" "xx";
+             test "" "" "" "");
            ( "replace_utf8_bar" >:: fun _ ->
              let test aaa bbb =
                let ccc = Sutil.replace_utf8_bar bbb in
@@ -119,6 +123,54 @@ let suite =
              test "1abc | def" ("1abc " ^ utf8_bar ^ " def");
              test "2abc |" ("2abc " ^ utf8_bar);
              test "| 3def" (utf8_bar ^ " 3def") );
+           ( "lower" >:: fun _ ->
+             let test aaa bbb =
+               let ccc = Sutil.lower bbb in
+               if aaa <> ccc then Printf.eprintf "Fail:(%s) (%s)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             test "benedicte.0.gouraud" "Bénédicte.0.Gouraud";
+             test "andre.0.fauchon-villeplee" "André.0.Fauchon-Villeplée";
+             test "andre.0.fauchon_villeplee" "André.0.Fauchon_Villeplée";
+             test "" ""
+            );
+           ( "contains" >:: fun _ ->
+             let test aaa bbb sss =
+               let ccc = Sutil.contains bbb sss in
+               assert (aaa = ccc)
+             in
+             test true "aaaedicte" "aaa";
+             test true "bbbaaacccccccc" "aaa";
+             test true "bbbbaaa" "aaa";
+             test false "bbbbaaa" "aaaa";
+             test true "" ""
+            );
+           ( "contains_index" >:: fun _ ->
+             let test aaa bbb sss =
+               let ccc = Sutil.contains_index bbb sss in
+               if aaa <> ccc then Printf.eprintf "Fail:(%d) (%d)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             test 0 "aaaedicte" "aaa";
+             test 3 "bbbaaacccccccc" "aaa";
+             test 4 "bbbbaaa" "aaa";
+             test 0 "" ""
+            );
+           ( "escape" >:: fun _ ->
+             let test aaa bbb =
+               let ccc = Lutil.escape bbb in
+               if aaa <> ccc then Printf.eprintf "Fail:(%s) (%s)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             test "aaaedicte" "aaaedicte";
+             test "aaa\\_{}edicte" "aaa_edicte";
+             test "aaa\\includegraphics{xx_xx}bbb" "aaa\\includegraphics{xx_xx}bbb";
+             test "\\includegraphics{xx_xx}" "\\includegraphics{xx_xx}";
+             test "\\includegraphics{xxxx}" "\\includegraphics{xxxx}";
+             test "aaa{b\\_{}b}\\includegraphics{xxxx}" "aaa{b_b}\\includegraphics{xxxx}";
+             test "\\includegraphics{xx_xx}\n" "\\includegraphics{xx_xx}\n";
+             test "" ""
+            );
            ( "get_nb_full_col_in_span" >:: fun _ ->
              let cols =
                [

@@ -102,7 +102,7 @@ let scan_row_for_bar row =
       in
       let bar =
         bar || String.contains te '|' || String.contains it '|'
-        || Sutil.contains te utf8_bar || Sutil.contains it utf8_bar
+        || (Sutil.contains te utf8_bar) || (Sutil.contains it utf8_bar)
       in
       let lr =
         match (lr, left_right) with
@@ -232,8 +232,10 @@ let get_img_name base im =
   let ext = ".jpg" in
   let where = "images" in (* or src *)
   let _b, _m, _p, _n, _oc, _i, k, _s, _v, _t = Hutil.split_href im in
-  Format.sprintf "%s" (String.concat Filename.dir_sep ["."; where; base; (k ^ ext)])
-
+  let name =
+    Format.sprintf "%s" (String.concat Filename.dir_sep ["."; where; base; (k ^ ext)])
+  in
+  Sutil.replace_str name "\\_{}" "_"
 
 let expand_cells tree =
   let rec expand row new_row =
@@ -265,7 +267,7 @@ let expand_cells tree =
 
 
 let print_tree base tree mode textwidth textheight _margin
-debug fontsize sideways imgwidth =
+debug fontsize sideways imgwidth twopages =
   if debug <> 0 then Printf.eprintf "Print Tree mode=%d, depth=%d\n" mode (List.length tree);
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
@@ -280,10 +282,11 @@ debug fontsize sideways imgwidth =
     in
     let tabular_env =
       let rec loop s i = if i = 0 then s ^ "c" else loop (s ^ "c") (i - 1) in
-      loop "ccccc" non_empty_col_nbr
+      loop "ccccc" (List.length cols)
     in
     let cell_wid =
-      (if sideways then textheight else textwidth)
+      (if sideways then (textheight *. (if twopages then 2.0 else 1.0)) 
+       else textwidth)
       /. Float.of_int non_empty_col_nbr
     in
     let half_cell_wid = cell_wid /. 2.0 in
@@ -389,7 +392,7 @@ debug fontsize sideways imgwidth =
                     | "Im" ->
                         Format.sprintf
                           {|\\begin{center}
-                          \\includegraphics[width=%1.2fcm]{%s}
+                          uu\\includegraphics[width=%1.2fcm]{%s}
                           \\end{center}|}
                           imgwidth (get_img_name base im)
                     | _ -> "??")

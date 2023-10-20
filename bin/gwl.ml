@@ -99,6 +99,7 @@ let unit = ref "cm"
 let offset = ref false
 let xoffset = ref 0.0
 let yoffset = ref 0.0
+let twopages = ref false
 
 
 let first_tr = ref true
@@ -238,38 +239,6 @@ let _dump_tag elt =
       Printf.eprintf "<end %s>\n" name
   | Text s -> Printf.eprintf "Text elt: (%s)\n" s
 
-let unaccent_utf_8 lower s i =
-  let fns =
-    if lower then fun n s -> (String.lowercase_ascii s, n) else fun n s -> (s, n)
-  in
-  let fnc =
-    if lower then fun n c -> (String.make 1 @@ Char.lowercase_ascii c, n)
-    else fun n c -> (String.make 1 c, n)
-  in
-  let s, n =
-    Unidecode.decode fns fnc
-      (fun n -> (String.sub s i (n - i), n))
-      s i (String.length s)
-  in
-  if lower then (String.lowercase_ascii s, n) else (s, n)
-
-let lower s =
-  let rec copy special i len =
-    if i = String.length s then Buff.get len
-    else if Char.code s.[i] < 0x80 then
-      match s.[i] with
-      | ('a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '.') as c ->
-          let len = if special then Buff.store len ' ' else len in
-          let c = Char.lowercase_ascii c in
-          copy false (i + 1) (Buff.store len c)
-      | _ -> copy (len <> 0) (i + 1) len
-    else
-      let len = if special then Buff.store len ' ' else len in
-      let t, j = unaccent_utf_8 true s i in
-      copy false j (Buff.mstore len t)
-  in
-  copy false 0 0
-
 (* TODO find TaTeX equivalent string *)
 (*
     & % $ # _ { } ~ ^ \
@@ -294,13 +263,13 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       name ch sec ssec sssec nb
   in
   match im_type with
-  | Portrait | Imagek ->
+  | Portrait | Imagek -> (
       (* TODO manage images location *)
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n"
         !imgwidth !unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "images"; !base; ])
         Filename.dir_sep
-        (lower name |> Sutil.replace ' ' '_' ) "jpg"
+        (Sutil.lower name |> Sutil.replace '-' '_') "jpg")
   | Images ->
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n"
         !imgwidth !unit (* 5 cm in page mode, 1.5 cm in table mode *)
@@ -382,6 +351,19 @@ let one_page och line = output_string och line
 (* process_tree_cumul accumulates results in a string *)
 
 let rec process_tree_cumul och cumul tree (row, col) =
+
+  let get_child children =
+    List.fold_left
+      (fun acc c -> acc ^ process_tree_cumul och "" c (row, col))
+      "" children
+  in
+
+  let continue cumul children =
+    List.fold_left
+      (fun acc c -> acc ^ process_tree_cumul och cumul c (row, col))
+      cumul children
+  in
+
   let tag_a cumul _name attributes children =
     (* if p <> "" or n <> "" we have a person *)
     (* it may appear undes a different spelling as part of <a>xxx</a> *)
@@ -400,11 +382,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
     
     if List.mem m skip_m_cmd then cumul
     else
-      let content =
-        List.fold_left
-          (fun acc c -> acc ^ process_tree_cumul och cumul c (row, col))
-          "" children
-      in
+      let content = get_child children in (* between <a...> and </a> *)
       let ip =
         match
           Gwdb.person_of_key !my_base p n
@@ -455,9 +433,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
                   content !chapter !section !image_nbr
           in
           str)
-        else "{\\bf " ^ content ^ "}"
+        else "begin-a-tag{\\bf " ^ content ^ "} end-a-tag"
       in
-      str
+      cumul ^ str
   in
 
   let tag_img _cumul _name attributes _children =
@@ -495,19 +473,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
         images_in_page := image :: !images_in_page;
       print_image image
     in
-    str
-  in
-
-  let get_child children =
-    List.fold_left
-      (fun acc c -> acc ^ process_tree_cumul och "" c (row, col))
-      "" children
-  in
-
-  let continue cumul children =
-    List.fold_left
-      (fun acc c -> acc ^ process_tree_cumul och cumul c (row, col))
-      cumul children
+    "begin-img" ^ str ^ "end-img"
   in
 
   let _print_cell cell =
@@ -575,16 +541,16 @@ let rec process_tree_cumul och cumul tree (row, col) =
          (* TODO compute the number of columns and their style *)
          let cols =
            let rec loop s n =
-             if n = !td_nbr then s else loop (s ^ "l") (n + 1)
+             if n = !td_nbr then s else loop (s ^ "c") (n + 1)
            in
-           loop "" 0
+           loop "cccc" 0
          in
          let content =
            Format.sprintf "\n\\begin{tabular}{%s}\n%s\n\\end{tabular}\n" cols
              content
          in
          first_tr := true;
-         cumul ^ content
+         cumul ^ "begin-body" ^ content ^ "end-body"
       | "tr" ->
          let content = get_child children in
          first_tr := false;
@@ -602,12 +568,12 @@ let rec process_tree_cumul och cumul tree (row, col) =
          in
          let content =
            if colspan > 1 then
-             Format.sprintf "\\multicolumn{%d}{}{%s}" colspan content
+             Format.sprintf "\\multicolumn{%d}{c}{%s}" colspan content
            else content
          in
          first_td := false;
          if !first_tr then incr td_nbr;
-         cumul ^ (if first then "" else " & ") ^ content
+         cumul ^ (if first then "" else " & ") ^ "begin-td" ^ content ^ "end-td"
       | "ul" ->
           let content = get_child children in
           cumul
@@ -705,7 +671,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
           cumul
           ^ Trees.print_tree !base (List.rev !new_tree) !mode
             !textwidth !textheight !margin !debug
-            !fontsize !sideways !imgwidth
+            !fontsize !sideways !imgwidth !twopages
       | "cell" ->
           if !c_typ <> "" || !c_txt <> "" || !c_item <> "" || !c_img <> "" then
             new_row := (!c_width, !c_span, !c_typ, !c_txt, !c_item, !c_img) :: !new_row;
@@ -850,6 +816,7 @@ let one_command och line =
   | "Newpage" -> output_string och "\\newpage"
   | "Print" -> output_string och param
   | "Sideways" -> sideways := true
+  | "TwoPages" -> twopages := param = "on" || param = "On"
   | "Section" ->
       if !image_label > 2 then image_nbr := 0;
       out "section" param;
@@ -962,7 +929,7 @@ let print_images och images_list =
           output_string och
             (Format.sprintf
                "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}%s}\n" width
-               width images_dir Filename.dir_sep name label))
+               width images_dir Filename.dir_sep (Sutil.replace_str name "\\_{}" "&") label))
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
@@ -1096,12 +1063,13 @@ let main () =
   let fname_out =
     String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".tex" ]
   in
-  let mode, fname_in, och =
+  let mode, fname_in =
     if Sys.file_exists fname_txt then
-      ("txt", fname_txt, if !follow then open_out fname_out else stderr)
-    else if Sys.file_exists fname_htm then ("html", fname_htm, stderr)
-    else ("", fname_all, open_out fname_out)
+      ("txt", fname_txt)
+    else if Sys.file_exists fname_htm then ("html", fname_htm)
+    else ("", fname_all)
   in
+  let och = if !follow then open_out fname_out else stderr in
   let ic = open_in_bin fname_in in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 

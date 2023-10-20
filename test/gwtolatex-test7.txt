@@ -14,16 +14,17 @@
 <x Trees on>
 <x Hrule off>
 <a href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=TV&v=3&templ=tex;w=hg:1045">Arbre descendant d'Henri (t=TV)</a>
-<a href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=TV&v=3&templ=tex;w=hg:1045;cgl=on">Arbre descendant d'Henri (t=TVcgl=on)</a>
-<a href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=V&v=3&templ=tex;w=hg:1045">Arbre descendant d'Henri (t=V)</a>
-<a href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=T&v=3&templ=tex;w=hg:1045">Arbre descendant d'Henri (t=T)</a>
+<y href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=TV&v=3&templ=tex;w=hg:1045;cgl=on">Arbre descendant d'Henri (t=TVcgl=on)</a>
+<y href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=V&v=3&templ=tex;w=hg:1045">Arbre descendant d'Henri (t=V)</a>
+<y href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=T&v=3&templ=tex;w=hg:1045">Arbre descendant d'Henri (t=T)</a>
 
 <x Hrule on>
 <x Newpage>
-<x Xoffset 5>
-<x Yoffset 10>
-<x FontSize tiny>
+
 <x Sideways on>
-<y href="http://127.0.0.1:2317/Chausey_xolieymqd?m=RLM&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri</a>
-<x Offset off>
+<a href="http://127.0.0.1:2317/Chausey_xolieymqd?m=RLM&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri</a>
+<x TwoPages on>
+<y href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045;cgl=on">Arbre descendant d'Albert Marie (Toumagi)</a>
+<x TwoPages off>
+
 \end{document}
