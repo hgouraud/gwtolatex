@@ -44,10 +44,7 @@ let split_href href =
     try List.assoc "b" evars
     with Not_found ->
       let server = List.nth parts 0 in
-      let j =
-        try String.index server '_'
-        with Not_found -> -1
-      in
+      let j = try String.index server '_' with Not_found -> -1 in
       if j <> -1 then String.sub server 0 j else server
   in
   (* TODO treat CGI case *)

@@ -19,7 +19,6 @@ type _image = {
   image_nbr : int;
 }
 
-
 (*
 (* width, span, (F O Hr Hc Hl Vc c), item, text, index *)
 type t_cell = {
@@ -100,8 +99,6 @@ let offset = ref false
 let xoffset = ref 0.0
 let yoffset = ref 0.0
 let twopages = ref false
-
-
 let first_tr = ref true
 let first_td = ref true
 let td_nbr = ref 0
@@ -251,7 +248,6 @@ use the macros \textasciitilde, \textasciicircum, and \textbackslash.
 let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
 
-
 let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
   let _trace =
     Format.sprintf "Type: %s, name: %s, (%d, %d, %d, %d), nb: %d"
@@ -263,31 +259,31 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       name ch sec ssec sssec nb
   in
   match im_type with
-  | Portrait | Imagek -> (
+  | Portrait | Imagek ->
       (* TODO manage images location *)
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n"
-        !imgwidth !unit (* 5 cm in page mode, 1.5 cm in table mode *)
-        (String.concat Filename.dir_sep [ "."; "images"; !base; ])
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n" !imgwidth
+        !unit (* 5 cm in page mode, 1.5 cm in table mode *)
+        (String.concat Filename.dir_sep [ "."; "images"; !base ])
         Filename.dir_sep
-        (Sutil.lower name |> Sutil.replace '-' '_') "jpg")
+        (* GeneWeb replaces ' ' by '_' in key computations *)
+        (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
+        "jpg"
   | Images ->
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n"
-        !imgwidth !unit (* 5 cm in page mode, 1.5 cm in table mode *)
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !imgwidth
+        !unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
-        Filename.dir_sep
-        name
+        Filename.dir_sep name
   | Vignette ->
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n"
-        !vignwidth !unit
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !vignwidth
+        !unit
         (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
-        Filename.dir_sep
-        name
+        Filename.dir_sep name
 
 (* ignore tag but read children *)
 let dummy_tags_0 = [ "body"; "html"; "center"; "bdo"; "table" ]
 
 (* ignore tag, skip to end *)
-let dummy_tags_1 = [ "!--"; "samp";  ]
+let dummy_tags_1 = [ "!--"; "samp" ]
 
 let dummy_tags_2 =
   [
@@ -351,7 +347,6 @@ let one_page och line = output_string och line
 (* process_tree_cumul accumulates results in a string *)
 
 let rec process_tree_cumul och cumul tree (row, col) =
-
   let get_child children =
     List.fold_left
       (fun acc c -> acc ^ process_tree_cumul och "" c (row, col))
@@ -379,10 +374,11 @@ let rec process_tree_cumul och cumul tree (row, col) =
     let href = try List.assoc "href" attr with Not_found -> "" in
     let href = Sutil.decode href in
     let b, m, p, n, oc, i, k, s, _v, t = Hutil.split_href href in
-    
+
     if List.mem m skip_m_cmd then cumul
     else
-      let content = get_child children in (* between <a...> and </a> *)
+      let content = get_child children in
+      (* between <a...> and </a> *)
       let ip =
         match
           Gwdb.person_of_key !my_base p n
@@ -404,7 +400,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
           Lutil.build_index fn sn ocn content check
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
-        else if (String.lowercase_ascii b) <> (String.lowercase_ascii !base) then
+        else if String.lowercase_ascii b <> String.lowercase_ascii !base then
           Format.sprintf "%s\\footnote{%s}" content (Lutil.escape href)
         else if s <> "" then (
           let vignette = Sutil.contains s "-vignette" in
@@ -433,7 +429,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
                   content !chapter !section !image_nbr
           in
           str)
-        else "begin-a-tag{\\bf " ^ content ^ "} end-a-tag"
+        else "{\\bf " ^ content ^ "}"
       in
       cumul ^ str
   in
@@ -473,7 +469,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
         images_in_page := image :: !images_in_page;
       print_image image
     in
-    "begin-img" ^ str ^ "end-img"
+    str
   in
 
   let _print_cell cell =
@@ -484,254 +480,255 @@ let rec process_tree_cumul och cumul tree (row, col) =
           (Sutil.clean_double_back_slash it)
   in
 
-  match tree with
-  | Text s -> cumul ^ s
-  | Element (name, attributes, children) (* as elt *) -> (
-      match name with
-      | ("i" | "u" | "b" | "em" | "tt" | "strong" | "tiny" | "small" | "big") as
-        t ->
-          let content = get_child children in
-          cumul ^ Lutil.simple_tag_1 t content
-      (* TODO check here we are terminating something!! *)
-      | "br" -> cumul ^ " \\\\ \n"
-      | "sup" ->
-          let content = get_child children in
-          cumul
-          ^
-          if content <> "" then Format.sprintf "\\textsuperscript{%s}" content
-          else ""
-      | "h1" ->
-          let content = get_child children in
-          cumul
-          ^
-          if content <> "" && !section_on_a_tag then
-            Format.sprintf "\\section{%s}" content
-          else ""
-      | "h2" ->
-          let content = get_child children in
-          cumul
-          ^
-          if content <> "" then Format.sprintf "\\subsection{%s}" content
-          else ""
-      | "h3" ->
-          let content = get_child children in
-          let str =
-            if Sutil.contains content ">Bateaux<" then
-              "\n\\par\\hgbato{Bateaux}"
-            else if Sutil.contains content ">Propriétaires<" then
-              "\n\\par\\hgbato{Propriétaires}"
-            else Format.sprintf "\\subsubsection{%s}" content
-          in
-          cumul ^ if content <> "" then str else ""
-      | "hr" -> cumul ^ "\\par\\noindent\\rule{\\textwidth}{0.4pt}\n"
-      | "p" ->
-          let content = get_child children in
-          cumul
-          ^ if content <> "" then Format.sprintf "\\par\n %s" content else ""
-      | "table" ->
-         let content = get_child children in
-         cumul ^ content
-      | "caption" ->
-         let content = get_child children in
-         let content = Format.sprintf "\n\\caption{%s}\n" content in
-         cumul ^ content
-      | "tbody" ->
-         (* implicit if no <caption> or <thead> *)
-         let content = get_child children in
-         (* TODO compute the number of columns and their style *)
-         let cols =
-           let rec loop s n =
-             if n = !td_nbr then s else loop (s ^ "c") (n + 1)
-           in
-           loop "cccc" 0
-         in
-         let content =
-           Format.sprintf "\n\\begin{tabular}{%s}\n%s\n\\end{tabular}\n" cols
-             content
-         in
-         first_tr := true;
-         cumul ^ "begin-body" ^ content ^ "end-body"
-      | "tr" ->
-         let content = get_child children in
-         first_tr := false;
-         first_td := true;
-         cumul ^ content ^ "\\\\\n"
-      | "td" ->
-         let first = !first_td in
-         let content = get_child children in
-         let colspan =
-           List.fold_left
-             (fun c ((_, k), v) ->
-               if k = "colspan" then try int_of_string v with Failure _ -> 1
-               else c)
-             1 attributes
-         in
-         let content =
-           if colspan > 1 then
-             Format.sprintf "\\multicolumn{%d}{c}{%s}" colspan content
-           else content
-         in
-         first_td := false;
-         if !first_tr then incr td_nbr;
-         cumul ^ (if first then "" else " & ") ^ "begin-td" ^ content ^ "end-td"
-      | "ul" ->
-          let content = get_child children in
-          cumul
-          ^
-          if content <> "" then
-            Format.sprintf "\\begin{hgitemize}\n %s\n\\end{hgitemize}\n" content
-          else ""
-      | "li" ->
-          let content = get_child children in
-          cumul
-          ^ if content <> "" then Format.sprintf "\\item{}{%s}" content else ""
-      | "span" ->
-          (* look for potential TeX code *)
-          (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
-          (* or \highlight *)
-          (* <span mode="highlight">sn fn%if;(oc != "0") (oc)%end;</span> *)
-          (* children is a single string of TeX *)
-          (* % might not be there (old format) *)
-          let display_none =
-            Hutil.test_attr attributes "style" "display:none"
-          in
-          let highlight_mode = Hutil.test_attr attributes "mode" "highlight" in
-          let tex_mode_1 = Hutil.test_attr attributes "mode" "tex" in
-          let str =
+  let element =
+    match tree with
+    | Text s -> s
+    | Element (name, attributes, children) (* as elt *) -> (
+        match name with
+        | ("i" | "u" | "b" | "em" | "tt" | "strong" | "tiny" | "small" | "big")
+          as t ->
             let content = get_child children in
-            let tex_mode_2 =
-              if String.length content > 3 then String.sub content 0 3 = "tex"
-              else false
+            Lutil.simple_tag_1 t content
+        (* TODO check here we are terminating something!! *)
+        | "br" -> " \\\\ \n"
+        | "sup" ->
+            let content = get_child children in
+            if content <> "" then Format.sprintf "\\textsuperscript{%s}" content
+            else ""
+        | "h1" ->
+            let content = get_child children in
+            if content <> "" && !section_on_a_tag then
+              Format.sprintf "\\section{%s}" content
+            else ""
+        | "h2" ->
+            let content = get_child children in
+            if content <> "" then Format.sprintf "\\subsection{%s}" content
+            else ""
+        | "h3" ->
+            let content = get_child children in
+            (* TODO parametrer ce comportement *)
+            (* TODO revoir comportement côté LaTeX *)
+            let str =
+              if Sutil.contains content ">Bateaux<" then
+                "\n\\par\\hgbato{Bateaux}"
+              else if Sutil.contains content ">Propriétaires<" then
+                "\n\\par\\hgbato{Propriétaires}"
+              else Format.sprintf "\\subsubsection{%s}" content
             in
-            if display_none then
-              if String.length content > 3 && (tex_mode_1 || tex_mode_2) then
-                let content = Sutil.replace '[' '{' content in
-                let content = Sutil.replace ']' '}' content in
-                let content =
-                  if tex_mode_2 then
-                    String.sub content 4 (String.length content - 7)
-                  else content
-                in
-                let i =
-                  try String.index_from content 0 '%' with Not_found -> -1
-                in
-                if i > 0 then
-                  String.sub content 0 i
-                  ^ String.sub content (i + 1) (String.length content - i - 1)
-                else content
+            if content <> "" then str else ""
+        | "hr" -> "\\par\\noindent\\rule{\\textwidth}{0.4pt}\n"
+        | "p" ->
+            let content = get_child children in
+            if content <> "" then Format.sprintf "\\par\n %s" content else ""
+        | "table" ->
+            let content = get_child children in
+            content
+        | "caption" ->
+            let content = get_child children in
+            let content = Format.sprintf "\n\\caption{%s}\n" content in
+            content
+        | "tbody" ->
+            (* implicit if no <caption> or <thead> *)
+            (* TODO what happens if <caption> ?? *)
+            let content = get_child children in
+            (* TODO compute the number of columns and their style *)
+            let cols =
+              let rec loop s n =
+                if n = !td_nbr then s else loop (s ^ "c") (n + 1)
+              in
+              loop "cccc" 0
+            in
+            let content =
+              Format.sprintf "\n\\begin{tabular}{%s}\n%s\n\\end{tabular}\n" cols
+                content
+            in
+            first_tr := true;
+            content
+        | "tr" ->
+            let content = get_child children in
+            first_tr := false;
+            first_td := true;
+            content ^ "\\\\\n"
+        | "td" ->
+            let first = !first_td in
+            let content = get_child children in
+            let colspan =
+              List.fold_left
+                (fun c ((_, k), v) ->
+                  if k = "colspan" then
+                    try int_of_string v with Failure _ -> 1
+                  else c)
+                1 attributes
+            in
+            let content =
+              if colspan > 1 then
+                Format.sprintf "\\multicolumn{%d}{c}{%s}" colspan content
               else content
-            else if highlight_mode then
-              if List.mem content !highlights then
-                Format.sprintf "{\\hl{\\bf %s}}" content
-              else Format.sprintf "{\\bf %s}" content
-            else content
-          in
-          cumul ^ str
-      | "div" ->
-          (* <div class="container" style="column-count:2;column-gap:50px"> *)
-          (* <div class="column"> *)
-          (* <div class="row"> *)
-          let clas = Hutil.get_attr attributes "class" in
-          let sty = Hutil.get_attr attributes "style" in
-          let sty = String.split_on_char ';' sty in
-          let sty =
-            List.map
-              (fun s ->
-                let p = String.split_on_char ':' s in
-                let len = List.length p in
-                ( (if len > 0 then List.nth p 0 else ""),
-                  if len > 1 then List.nth p 1 else "" ))
-              sty
-          in
-          let cols =
-            try
-              try int_of_string (List.assoc "column-count" sty)
-              with Failure _ -> 0
-            with Not_found -> 0
-          in
-          let tabl =
-            if Sutil.contains clas "columns" then (0, 0) else (row, col)
-          in
-          let content =
-            List.fold_left
-              (fun acc c -> acc ^ process_tree_cumul och cumul c tabl)
-              "" children
-          in
-          if Sutil.contains clas "container" && cols > 1 then
-            cumul
-            ^ Format.sprintf "\n\\begin{multicols}{%d}\n%s\n\\end{multicols}\n"
+            in
+            first_td := false;
+            if !first_tr then incr td_nbr;
+            (if first then "" else " & ") ^ content
+        | "ul" ->
+            let content = get_child children in
+            if content <> "" then
+              Format.sprintf "\\begin{hgitemize}\n %s\n\\end{hgitemize}\n"
+                content
+            else ""
+        | "li" ->
+            let content = get_child children in
+            if content <> "" then Format.sprintf "\\item{}{%s}" content else ""
+        | "span" ->
+            (* look for potential TeX code *)
+            (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
+            (* or \highlight *)
+            (* <span mode="highlight">sn fn%if;(oc != "0") (oc)%end;</span> *)
+            (* children is a single string of TeX *)
+            (* % might not be there (old format) *)
+            let display_none =
+              Hutil.test_attr attributes "style" "display:none"
+            in
+            let highlight_mode =
+              Hutil.test_attr attributes "mode" "highlight"
+            in
+            let tex_mode_1 = Hutil.test_attr attributes "mode" "tex" in
+            let str =
+              let content = get_child children in
+              let tex_mode_2 =
+                if String.length content > 3 then String.sub content 0 3 = "tex"
+                else false
+              in
+              if display_none then
+                if String.length content > 3 && (tex_mode_1 || tex_mode_2) then
+                  let content = Sutil.replace '[' '{' content in
+                  let content = Sutil.replace ']' '}' content in
+                  let content =
+                    if tex_mode_2 then
+                      String.sub content 4 (String.length content - 7)
+                    else content
+                  in
+                  let i =
+                    try String.index_from content 0 '%' with Not_found -> -1
+                  in
+                  if i > 0 then
+                    String.sub content 0 i
+                    ^ String.sub content (i + 1) (String.length content - i - 1)
+                  else content
+                else content
+              else if highlight_mode then
+                if List.mem content !highlights then
+                  Format.sprintf "{\\hl{\\bf %s}}" content
+                else Format.sprintf "{\\bf %s}" content
+              else content
+            in
+            str
+        | "div" ->
+            (* <div class="container" style="column-count:2;column-gap:50px"> *)
+            (* <div class="column"> *)
+            (* <div class="row"> *)
+            let clas = Hutil.get_attr attributes "class" in
+            let sty = Hutil.get_attr attributes "style" in
+            let sty = String.split_on_char ';' sty in
+            let sty =
+              List.map
+                (fun s ->
+                  let p = String.split_on_char ':' s in
+                  let len = List.length p in
+                  ( (if len > 0 then List.nth p 0 else ""),
+                    if len > 1 then List.nth p 1 else "" ))
+                sty
+            in
+            let cols =
+              try
+                try int_of_string (List.assoc "column-count" sty)
+                with Failure _ -> 0
+              with Not_found -> 0
+            in
+            let tabl =
+              if Sutil.contains clas "columns" then (0, 0) else (row, col)
+            in
+            let content =
+              List.fold_left
+                (fun acc c -> acc ^ process_tree_cumul och cumul c tabl)
+                "" children
+            in
+            if Sutil.contains clas "container" && cols > 1 then
+              Format.sprintf "\n\\begin{multicols}{%d}\n%s\n\\end{multicols}\n"
                 cols content
-          else cumul ^ content
-      (* Trees ********************************* *)
-      | "bigtree" ->
-          new_tree := [];
-          new_row := [];
-          let _ = continue "" children in
-          if !new_row <> [] then new_tree := List.rev !new_row :: !new_tree;
-          cumul
-          ^ Trees.print_tree !base (List.rev !new_tree) !mode
-            !textwidth !textheight !margin !debug
-            !fontsize !sideways !imgwidth !twopages
-      | "cell" ->
-          if !c_typ <> "" || !c_txt <> "" || !c_item <> "" || !c_img <> "" then
-            new_row := (!c_width, !c_span, !c_typ, !c_txt, !c_item, !c_img) :: !new_row;
-          c_width := 0;
-          let span = Hutil.get_attr attributes "colspan" in
-          (c_span := try int_of_string span with Failure _ -> 1);
-          (* TODO undestand why some span are -1 *)
-          if !c_span = -1 then c_span := 1;
-          c_typ := "";
-          c_txt := "";
-          c_item := "";
-          c_img := "";
-          continue "" children
-      | "celltext" ->
-          c_typ := "Te";
-          c_txt := Lutil.escape (get_child children);
-          continue "" children
-      | "cellitem" ->
-          c_typ := "It";
-          c_item := Lutil.escape (get_child children);
-          continue "" children
-      | "rule-left" ->
-          c_typ := "Hl";
-          continue "" children
-      | "rule-right" ->
-          c_typ := "Hr";
-          continue "" children
-      | "rule-fullcell" ->
-          c_typ := "Hc";
-          continue "" children
-      | "vbar" ->
-          c_typ := "Hv1";
-          continue "" children
-      | "emptycell" ->
-          c_typ := "E";
-          continue "" children
-      | "newline" ->
-          new_row := (!c_width, !c_span, !c_typ, !c_txt, !c_item, !c_img) :: !new_row;
-          new_tree := List.rev !new_row :: !new_tree;
-          new_row := [];
-          c_typ := "";
-          c_txt := "";
-          c_item := "";
-          c_img := "";
-          continue "" children
-      | "image" ->
-          c_typ := "Im";
-          c_img := Lutil.escape (get_child children);
-          continue "" children
-      (* end trees ***************************** *)
-      | name when List.mem name dummy_tags_0 -> continue cumul children
-      | name when List.mem name dummy_tags_1 -> cumul
-      | name when List.mem name dummy_tags_2 -> cumul
-      | name when List.mem name dummy_tags_3 -> cumul
-      (* cumul is handled by these two tag functions *)
-      | "a" -> tag_a cumul name attributes children
-      | "img" -> tag_img cumul name attributes children
-      | _ ->
-          Printf.eprintf "Missing tag: %s\n" name;
-          continue cumul children)
+            else content
+        (* Trees ********* NON REENTRANT !! ********** *)
+        (* <tables> in trees dont work !!              *)
+        | "bigtree" ->
+            new_tree := [];
+            new_row := [];
+            let _ = continue "" children in
+            if !new_row <> [] then new_tree := List.rev !new_row :: !new_tree;
+            Trees.print_tree !base (List.rev !new_tree) !mode !textwidth
+              !textheight !margin !debug !fontsize !sideways !imgwidth !twopages
+        | "cell" ->
+            if !c_typ <> "" || !c_txt <> "" || !c_item <> "" || !c_img <> ""
+            then
+              new_row :=
+                (!c_width, !c_span, !c_typ, !c_txt, !c_item, !c_img) :: !new_row;
+            c_width := 0;
+            let span = Hutil.get_attr attributes "colspan" in
+            (c_span := try int_of_string span with Failure _ -> 1);
+            (* TODO undestand why some span are -1 *)
+            if !c_span = -1 then c_span := 1;
+            c_typ := "";
+            c_txt := "";
+            c_item := "";
+            c_img := "";
+            ""
+        | "celltext" ->
+            c_typ := "Te";
+            c_txt := Lutil.escape (get_child children);
+            ""
+        | "cellitem" ->
+            c_typ := "It";
+            c_item := Lutil.escape (get_child children);
+            ""
+        | "rule-left" ->
+            c_typ := "Hl";
+            ""
+        | "rule-right" ->
+            c_typ := "Hr";
+            ""
+        | "rule-fullcell" ->
+            c_typ := "Hc";
+            ""
+        | "vbar" ->
+            c_typ := "Hv1";
+            ""
+        | "emptycell" ->
+            c_typ := "E";
+            ""
+        | "newline" ->
+            new_row :=
+              (!c_width, !c_span, !c_typ, !c_txt, !c_item, !c_img) :: !new_row;
+            new_tree := List.rev !new_row :: !new_tree;
+            new_row := [];
+            c_typ := "";
+            c_txt := "";
+            c_item := "";
+            c_img := "";
+            ""
+        | "image" ->
+            c_typ := "Im";
+            c_img := Lutil.escape (get_child children);
+            ""
+        (* end trees ***************************** *)
+        | name when List.mem name dummy_tags_0 -> continue cumul children
+        | name when List.mem name dummy_tags_1 -> ""
+        | name when List.mem name dummy_tags_2 -> ""
+        | name when List.mem name dummy_tags_3 -> ""
+        (* cumul is handled by these two tag functions *)
+        | "a" -> tag_a cumul name attributes children
+        | "img" -> tag_img cumul name attributes children
+        | _ ->
+            Printf.eprintf "Missing tag: %s\n" name;
+            "")
+  in
+  cumul ^ element
 
 let process_html och body =
   let open Markup in
@@ -780,10 +777,13 @@ let one_command och line =
       output_string och
         (Format.sprintf "Newwidth {\\bf %s}\n" (* TODO *)
            (if param <> "" then param else "7cm"))
-  | "Arbres" -> (
+  | "Arbres" ->
       if param = "on" || param = "On" then (
-          imgwidth := 1.5; arbres := true)
-      else (imgwidth := imgwidth_default; arbres := false))
+        imgwidth := 1.5;
+        arbres := true)
+      else (
+        imgwidth := imgwidth_default;
+        arbres := false)
   | "BumpSub" -> sub := param = "on" || param = "On"
   | "Chapter" ->
       if !image_label > 1 then image_nbr := 0;
@@ -801,7 +801,7 @@ let one_command och line =
   | "Hrule" -> hrule := param = "on" || param = "On"
   | "ImageLabels" -> (
       image_label := try int_of_string param with Failure _ -> 3)
-  | "ImageWidth" -> imgwidth := (Float.of_string param)
+  | "ImageWidth" -> imgwidth := Float.of_string param
   | "Input" -> (
       let param = Sutil.replace_str param "%%%LIVRES%%%" !livres in
       let ic = open_in param in
@@ -835,19 +835,34 @@ let one_command och line =
       out "subsubsection" param;
       incr subsubsection;
       current_level := 3
-  | "Trees" -> (
+  | "Trees" ->
       if param = "on" || param = "On" then (
-          imgwidth := 1.5; arbres := true)
-      else (imgwidth := imgwidth_default; arbres := false))
+        imgwidth := 1.5;
+        arbres := true)
+      else (
+        imgwidth := imgwidth_default;
+        arbres := false)
   | "Version" -> output_string och (version ^ "\n")
   | "WideImage" ->
-      if param = "on" || param = "On" then (imgwidth := !textwidth; wide := true)
-      else (imgwidth := imgwidth_default; wide := false)
-  | "TextWidth" -> textwidth := (Float.of_string param)
-  | "Xoffset" -> (offset := true; xoffset := Float.of_string param)
-  | "Yoffset" -> (offset := true; yoffset := Float.of_string param)
-  | "Offset" -> if param = "on" || param = "On" then offset := true
-      else (offset := false; xoffset := 0.0; yoffset := 0.0)
+      if param = "on" || param = "On" then (
+        imgwidth := !textwidth;
+        wide := true)
+      else (
+        imgwidth := imgwidth_default;
+        wide := false)
+  | "TextWidth" -> textwidth := Float.of_string param
+  | "Xoffset" ->
+      offset := true;
+      xoffset := Float.of_string param
+  | "Yoffset" ->
+      offset := true;
+      yoffset := Float.of_string param
+  | "Offset" ->
+      if param = "on" || param = "On" then offset := true
+      else (
+        offset := false;
+        xoffset := 0.0;
+        yoffset := 0.0)
   | "Unit" -> unit := param
   | _ -> output_string och (Format.sprintf "%%%s%s\n" cmd remain)
 
@@ -858,34 +873,39 @@ let one_http_call och line =
   in
   let url = String.sub line (url_beg + 1) (url_end - url_beg - 1) in
   let parts = String.split_on_char '?' line in
-  if List.length parts > 1 then 
-    let evars = String.split_on_char  '&' (Sutil.replace ';' '&' ( List.nth parts 1)) in
+  if List.length parts > 1 then
     let evars =
-      List.map (fun kv ->
-        let parts = String.split_on_char '=' kv in
-        if List.length parts > 1 then (List.nth parts 0, List.nth parts 1)
-        else List.nth parts 0, "") evars
+      String.split_on_char '&' (Sutil.replace ';' '&' (List.nth parts 1))
     in
-    if try (List.assoc "m" evars) = "D" && (List.assoc "t" evars ) = "V" 
-       with Not_found -> false
+    let evars =
+      List.map
+        (fun kv ->
+          let parts = String.split_on_char '=' kv in
+          if List.length parts > 1 then (List.nth parts 0, List.nth parts 1)
+          else (List.nth parts 0, ""))
+        evars
+    in
+    if
+      try List.assoc "m" evars = "D" && List.assoc "t" evars = "V"
+      with Not_found -> false
     then output_string och "Command m=D;t=V is not available (yet)\\\\\n"
-  else (
-    let resp = Ezcurl.get ~url () in
-    match resp with
-    | Ok { Ezcurl.code; body; _ } ->
-        if bad_code code then (
-          Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
+    else
+      let resp = Ezcurl.get ~url () in
+      match resp with
+      | Ok { Ezcurl.code; body; _ } ->
+          if bad_code code then (
+            Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
+            output_string och
+              (Format.sprintf "Bad code when fetching %s: %d!\n" url code))
+          else
+            let _ = process_html och body in
+            ()
+      | Error (_, msg) ->
+          Printf.eprintf "error when fetching %s:\n  %s\n%!" (Lutil.escape url)
+            (Lutil.escape msg);
           output_string och
-            (Format.sprintf "Bad code when fetching %s: %d!\n" url code))
-        else
-          let _ = process_html och body in
-          ()
-    | Error (_, msg) ->
-        Printf.eprintf "error when fetching %s:\n  %s\n%!" (Lutil.escape url)
-          (Lutil.escape msg);
-        output_string och
-          (Format.sprintf "Error when fetching %s:\n %s\n" (Lutil.escape url)
-             (Lutil.escape msg)))
+            (Format.sprintf "Error when fetching %s:\n %s\n" (Lutil.escape url)
+               (Lutil.escape msg))
 
 let print_images och images_list =
   output_string och (Format.sprintf "\\par\n");
@@ -894,8 +914,7 @@ let print_images och images_list =
     (fun (im_type, name, (ch, sec, ssec, _sssec), nbr) ->
       let wide = Sutil.contains name "-wide" in
       let width =
-        if wide then "\\textwidth"
-        else Printf.sprintf "%2.2f%s" !imgwidth !unit
+        if wide then "\\textwidth" else Printf.sprintf "%2.2f%s" !imgwidth !unit
       in
       match im_type with
       | Imagek | Portrait | Vignette -> ()
@@ -929,7 +948,9 @@ let print_images och images_list =
           output_string och
             (Format.sprintf
                "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}%s}\n" width
-               width images_dir Filename.dir_sep (Sutil.replace_str name "\\_{}" "&") label))
+               width images_dir Filename.dir_sep
+               (Sutil.replace_str name "\\_{}" "&")
+               label))
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
@@ -1064,8 +1085,7 @@ let main () =
     String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".tex" ]
   in
   let mode, fname_in =
-    if Sys.file_exists fname_txt then
-      ("txt", fname_txt)
+    if Sys.file_exists fname_txt then ("txt", fname_txt)
     else if Sys.file_exists fname_htm then ("html", fname_htm)
     else ("", fname_all)
   in

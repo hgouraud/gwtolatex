@@ -35,7 +35,6 @@ let _simple_tag_2 t str =
   in
   if str <> "" then Format.sprintf "{\\%s %s}" cmd str else ""
 
-
 let escape_aux str =
   let special =
     [
@@ -61,19 +60,22 @@ let escape_aux str =
 (*\includegraphics[width=1.50cm]{./images/chausey/andre.0.fauchon\_{}villeplee.jpg}*)
 let escape str =
   let i = Sutil.contains_index str "\\includegraphics" in
-  if i = -1 then escape_aux  str
+  if i = -1 then escape_aux str
   else
-  let rec loop str1 str2 =
-    let i = Sutil.contains_index str1 "\\includegraphics" in
-    if i = -1 then str2 ^ str1
-    else
-      let j = try String.index_from str1 i '}' with Not_found -> -1 in
-      if j = -1 then str1 ^ str2
-      else loop
-        (String.sub str1 (j + 1) (String.length str1 - j - 1))
-        ((escape_aux (String.sub str1 0 i)) ^
-        (String.sub str1 i (j - i + 1)) ^ str2)
-  in loop str ""
+    let rec loop str1 str2 =
+      let i = Sutil.contains_index str1 "\\includegraphics" in
+      if i = -1 then str2 ^ str1
+      else
+        let j = try String.index_from str1 i '}' with Not_found -> -1 in
+        if j = -1 then str1 ^ str2
+        else
+          loop
+            (String.sub str1 (j + 1) (String.length str1 - j - 1))
+            (escape_aux (String.sub str1 0 i)
+            ^ String.sub str1 i (j - i + 1)
+            ^ str2)
+    in
+    loop str ""
 
 let build_index fn sn ocn content check =
   (* cover cases with sn = . (houses) or X (boats) *)

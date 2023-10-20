@@ -72,8 +72,7 @@ let suite =
              test 11 "2abc \\\\ defxx\\\\abcdefghijk";
              test 12 "2abc \\\\ abcdefghijk\\\\abc";
              test 10 "3abc   def\\\\";
-             test 0 ""
-            );
+             test 0 "" );
            ( "suppress_leading_sp" >:: fun _ ->
              let test aaa bbb =
                let ccc = Sutil.suppress_leading_sp bbb in
@@ -110,7 +109,7 @@ let suite =
              test "4abc_def" "4abc\\_{}def" "\\_{}" "_";
              test "5abc  def" "5abc xyz def" "xyz" "";
              test "6abc xyz def" "6abc xyz def" "" "xx";
-             test "" "" "" "");
+             test "" "" "" "" );
            ( "replace_utf8_bar" >:: fun _ ->
              let test aaa bbb =
                let ccc = Sutil.replace_utf8_bar bbb in
@@ -132,8 +131,7 @@ let suite =
              test "benedicte.0.gouraud" "Bénédicte.0.Gouraud";
              test "andre.0.fauchon-villeplee" "André.0.Fauchon-Villeplée";
              test "andre.0.fauchon_villeplee" "André.0.Fauchon_Villeplée";
-             test "" ""
-            );
+             test "" "" );
            ( "contains" >:: fun _ ->
              let test aaa bbb sss =
                let ccc = Sutil.contains bbb sss in
@@ -143,8 +141,7 @@ let suite =
              test true "bbbaaacccccccc" "aaa";
              test true "bbbbaaa" "aaa";
              test false "bbbbaaa" "aaaa";
-             test true "" ""
-            );
+             test true "" "" );
            ( "contains_index" >:: fun _ ->
              let test aaa bbb sss =
                let ccc = Sutil.contains_index bbb sss in
@@ -154,8 +151,7 @@ let suite =
              test 0 "aaaedicte" "aaa";
              test 3 "bbbaaacccccccc" "aaa";
              test 4 "bbbbaaa" "aaa";
-             test 0 "" ""
-            );
+             test 0 "" "" );
            ( "escape" >:: fun _ ->
              let test aaa bbb =
                let ccc = Lutil.escape bbb in
@@ -164,13 +160,14 @@ let suite =
              in
              test "aaaedicte" "aaaedicte";
              test "aaa\\_{}edicte" "aaa_edicte";
-             test "aaa\\includegraphics{xx_xx}bbb" "aaa\\includegraphics{xx_xx}bbb";
+             test "aaa\\includegraphics{xx_xx}bbb"
+               "aaa\\includegraphics{xx_xx}bbb";
              test "\\includegraphics{xx_xx}" "\\includegraphics{xx_xx}";
              test "\\includegraphics{xxxx}" "\\includegraphics{xxxx}";
-             test "aaa{b\\_{}b}\\includegraphics{xxxx}" "aaa{b_b}\\includegraphics{xxxx}";
+             test "aaa{b\\_{}b}\\includegraphics{xxxx}"
+               "aaa{b_b}\\includegraphics{xxxx}";
              test "\\includegraphics{xx_xx}\n" "\\includegraphics{xx_xx}\n";
-             test "" ""
-            );
+             test "" "" );
            ( "get_nb_full_col_in_span" >:: fun _ ->
              let cols =
                [

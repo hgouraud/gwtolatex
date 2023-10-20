@@ -53,8 +53,8 @@ let contains_index str sub =
   let rec aux i1 i2 =
     if i1 = sublen then i2 - sublen
     else if i2 = strlen then -1
-    else if String.unsafe_get str i2 = String.unsafe_get sub i1
-    then aux (i1 + 1) (i2 + 1)
+    else if String.unsafe_get str i2 = String.unsafe_get sub i1 then
+      aux (i1 + 1) (i2 + 1)
     else -1
   in
   let rec loop i =
@@ -62,7 +62,8 @@ let contains_index str sub =
       let r = aux 0 i in
       if r <> -1 then r else loop (i + 1)
     else -1
-  in loop 0
+  in
+  loop 0
 
 let contains str sub =
   let strlen = String.length str in
@@ -70,14 +71,14 @@ let contains str sub =
   let rec aux i1 i2 =
     if i1 = sublen then true
     else if i2 = strlen then false
-    else if String.unsafe_get str i2 = String.unsafe_get sub i1
-    then aux (i1 + 1) (i2 + 1)
+    else if String.unsafe_get str i2 = String.unsafe_get sub i1 then
+      aux (i1 + 1) (i2 + 1)
     else false
   in
   let rec loop i =
-    if i + sublen <= strlen then aux 0 i || loop (i + 1)
-    else false
-  in loop 0
+    if i + sublen <= strlen then aux 0 i || loop (i + 1) else false
+  in
+  loop 0
 
 (* in str, replace car x by car y *)
 let replace x y str =
@@ -252,7 +253,7 @@ let lower s =
     if i = String.length s then Buff.get len
     else if Char.code s.[i] < 0x80 then
       match s.[i] with
-      | ('a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '.' | '-' | '_' ) as c ->
+      | ('a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '.' | '-' | '_') as c ->
           let len = if special then Buff.store len ' ' else len in
           let c = Char.lowercase_ascii c in
           copy false (i + 1) (Buff.store len c)

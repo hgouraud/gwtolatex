@@ -102,7 +102,7 @@ let scan_row_for_bar row =
       in
       let bar =
         bar || String.contains te '|' || String.contains it '|'
-        || (Sutil.contains te utf8_bar) || (Sutil.contains it utf8_bar)
+        || Sutil.contains te utf8_bar || Sutil.contains it utf8_bar
       in
       let lr =
         match (lr, left_right) with
@@ -125,11 +125,11 @@ let copy_row row lr side =
         (if side = "bar" then match ty with "Te" | "It" -> "Hv2" | _ -> ty
         else ty),
         (if side = "bar" then ""
-        else match ty with "Te" -> get_part lr side te | _ -> te ),
+        else match ty with "Te" -> get_part lr side te | _ -> te),
         (if side = "bar" then ""
-        else match ty with "It" -> get_part lr side it | _ -> it ),
-        (if side = "bar" then ""
-        else match ty with "Im" -> get_part lr side im | _ -> im )))
+        else match ty with "It" -> get_part lr side it | _ -> it),
+        if side = "bar" then ""
+        else match ty with "Im" -> get_part lr side im | _ -> im ))
     row
 
 let print_row row =
@@ -166,23 +166,22 @@ let get_nb_full_col_in_span cols b s =
         else n
   in
   loop 0 0 cols
-  
+
 let get_item_length str =
   let len = String.length str in
   let rec loop i l1 l2 =
-    if i = len then (max l1 l2)
+    if i = len then max l1 l2
     else if i < len - 1 && str.[i] = '\\' && str.[i + 1] = '\\' then
       loop (i + 2) 0 (max l1 l2)
     else loop (i + 1) (l1 + 1) l2
-  in loop 0 0 0
+  in
+  loop 0 0 0
 
 (* find the largest item in a given column *)
-let get_col_width _row _c =
-  1.0
-
+let get_col_width _row _c = 1.0
 let carwidth = 0.3
 
-let reset_cell_width cols row textwidth imwidth=
+let reset_cell_width cols row textwidth imwidth =
   let nb_f_col =
     let rec loop i n cols =
       match cols with
@@ -197,31 +196,31 @@ let reset_cell_width cols row textwidth imwidth=
       match row with
       | [] -> n
       | (_, _, ty, te, it, _im) :: row ->
-          if ty = "It" || ty = "Te" || ty = "Im"
-          then loop (i + 1)
-          (n +.
-            (max imwidth
-              (((Float.of_int (get_item_length te)) *. carwidth) +.
-               ((Float.of_int (get_item_length it)) *. carwidth)
-              )))
-          cols
+          if ty = "It" || ty = "Te" || ty = "Im" then
+            loop (i + 1)
+              (n
+              +. max imwidth
+                   ((Float.of_int (get_item_length te) *. carwidth)
+                   +. (Float.of_int (get_item_length it) *. carwidth)))
+              cols
           else loop (i + 1) n row
     in
     loop 0 0. row
   in
-  let unit_width = textwidth /. (Float.of_int nb_f_col) in
+  let unit_width = textwidth /. Float.of_int nb_f_col in
   let rec loop new_row c row =
     match row with
     | [] -> List.rev new_row
     | (_w, s, ty, te, it, im) :: row ->
-      let width =
-        (get_nb_full_col_in_span cols c s |> Float.of_int) *.
-        unit_width *.
-        (get_col_width row c) /. (* TODO ??? *)
-        total_width
-      in
-      loop ((width, s, ty, te, it, im) :: new_row) (c + s) row
-  in loop [] 0 row
+        let width =
+          (get_nb_full_col_in_span cols c s |> Float.of_int)
+          *. unit_width *. get_col_width row c
+          /. (* TODO ??? *)
+          total_width
+        in
+        loop ((width, s, ty, te, it, im) :: new_row) (c + s) row
+  in
+  loop [] 0 row
 
 (* <a href="base?m=IM&p=first_name&n=surname&occ=noc&k=first_name.noc.surname" *)
 (* <a href="base?m=IM;s=test/filaname.jpg"> *)
@@ -230,31 +229,42 @@ let reset_cell_width cols row textwidth imwidth=
 let get_img_name base im =
   let _ext_l = [ ".jpg"; ".jpeg"; ".bnp" ] in
   let ext = ".jpg" in
-  let where = "images" in (* or src *)
+  let where = "images" in
+  (* or src *)
   let _b, _m, _p, _n, _oc, _i, k, _s, _v, _t = Hutil.split_href im in
   let name =
-    Format.sprintf "%s" (String.concat Filename.dir_sep ["."; where; base; (k ^ ext)])
+    Format.sprintf "%s"
+      (String.concat Filename.dir_sep [ "."; where; base; k ^ ext ])
   in
   Sutil.replace_str name "\\_{}" "_"
 
 let expand_cells tree =
   let rec expand row new_row =
     match row with
-    | (w1, s1, ty1, te1, it1, im1) :: (w2, s2, ty2, te2, it2, im2) :: (w3, s3, ty3, te3, it3, im3) :: row -> (
+    | (w1, s1, ty1, te1, it1, im1)
+      :: (w2, s2, ty2, te2, it2, im2)
+      :: (w3, s3, ty3, te3, it3, im3)
+      :: row -> (
         match (ty1, ty2, ty3) with
         | "X", ty2, "X" ->
             if s1 >= 2 && s3 >= 2 then
               expand
-                ([ (w2, s2 + 2, ty2, te2, it2, im2); (w3, s3 - 1, ty3, te3, it3, im3) ] @ row)
+                ([
+                   (w2, s2 + 2, ty2, te2, it2, im2);
+                   (w3, s3 - 1, ty3, te3, it3, im3);
+                 ]
+                @ row)
                 ([ (w1, s1 - 1, ty1, te1, it1, im1) ] @ new_row)
             else
               expand
-                ([ (w2, s2, ty2, te2, it2, im2); (w3, s3, ty3, te3, it3, im3) ] @ row)
+                ([ (w2, s2, ty2, te2, it2, im2); (w3, s3, ty3, te3, it3, im3) ]
+                @ row)
                 ([ (w1, s1, ty1, te1, it1, im1) ] @ new_row)
         | _ ->
             expand
-                ([ (w2, s2, ty2, te2, it2, im2); (w3, s3, ty3, te3, it3, im3) ] @ row)
-                ([ (w1, s1, ty1, te1, it1, im1) ] @ new_row))
+              ([ (w2, s2, ty2, te2, it2, im2); (w3, s3, ty3, te3, it3, im3) ]
+              @ row)
+              ([ (w1, s1, ty1, te1, it1, im1) ] @ new_row))
     | _ -> List.rev (List.rev row @ new_row)
   in
   let tree =
@@ -262,13 +272,15 @@ let expand_cells tree =
       match tree with
       | [] -> new_tree
       | row :: tree -> loop tree (expand row [] :: new_tree)
-    in loop tree []
-  in List.rev tree
+    in
+    loop tree []
+  in
+  List.rev tree
 
-
-let print_tree base tree mode textwidth textheight _margin
-debug fontsize sideways imgwidth twopages =
-  if debug <> 0 then Printf.eprintf "Print Tree mode=%d, depth=%d\n" mode (List.length tree);
+let print_tree base tree mode textwidth textheight _margin debug fontsize
+    sideways imgwidth twopages =
+  if debug <> 0 then
+    Printf.eprintf "Print Tree mode=%d, depth=%d\n" mode (List.length tree);
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
@@ -285,8 +297,8 @@ debug fontsize sideways imgwidth twopages =
       loop "ccccc" (List.length cols)
     in
     let cell_wid =
-      (if sideways then (textheight *. (if twopages then 2.0 else 1.0)) 
-       else textwidth)
+      (if sideways then textheight *. if twopages then 2.0 else 1.0
+      else textwidth)
       /. Float.of_int non_empty_col_nbr
     in
     let half_cell_wid = cell_wid /. 2.0 in
