@@ -16,17 +16,19 @@
 
 
 %define;hgindex(alxx, snxx, fnxx, occxx)
-  %if;(alxx = "0")
-    %if;(occxx = "0")
-      \index{snxx, fnxx}
+  %if;(snxx!="." and snxx!="X" and (snxx!="?" or fnxx!="?"))
+    %if;(alxx = "0")
+      %if;(occxx = "0")
+        \index{snxx, fnxx}
+      %else;
+        \index{snxx, fnxx (occxx)}
+      %end;
     %else;
-      \index{snxx, fnxx (occxx)}
-    %end;
-  %else;
-    %if;(occxx = "0")
-      \index{alxx, voir snxx, fnxx}
-    %else;
-      \index{alxx, voir snxx, fnxx (occxx)}
+      %if;(occxx = "0")
+        \index{alxx, voir snxx, fnxx}
+      %else;
+        \index{alxx, voir snxx, fnxx (occxx)}
+      %end;
     %end;
   %end;
 %end;

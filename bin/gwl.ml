@@ -52,7 +52,7 @@ let c_img = ref ""
 let base = ref "chausey"
 let family = ref ""
 let out_file = ref ""
-let debug = ref (-1)
+let debug = ref 0
 let mode = ref 0
 let dev = ref false
 let second = ref false
@@ -865,7 +865,7 @@ let one_command och line =
         imgwidth := imgwidth_default;
         arbres := false)
   | "Version" -> output_string och (version ^ "\n")
-  | "WideImage" ->
+  | "WideImages" ->
       if param = "on" || param = "On" then (
         imgwidth := !textwidth;
         wide := true)
@@ -938,10 +938,8 @@ let print_images och images_list =
   (* TODO manage Wide *)
   List.iter
     (fun (im_type, name, (ch, sec, ssec, _sssec), nbr) ->
-      let wide = Sutil.contains name "-wide" in
-      let width =
-        if wide then "\\textwidth" else Printf.sprintf "%2.2f%s" !imgwidth !unit
-      in
+      (* let wide = Sutil.contains name "-wide" in *)
+      let width = Format.sprintf "%2.2f%s" !imgwidth !unit in
       match im_type with
       | Imagek | Portrait | Vignette -> ()
       | Images ->
@@ -1061,6 +1059,10 @@ let main () =
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
 
+  (* for my convenience. Win env may differ *)
+  if Sys.argv.(0) = "_build/install/default/bin/gwl" ||
+     Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
+  then dev:= true;
   (* install tex templates in bases/etc *)
   (* on excute dans le repo (dev) ou dans bases_dir *)
   let dist_dir = if !dev then "." else "./gw2l_dist" in
@@ -1072,14 +1074,6 @@ let main () =
     Printf.eprintf "Error while loading tex templates files (%d)\n" error;
     exit 0);
 
-  (*
-  let tmp_dir = Filename.concat dist_dir "tmp" in
-  try if Sys.is_directory tmp_dir then ()
-  with Sys_error _ -> (
-    Printf.eprintf "Creating tmp dir\n";
-    try Sys.mkdir tmp_dir 766 with Sys_error _ -> (
-      Printf.eprintf "Error in creating tmp dir\n"; exit 0));
-*)
   let fname_txt, family_out =
     ( (if !family <> "" then Filename.concat !livres (!family ^ ".txt")
       else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),

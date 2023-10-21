@@ -77,13 +77,16 @@ let escape str =
     in
     loop str ""
 
+(* ATTENTION there is alse a macro %hgindex(...) in tex/perso.txt *)
+(* ocn has been put in the form " (n)" or "" if 0 *)
 let build_index fn sn ocn content check =
-  (* cover cases with sn = . (houses) or X (boats) *)
+  (* cover cases with sn = . (houses) or X (boats) and ? ? *)
   match (fn, sn) with
+  | "?", "?" -> ""
   | fn, "." | fn, "X" ->
       Format.sprintf "{\\bf %s}" content ^ Format.sprintf "\\index{%s}" fn
   | "Famille", sn ->
-      Format.sprintf "{\\bf %s}" content ^ Format.sprintf "\\index{%s}" sn
+      Format.sprintf "{\\bf %s}" content ^ Format.sprintf "\\index{Famille %s}" sn
   | fn, sn ->
       Format.sprintf "{\\bf %s}" content
       ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
