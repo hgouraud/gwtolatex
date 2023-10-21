@@ -922,12 +922,12 @@ let one_http_call och line =
           if bad_code code then (
             Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
             output_string och
-              (Format.sprintf "Bad code when fetching %s: %d!\n" url code))
+              (Format.sprintf "Bad code when fetching %s: %d!\n" (Lutil.escape url) code))
           else
             let _ = process_html och body in
             ()
       | Error (_, msg) ->
-          Printf.eprintf "error when fetching %s:\n  %s\n%!" (Lutil.escape url)
+          Printf.eprintf "error when fetching %s:\n  %s\n%!" url
             (Lutil.escape msg);
           output_string och
             (Format.sprintf "Error when fetching %s:\n %s\n" (Lutil.escape url)
