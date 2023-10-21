@@ -22,7 +22,7 @@ Henri.Gouraud@LaPoste.net \\
 
 <y Version>
 <x Chapter Avant-propos>
-< Input Chausey-inputs/Notes.tex>
+<x Input %%%LIVRES%%%/Chausey-inputs/Notes.tex>
 
 <x Chapter Un peu d'histoire>
 <a href="http://127.0.0.1:2317/Chausey?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
@@ -31,7 +31,7 @@ Henri.Gouraud@LaPoste.net \\
 
 <x Chapter Listes de descendants>
 <x Section Famille Antoine>
-< LaTeX \index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
+<x LaTeX \index{Antoine (Famille) voir Famille Fortin (Chocolat)}>
 voir Famille Fortin (Chocolat)
 
 <y HighLight works only in descendant trees>
@@ -41,6 +41,7 @@ voir Famille Fortin (Chocolat)
 <a href="http://127.0.0.1:2317/Chausey?m=D;p=pierre;n=leperchois;oc=0;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Leperchois, Pierre</a><br>
 
 <x ImageLabels 4>
+<x CollectImages on>
 
 <x Chapter Fiches maisons>
 <a href="http://127.0.0.1:2317/Chausey?p=maisons;n=chausey;templ=tex;w=hg:1045">La Grande Île</a>La Grande Île<br>
@@ -61,7 +62,6 @@ Deux maisons ont été construites sur le domaine maritime.
 <x ImageLabels 3>
 
 <x Chapter Fiches individuelles>
-<x CollectImages on>
 <x Section Lucien Ernouf>
 See famille Ernouf
 <x LaTeX \label{Ernouf}>
@@ -74,10 +74,11 @@ See famille Ernouf
 <a href="http://127.0.0.1:2317/Chausey?p=pierre;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Pierre</a><br>
 
 <x Chapter Arbres généalogiques>
-<x Input Chausey-inputs/Notes-arbres.tex>
+<x Input %%%LIVRES%%%/Chausey-inputs/Notes-arbres.tex>
 <x Newpage>
 <x Trees on>
 <x Arbres on>
+<x TreeMode 1>
 <a href="http://127.0.0.1:2317/Chausey?m=D;p=henri;n=gouraud;v=3;t=TV;dag=on;templ=tex;w=hg:1045;cgl=on">Arbre descendant d'Henri Gouraud</a>
 <a href="http://127.0.0.1:2317/Chausey?p=henri&n=gouraud&m=D&t=TV&v=3&templ=tex;w=hg:1045">Arbre descendant d'Henri</a>
 
@@ -85,6 +86,12 @@ See famille Ernouf
 <x FontSize small>
 <x LaTeX \index{Marie, Albert (Toumagi)}>
 <a href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045;cgl=on">Arbre descendant d'Albert Marie (Toumagi)</a>
+<x Sideways off>
+
+<a href="http://127.0.0.1:2317/Chausey_xolieymqd?m=RLM&&im=off&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri</a>
+<x TreeMode 0>
+<a href="http://127.0.0.1:2317/Chausey_xolieymqd?m=RLM&im=off&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri</a>
+
 <x Trees off>
 <x Arbres off>
 

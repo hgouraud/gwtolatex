@@ -99,9 +99,6 @@ let offset = ref false
 let xoffset = ref 0.0
 let yoffset = ref 0.0
 let twopages = ref false
-let first_tr = ref true
-let first_td = ref true
-let td_nbr = ref 0
 
 let open_base basename =
   match basename with
@@ -274,7 +271,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
         (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
         Filename.dir_sep name
   | Vignette ->
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !vignwidth
+      Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !vignwidth
         !unit
         (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
         Filename.dir_sep name
@@ -297,6 +294,7 @@ let dummy_tags_2 =
     "meta";
     "nav";
     "option";
+    "wide";
   ]
 
 let dummy_tags_3 =
@@ -347,6 +345,7 @@ let one_page och line = output_string och line
 (* process_tree_cumul accumulates results in a string *)
 
 let rec process_tree_cumul och cumul tree (row, col) =
+
   let get_child children =
     List.fold_left
       (fun acc c -> acc ^ process_tree_cumul och "" c (row, col))
@@ -359,7 +358,80 @@ let rec process_tree_cumul och cumul tree (row, col) =
       cumul children
   in
 
-  let tag_a cumul _name attributes children =
+  let make_image_str s k content =
+    let vignette = Sutil.contains s "-vignette" in
+    if k = "" && not vignette then incr image_nbr;
+    let image =
+      ( Images,
+        s,
+        (!chapter, !section, !subsection, !subsubsection),
+        !image_nbr )
+    in
+    if !collect_images && k = "" && not vignette then (
+      images_in_page := image :: !images_in_page;
+      match !image_label with
+      | 1 ->
+          Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d)}}" content
+            !image_nbr
+      | 3 ->
+          Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}"
+            content !chapter !section !image_nbr
+      | 4 ->
+          Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d.%d)}}"
+            content !chapter !section !subsection !image_nbr
+      | _ ->
+          Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}"
+            content !chapter !section !image_nbr)
+    else content
+  in
+
+  (* SRC file typically contain mapped images *)
+  (* for more complex SRC files, see later!! *)
+  (*
+  <!-- mapped image -->
+  <h1>La Grande Île</h1>
+  <img SRC="%sm=IM;s=grande-ile-aerien.jpg" border="0" usemap="#Grande-Ile-Aerien">
+  <map name="Grande-Ile-Aerien">
+  *)
+
+  let read_src_file v content =
+    let src_dir = String.concat Filename.dir_sep [ !bases; "src"; !base ] in
+    let ic =
+      try Some (open_in (Filename.concat src_dir (v ^ ".txt")))
+      with _ -> None
+    in
+    match ic with
+    | None -> Format.sprintf " (Missing file %s.txt) " v
+    | Some ic ->
+        let file = really_input_string ic (in_channel_length ic) in
+        if not (Sutil.contains file "<!-- mapped image -->") then
+            Format.sprintf "{\\it %s}\\footnote{SRC or DOC file}" content
+        else
+          let i0 = Sutil.contains_index file "<img src=" in
+          let i1 = Sutil.contains_index file "<img SRC=" in
+          let i = match i1, i1 with -1, -1 -> -1 | _, _ -> max i0 i1 in
+          let j = String.index_from file i '>' in
+          if j = -1 then
+            Format.sprintf "Funny SRC content %s"
+              (String.sub file i (min 40 ((String.length file) - i)))
+          else
+            let href = String.sub file i (j - i) in
+            let href1 = Sutil.decode href in
+            let _b, _m, _p, _n, _oc, _i, k, s, _v, _t = Hutil.split_href href1 in
+            if s <> "" then make_image_str s k content
+            else
+              Format.sprintf "Funny SRC content %s" href
+  in
+  (*
+  <a href="%sm=SRC;v=grande-ile-aerien">
+  <img SRC="%sm=IM;s=grande-ile-aerien-v.jpg"></a>
+  permet de localiser presque toutes les maisons.<br>
+  Pour plus de détails, voir les plans cadastraux (<a href="%sm=SRC;v=plan-pointe-du-phare">Le Phare</a> et
+  <a href="%sm=SRC;v=plan-blainvillais">Blainvillais</a>) ou la
+  <a href="%sm=SRC;v=grande-ile">carte de l’île</a>.
+  *)
+
+  let tag_a _name attributes children =
     (* if p <> "" or n <> "" we have a person *)
     (* it may appear undes a different spelling as part of <a>xxx</a> *)
     (* or we may have a portrait k <> "" *)
@@ -373,10 +445,10 @@ let rec process_tree_cumul och cumul tree (row, col) =
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
     let href = Sutil.decode href in
-    let b, m, p, n, oc, i, k, s, _v, t = Hutil.split_href href in
+    let b, m, p, n, oc, i, k, s, v, t = Hutil.split_href href in
 
-    if List.mem m skip_m_cmd then cumul
-    else
+    if List.mem m skip_m_cmd then ""
+    else (
       let content = get_child children in
       (* between <a...> and </a> *)
       let ip =
@@ -398,43 +470,18 @@ let rec process_tree_cumul och cumul tree (row, col) =
         let check = Printf.sprintf "%s %s%s" fn sn ocn in
         if (fn <> "" || sn <> "") && s <> "" && k = "" then
           Lutil.build_index fn sn ocn content check
+        else if m = "SRC" || m = "DOC" then read_src_file v content
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
         else if String.lowercase_ascii b <> String.lowercase_ascii !base then
           Format.sprintf "%s\\footnote{%s}" content (Lutil.escape href)
-        else if s <> "" then (
-          let vignette = Sutil.contains s "-vignette" in
-          if k = "" && not vignette then incr image_nbr;
-          let image =
-            ( Images,
-              s,
-              (!chapter, !section, !subsection, !subsubsection),
-              !image_nbr )
-          in
-          if !collect_images && k = "" && not vignette then
-            images_in_page := image :: !images_in_page;
-          let str =
-            match !image_label with
-            | 1 ->
-                Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d)}}" content
-                  !image_nbr
-            | 3 ->
-                Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}"
-                  content !chapter !section !image_nbr
-            | 4 ->
-                Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d.%d)}}"
-                  content !chapter !section !subsection !image_nbr
-            | _ ->
-                Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}"
-                  content !chapter !section !image_nbr
-          in
-          str)
-        else "{\\bf " ^ content ^ "}"
+        else if s <> "" then make_image_str s k content
+        else ("{\\bf " ^ content ^ "}")
       in
-      cumul ^ str
+      str)
   in
 
-  let tag_img _cumul _name attributes _children =
+  let tag_img _name attributes _children =
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
     let href = Sutil.decode href in
@@ -490,7 +537,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
             let content = get_child children in
             Lutil.simple_tag_1 t content
         (* TODO check here we are terminating something!! *)
-        | "br" -> " \\\\ \n"
+        | "br" -> " \\\\\n"
         | "sup" ->
             let content = get_child children in
             if content <> "" then Format.sprintf "\\textsuperscript{%s}" content
@@ -532,42 +579,14 @@ let rec process_tree_cumul och cumul tree (row, col) =
             (* TODO what happens if <caption> ?? *)
             let content = get_child children in
             (* TODO compute the number of columns and their style *)
-            let cols =
-              let rec loop s n =
-                if n = !td_nbr then s else loop (s ^ "c") (n + 1)
-              in
-              loop "cccc" 0
-            in
-            let content =
-              Format.sprintf "\n\\begin{tabular}{%s}\n%s\n\\end{tabular}\n" cols
-                content
-            in
-            first_tr := true;
+            (* Ignore <tables> for the time being *)
             content
         | "tr" ->
             let content = get_child children in
-            first_tr := false;
-            first_td := true;
-            content ^ "\\\\\n"
+            content
         | "td" ->
-            let first = !first_td in
             let content = get_child children in
-            let colspan =
-              List.fold_left
-                (fun c ((_, k), v) ->
-                  if k = "colspan" then
-                    try int_of_string v with Failure _ -> 1
-                  else c)
-                1 attributes
-            in
-            let content =
-              if colspan > 1 then
-                Format.sprintf "\\multicolumn{%d}{c}{%s}" colspan content
-              else content
-            in
-            first_td := false;
-            if !first_tr then incr td_nbr;
-            (if first then "" else " & ") ^ content
+            content
         | "ul" ->
             let content = get_child children in
             if content <> "" then
@@ -678,30 +697,30 @@ let rec process_tree_cumul och cumul tree (row, col) =
             c_txt := "";
             c_item := "";
             c_img := "";
-            ""
+            continue "" children
         | "celltext" ->
             c_typ := "Te";
             c_txt := Lutil.escape (get_child children);
-            ""
+            continue "" children
         | "cellitem" ->
             c_typ := "It";
             c_item := Lutil.escape (get_child children);
-            ""
+            continue "" children
         | "rule-left" ->
             c_typ := "Hl";
-            ""
+            continue "" children
         | "rule-right" ->
             c_typ := "Hr";
-            ""
+            continue "" children
         | "rule-fullcell" ->
             c_typ := "Hc";
-            ""
+            continue "" children
         | "vbar" ->
             c_typ := "Hv1";
-            ""
+            continue "" children
         | "emptycell" ->
             c_typ := "E";
-            ""
+            continue "" children
         | "newline" ->
             new_row :=
               (!c_width, !c_span, !c_typ, !c_txt, !c_item, !c_img) :: !new_row;
@@ -711,19 +730,19 @@ let rec process_tree_cumul och cumul tree (row, col) =
             c_txt := "";
             c_item := "";
             c_img := "";
-            ""
+            continue "" children
         | "image" ->
             c_typ := "Im";
             c_img := Lutil.escape (get_child children);
-            ""
+            continue "" children
         (* end trees ***************************** *)
         | name when List.mem name dummy_tags_0 -> continue cumul children
         | name when List.mem name dummy_tags_1 -> ""
         | name when List.mem name dummy_tags_2 -> ""
         | name when List.mem name dummy_tags_3 -> ""
         (* cumul is handled by these two tag functions *)
-        | "a" -> tag_a cumul name attributes children
-        | "img" -> tag_img cumul name attributes children
+        | "a" -> tag_a name attributes children
+        | "img" -> tag_img name attributes children
         | _ ->
             Printf.eprintf "Missing tag: %s\n" name;
             "")
@@ -851,6 +870,7 @@ let one_command och line =
         imgwidth := imgwidth_default;
         wide := false)
   | "TextWidth" -> textwidth := Float.of_string param
+  | "TreeMode" -> mode := (int_of_string param)
   | "Xoffset" ->
       offset := true;
       xoffset := Float.of_string param
@@ -923,20 +943,6 @@ let print_images och images_list =
           let images_dir =
             "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images"
           in
-          (*
-          \newcommand{\hglaba}   [3]{\raisebox{.6ex}{\small (#1.#2.#3)}}
-          \newcommand{\hglabsa}  [3]{\raisebox{.6ex}{\small (#3)}}
-          \newcommand{\hglabxa}  [3]{#1.#2.#3\label{f#1#2#3}}
-          \newcommand{\hglabxsa} [3]{#3\label{f#1#2#3}}
-          \newcommand{\hgrefa}   [3]{#1.#2.#3\label{f#1#2#3}}
-          \newcommand{\hgrefsa}  [3]{#3\label{f#1#2#3}}
-          \newcommand{\hglabb}   [4]{\raisebox{.6ex}{\small (#1.#2.#3.#4)}}
-          \newcommand{\hglabsb}  [4]{\raisebox{.6ex}{\small (#4)}}
-          \newcommand{\hglabxb}  [4]{#1.#2.#3.#4\label{f#1#2#3#4}}
-          \newcommand{\hglabxsb} [4]{#4\label{f#1#2#3#4}}
-          \newcommand{\hgrefb}   [4]{#1.#2.#3.#4\label{f#1#2#3#4}}
-          \newcommand{\hgrefsb}  [4]{#4\label{f#1#2#3#4}}
-          *)
           let label =
             match !image_label with
             | 1 -> Format.sprintf "\\\\\\hglabxsa{%d}{%d}{%d}" ch sec nbr
@@ -947,19 +953,15 @@ let print_images och images_list =
           in
           output_string och
             (Format.sprintf
-               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}%s}\n" width
+               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\\\%s}\n" width
                width images_dir Filename.dir_sep
-               (Sutil.replace_str name "\\_{}" "&")
+               (Sutil.replace_str name "\\_{}" "_")
                label))
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
 let process_one_line och line =
-  let line =
-    if Sutil.contains line "%%%LIVRES%%%" then
-      Sutil.replace_str line "%%%LIVRES%%%" !livres
-    else line
-  in
+  let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
   match line.[0] with
   | '<' -> (
       match line.[1] with
