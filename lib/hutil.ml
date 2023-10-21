@@ -9,7 +9,6 @@ let get_attr attributes attr =
     (fun c ((_, k), v) -> if k = attr then v ^ c else c)
     "" attributes
 
-
 (* <a href="base?m=IM&p=first_name&n=surname&occ=noc&k=first_name.noc.surname" *)
 (* <a href="base?m=IM;s=test/filaname.jpg"> *)
 (* <a href="base_token?m=IM;s=test/filaname.jpg"> *)
@@ -49,8 +48,7 @@ let split_href href =
       if j <> -1 then String.sub server 0 j else server
     in
     ("b", b) :: evars
-  (* TODO treat CGI case *)
+(* TODO treat CGI case *)
 
 let get_href_attr attr attrl =
   if List.mem_assoc attr attrl then List.assoc attr attrl else ""
-

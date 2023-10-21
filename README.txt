@@ -17,24 +17,35 @@ The source material for the book is a text file containing :
   * <x Command parameter> issues a command to GwToLaTeX.
       parameter can be "on/off" or a string
       | "Arbres" -> "on/off"
+      | "BumpSub" ->
+            "on/off" if off, do not increment subsection level.
+            usefull is a section has been manually inserted and
+            is followed by automatic <a ...> (sub)sections
       | "Chapter" -> new chapter
       | "ImageLabel" -> nbr of items in image numbering (ch, sec, ssec, i_nbr)
       | "CollectImages" -> "on/off", collect_images to be printed at end of page
+      | "FontSize" -> set font size (small, tiny)
       | "HighLight" ->
+      | "Hrule" -> produce a hrule after each individual page
       | "ImageLabel" ->
+      | "ImageWidth" -> set image width (string -> \textwidth, 5.1cm)
       | "Input" -> read the param file, scanning for %%%LIVRES%%%
       | "LaTeX" -> issues a LaTeX command
       | "Newpage" -> newpage
+      | "Print" -> print param
       | "Sideways" -> print page sideways (wip)
-      | "Sub" -> "on/off" if off, do not increment subsection level.
-                  usefull is a section has been manually inserted and
-                  is followed by automatic <a ...> (sub)sections
       | "Section" -> new section
       | "SubSection" -> new subsection
       | "SubSubSection" -> new subsubsection
+      | "Trees" -> same as Arbres
+      | "TwoPages" -> split a tree across two pages (WIP)
+      | "TreeMode" -> 0 print tree as a list of cell lists, 1 print actual trees
+      | "Unit" -> set width units (for parameters taking floats)
       | "Version" -> outputs version
+      | "VignWidth" -> set vignettewidth (float)
       | "Wide" -> "on/off"
-      | "Width" -> sets image width to param
+      | "WideImage" -> set imagewidth to \textwidth
+      | "Width" -> sets image width to param (float)
   * <y ...> comment
   * <b command> WIP, to be modified. Ignored for the time being
 
@@ -95,7 +106,7 @@ or by mail to me (henri.gouraud@laposte.net).
   <x Width off> resets the width at its default value
     (5.1cm allowing for 3 images per line).
 - Images containing "-vignette" in their name are not
-  collected and displayed "in line" with a width of 1cm.
+  collected and displayed "in line" with a width of 1cm (adjustable with VignWidth).
 - Images containing "-wide" in their name are displayed "\textwidth"
 
 more to follow

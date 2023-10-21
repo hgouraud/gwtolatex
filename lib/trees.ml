@@ -255,9 +255,6 @@ let get_img_name base im =
 - recompute colspan ??
 *)
 
-
-
-
 let expand_cells tree =
   let rec expand row new_row =
     match row with
