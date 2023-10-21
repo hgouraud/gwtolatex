@@ -15,6 +15,7 @@ let get_attr attributes attr =
 (* Chausey\_{}qnnvsntxq?templ=tex\&{}m=IM *)
 
 let split_href href =
+  let href = Sutil.convert_html href |> Sutil.decode in
   let parts = String.split_on_char '?' href in
   let href =
     Sutil.replace ';' '&'

@@ -399,8 +399,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
               (String.sub file i (min 40 (String.length file - i)))
           else
             let href = String.sub file i (j - i) in
-            let href1 = Sutil.decode href in
-            let href_attrl = Hutil.split_href href1 in
+            let href_attrl = Hutil.split_href href in
             let k = Hutil.get_href_attr "k" href_attrl in
             let s = Hutil.get_href_attr "s" href_attrl in
             if s <> "" then
@@ -430,7 +429,6 @@ let rec process_tree_cumul och cumul tree (row, col) =
     (* TODO identify vignettes ! -> special width *)
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
-    let href = Sutil.decode href in
     let href_attrl = Hutil.split_href href in
     let b = Hutil.get_href_attr "b" href_attrl in
     let m = Hutil.get_href_attr "m" href_attrl in
@@ -479,7 +477,6 @@ let rec process_tree_cumul och cumul tree (row, col) =
   let tag_img _name attributes _children =
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
-    let href = Sutil.decode href in
     let href_attrl = Hutil.split_href href in
     let p = Hutil.get_href_attr "p" href_attrl in
     let n = Hutil.get_href_attr "n" href_attrl in
@@ -557,7 +554,6 @@ let rec process_tree_cumul och cumul tree (row, col) =
             else ""
         | "h3" ->
             let content = get_child children in
-            Printf.eprintf "Doing h3 tag: %s\n" content;
             (* TODO parametrer ce comportement *)
             (* TODO revoir comportement côté LaTeX *)
             (* TODO this is language dependant !! *)

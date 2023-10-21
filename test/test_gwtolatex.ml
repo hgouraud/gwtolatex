@@ -296,5 +296,16 @@ let suite =
              test cols1 my_tree;
              let my_tree2 = [ row1; row3 ] in
              test cols2 my_tree2 );
+           ( "convert_html" >:: fun _ ->
+             let test aaa bbb =
+               let ccc = Sutil.convert_html bbb in
+               if aaa <> ccc then Printf.eprintf "Fail:(%s) (%s)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             test "abc&def" "abc&#38;def";
+             test "abc&" "abc&#38;";
+             test "abc&#38" "abc&#38";
+             test "&def" "&#38;def";
+             test "" "" );
          ];
   ]

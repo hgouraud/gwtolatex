@@ -1,6 +1,27 @@
 (* strings utilities *)
 (* v1  Henri, 2023/10/16 *)
 
+(* convert &#xx; html notation *)
+let convert_html str =
+  let rec loop str1 str2 =
+    if String.length str1 = 0 then str2 ^ str1
+    else
+      let j = try String.index str1 '&' with Not_found -> -1 in
+      if j = -1 then str2 ^ str1
+      else
+        let k = try String.index_from str1 j ';' with Not_found -> -1 in
+        if k = -1 then str2 ^ str1
+        else
+          let char = String.sub str1 j (k - j + 1) in
+          let new_char = match char with "&#38;" -> "&" | _ -> char in
+          loop
+            (if k < String.length str1 then
+             String.sub str1 (k + 1) (String.length str1 - k - 1)
+            else "")
+            (String.sub str1 0 j ^ str2 ^ new_char)
+  in
+  loop str ""
+
 (* convert %xx utf-8 notation *)
 let decode s =
   let hexa_val conf =
