@@ -304,7 +304,6 @@ let dummy_tags_3 =
     "form";
     "select";
     "colgroup";
-    "font";
     "script";
     "title";
     "style";
@@ -417,8 +416,11 @@ let rec process_tree_cumul och cumul tree (row, col) =
           else
             let href = String.sub file i (j - i) in
             let href1 = Sutil.decode href in
-            let _b, _m, _p, _n, _oc, _i, k, s, _v, _t = Hutil.split_href href1 in
-            if s <> "" then make_image_str s k content
+            let href_attrl = Hutil.split_href href1 in
+            let k = Hutil.get_href_attr "k" href_attrl in
+            let s = Hutil.get_href_attr "s" href_attrl in
+            if s <> "" then (make_image_str s k content) ^
+                "\\footnote{Image cliquable sur la version Internet}"
             else
               Format.sprintf "Funny SRC content %s" href
   in
@@ -445,8 +447,17 @@ let rec process_tree_cumul och cumul tree (row, col) =
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
     let href = Sutil.decode href in
-    let b, m, p, n, oc, i, k, s, v, t = Hutil.split_href href in
-
+    let href_attrl = Hutil.split_href href in
+    let b = Hutil.get_href_attr "b" href_attrl in
+    let m = Hutil.get_href_attr "m" href_attrl in
+    let p = Hutil.get_href_attr "p" href_attrl in
+    let n = Hutil.get_href_attr "n" href_attrl in
+    let oc = Hutil.get_href_attr "oc" href_attrl in
+    let i = Hutil.get_href_attr "i" href_attrl in
+    let k = Hutil.get_href_attr "k" href_attrl in
+    let s = Hutil.get_href_attr "s" href_attrl in
+    let v = Hutil.get_href_attr "v" href_attrl in
+    let t = Hutil.get_href_attr "t" href_attrl in
     if List.mem m skip_m_cmd then ""
     else (
       let content = get_child children in
@@ -485,7 +496,13 @@ let rec process_tree_cumul och cumul tree (row, col) =
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
     let href = Sutil.decode href in
-    let _b, _m, p, n, oc, i, k, s, _v, _t = Hutil.split_href href in
+    let href_attrl = Hutil.split_href href in
+    let p = Hutil.get_href_attr "p" href_attrl in
+    let n = Hutil.get_href_attr "n" href_attrl in
+    let oc = Hutil.get_href_attr "oc" href_attrl in
+    let i = Hutil.get_href_attr "i" href_attrl in
+    let k = Hutil.get_href_attr "k" href_attrl in
+    let s = Hutil.get_href_attr "s" href_attrl in
     let ip =
       match
         Gwdb.person_of_key !my_base p n
@@ -542,6 +559,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
             let content = get_child children in
             if content <> "" then Format.sprintf "\\textsuperscript{%s}" content
             else ""
+        | "font" -> 
+            let content = get_child children in
+            content
         | "h1" ->
             let content = get_child children in
             if content <> "" && !section_on_a_tag then
@@ -551,18 +571,21 @@ let rec process_tree_cumul och cumul tree (row, col) =
             let content = get_child children in
             if content <> "" then Format.sprintf "\\subsection{%s}" content
             else ""
-        | "h3" ->
+        | "h3" -> (
             let content = get_child children in
+            Printf.eprintf "Doing h3 tag: %s\n" content;
             (* TODO parametrer ce comportement *)
             (* TODO revoir comportement côté LaTeX *)
-            let str =
-              if Sutil.contains content ">Bateaux<" then
+            (* TODO this is language dependant !! *)
+            (* généraliser aux autres <hn>  </hn> *)
+            let str = 
+              if Sutil.contains content "Bateaux" then
                 "\n\\par\\hgbato{Bateaux}"
-              else if Sutil.contains content ">Propriétaires<" then
-                "\n\\par\\hgbato{Propriétaires}"
+              else if Sutil.contains content "Occupants" then
+                "\n\\par\\hgbato{Occupants}"
               else Format.sprintf "\\subsubsection{%s}" content
             in
-            if content <> "" then str else ""
+            if content <> "" then str else "xxx")
         | "hr" -> "\\par\\noindent\\rule{\\textwidth}{0.4pt}\n"
         | "p" ->
             let content = get_child children in
@@ -834,7 +857,7 @@ let one_command och line =
   | "LaTeX" -> output_string och param
   | "Newpage" -> output_string och "\\newpage"
   | "Print" -> output_string och param
-  | "Sideways" -> sideways := true
+  | "Sideways" -> sideways := param = "on" || param = "On"
   | "TwoPages" -> twopages := param = "on" || param = "On"
   | "Section" ->
       if !image_label > 2 then image_nbr := 0;
@@ -870,7 +893,10 @@ let one_command och line =
         imgwidth := imgwidth_default;
         wide := false)
   | "TextWidth" -> textwidth := Float.of_string param
-  | "TreeMode" -> mode := (int_of_string param)
+  | "VignWidth" ->
+      if param = "off" || param = "Off" then vignwidth := 1.0
+      else vignwidth :=  Float.of_string param
+  | "TreeMode" -> mode := int_of_string param
   | "Xoffset" ->
       offset := true;
       xoffset := Float.of_string param
@@ -945,11 +971,11 @@ let print_images och images_list =
           in
           let label =
             match !image_label with
-            | 1 -> Format.sprintf "\\\\\\hglabxsa{%d}{%d}{%d}" ch sec nbr
-            | 3 -> Format.sprintf "\\\\\\hglabxa{%d}{%d}{%d}" ch sec nbr
+            | 1 -> Format.sprintf "\n\\hglabxsa{%d}{%d}{%d}" ch sec nbr
+            | 3 -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
             | 4 ->
-                Format.sprintf "\\\\\\hglabxb{%d}{%d}{%d}{%d}" ch sec ssec nbr
-            | _ -> Format.sprintf "\\\\\\hglabxa{%d}{%d}{%d}" ch sec nbr
+                Format.sprintf "\n\\hglabxb{%d}{%d}{%d}{%d}" ch sec ssec nbr
+            | _ -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
           in
           output_string och
             (Format.sprintf

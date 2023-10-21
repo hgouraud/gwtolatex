@@ -225,18 +225,38 @@ let reset_cell_width cols row textwidth imwidth =
 (* <a href="base?m=IM&p=first_name&n=surname&occ=noc&k=first_name.noc.surname" *)
 (* <a href="base?m=IM;s=test/filaname.jpg"> *)
 (* ATTENTION assumes .jpg portrait file extension *)
-(* TODO query the base for resl extension ?? *)
+(* TODO query the base for real extension ?? *)
 let get_img_name base im =
   let _ext_l = [ ".jpg"; ".jpeg"; ".bnp" ] in
   let ext = ".jpg" in
   let where = "images" in
   (* or src *)
-  let _b, _m, _p, _n, _oc, _i, k, _s, _v, _t = Hutil.split_href im in
+  let href_attrl = Hutil.split_href im in
+  let k = Hutil.get_href_attr "k" href_attrl in
   let name =
     Format.sprintf "%s"
       (String.concat Filename.dir_sep [ "."; where; base; k ^ ext ])
   in
   Sutil.replace_str name "\\_{}" "_"
+
+(*
+  goal: split crammed rows in two
+       |         |           |
+   ----------    |      ----------
+  |          |   |     |          |
+   ----------    |      ----------
+           --------------
+          |              |
+           --------------
+- for each non empty column, add 2 extra cols (left and right)
+- for col 1 and n add an extra col
+- give to these cols the width txtw / nb_f_col / 3
+- expand full colums to the right and left
+- recompute colspan ??
+*)
+
+
+
 
 let expand_cells tree =
   let rec expand row new_row =
@@ -297,7 +317,7 @@ let print_tree base tree mode textwidth textheight _margin debug fontsize
       loop "ccccc" (List.length cols)
     in
     let cell_wid =
-      (if sideways then textheight *. if twopages then 2.0 else 1.0
+      (if sideways then textheight *. if twopages then 3.0 else 1.0
       else textwidth)
       /. Float.of_int non_empty_col_nbr
     in
