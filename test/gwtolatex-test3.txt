@@ -68,12 +68,14 @@ Deux maisons ont été construites sur le domaine maritime.
 See famille Ernouf
 <x LaTeX \label{Ernouf}>
 <x BumpSub off>
-<a href="http://127.0.0.1:2317/Chausey?p=jacques;n=marie;oc=1;templ=tex;w=hg:1045">Marie, Jacques (1)</a><br>
-<a href="http://127.0.0.1:2317/Chausey?p=jules;n=durand;oc=0;templ=tex;w=hg:1045">Durand, Jules</a><br>
-<a href="http://127.0.0.1:2317/Chausey?p=philippe;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Philippe\index{Gouraud, Philippe}</a><br>
+<x WideImages on>
+<a href="http://127.0.0.1:2317/Chausey?p=jacques;n=marie;oc=1;templ=tex;w=hg:1045">Marie, Jacques (1)</a>
+<x WideImages off>
+<a href="http://127.0.0.1:2317/Chausey?p=jules;n=durand;oc=0;templ=tex;w=hg:1045">Durand, Jules</a>
+<a href="http://127.0.0.1:2317/Chausey?p=philippe;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Philippe\index{Gouraud, Philippe}</a>
 <x BumpSub on>
-<a href="http://127.0.0.1:2317/Chausey?p=henri;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Henri</a><br>
-<a href="http://127.0.0.1:2317/Chausey?p=pierre;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Pierre</a><br>
+<a href="http://127.0.0.1:2317/Chausey?p=henri;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Henri</a>
+<a href="http://127.0.0.1:2317/Chausey?p=albert;n=marie;oc=0;templ=tex;w=hg:1045">Marie, Albert (Toumagi)/a>
 
 <x Chapter Arbres généalogiques>
 <x Input %%%LIVRES%%%/Chausey-inputs/Notes-arbres.tex>

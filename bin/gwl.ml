@@ -347,27 +347,46 @@ let rec process_tree_cumul och cumul tree (row, col) =
       cumul children
   in
 
-  let make_image_str s k content =
-    let vignette = Sutil.contains s "-vignette" in
-    if k = "" && not vignette then incr image_nbr;
-    let image =
-      (Images, s, (!chapter, !section, !subsection, !subsubsection), !image_nbr)
-    in
-    if !collect_images && k = "" && not vignette then (
-      images_in_page := image :: !images_in_page;
-      match !image_label with
-      | 1 ->
-          Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d)}}" content !image_nbr
-      | 3 ->
-          Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}" content
-            !chapter !section !image_nbr
-      | 4 ->
-          Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d.%d)}}" content
-            !chapter !section !subsection !image_nbr
-      | _ ->
-          Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}" content
-            !chapter !section !image_nbr)
-    else content
+  let make_image_str name k content mode caption =
+    let vignette = Sutil.contains name "-vignette" in
+    if k = "" && (not vignette) && not (mode = "wide") then incr image_nbr;
+    match mode with
+    | "wide" ->
+        let minipage_b = Format.sprintf "\\begin{figure}" in
+        let minipage_e = Format.sprintf "\\end{figure}" in
+        let caption =
+          if caption <> "" then
+            Format.sprintf "\\captionof{figure}{{\\it %s}}" caption
+          else ""
+        in
+        Format.sprintf "%s%s\\includegraphics[width=%2.2f%s]{%s%s%s}%s%s"
+          content minipage_b !textwidth
+          !unit (* 5 cm in page mode, 1.5 cm in table mode *)
+          (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
+          Filename.dir_sep name caption minipage_e
+    | _ ->
+        let image =
+          ( Images,
+            name,
+            (!chapter, !section, !subsection, !subsubsection),
+            !image_nbr )
+        in
+        if !collect_images && k = "" && not vignette then (
+          images_in_page := image :: !images_in_page;
+          match !image_label with
+          | 1 ->
+              Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d)}}" content
+                !image_nbr
+          | 3 ->
+              Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}" content
+                !chapter !section !image_nbr
+          | 4 ->
+              Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d.%d)}}"
+                content !chapter !section !subsection !image_nbr
+          | _ ->
+              Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}" content
+                !chapter !section !image_nbr)
+        else content
   in
 
   (* SRC file typically contain mapped images *)
@@ -403,7 +422,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
             let k = Hutil.get_href_attr "k" href_attrl in
             let s = Hutil.get_href_attr "s" href_attrl in
             if s <> "" then
-              make_image_str s k content
+              (* TODO see if wide/caption can be used here *)
+              make_image_str s k content "" ""
               ^ "\\footnote{Image cliquable sur la version Internet}"
             else Format.sprintf "Funny SRC content %s" href
   in
@@ -429,6 +449,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
     (* TODO identify vignettes ! -> special width *)
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
+    let mode = try List.assoc "mode" attr with Not_found -> "" in
+    let caption = try List.assoc "caption" attr with Not_found -> "" in
     let href_attrl = Hutil.split_href href in
     let b = Hutil.get_href_attr "b" href_attrl in
     let m = Hutil.get_href_attr "m" href_attrl in
@@ -468,7 +490,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
         else if String.lowercase_ascii b <> String.lowercase_ascii !base then
           Format.sprintf "%s\\footnote{%s}" content (Lutil.escape href)
-        else if s <> "" then make_image_str s k content
+        else if s <> "" then make_image_str s k content mode caption
         else "{\\bf " ^ content ^ "}"
       in
       str
@@ -527,7 +549,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
 
   let element =
     match tree with
-    | Text s -> s
+    | Text s -> if s = "\n" then " " else s
     | Element (name, attributes, children) (* as elt *) -> (
         match name with
         | ("i" | "u" | "b" | "em" | "tt" | "strong" | "tiny" | "small" | "big")
@@ -601,45 +623,58 @@ let rec process_tree_cumul och cumul tree (row, col) =
             if content <> "" then Format.sprintf "\\item{}{%s}" content else ""
         | "span" ->
             (* look for potential TeX code *)
-            (* <span style="display:none">tex \index%{Gelin, Zacharie}tex</span> *)
+            (* <span style="display:none" mode="tex">\index%{Gelin, Zacharie}</span> *)
             (* or \highlight *)
             (* <span mode="highlight">sn fn%if;(oc != "0") (oc)%end;</span> *)
+            (* or instruction for display next image *)
+            (* <span mode="wide">Caption</span> applied to the next image *)
             (* children is a single string of TeX *)
             (* % might not be there (old format) *)
             let display_none =
               Hutil.test_attr attributes "style" "display:none"
             in
-            let highlight_mode =
-              Hutil.test_attr attributes "mode" "highlight"
-            in
-            let tex_mode_1 = Hutil.test_attr attributes "mode" "tex" in
+            let mode = Hutil.get_attr attributes "mode" in
             let str =
               let content = get_child children in
               let tex_mode_2 =
+                (* for backward compatibility *)
                 if String.length content > 3 then String.sub content 0 3 = "tex"
                 else false
               in
+              let mode =
+                match mode with
+                | "tex" -> "tex"
+                | "highlight" -> "highlight"
+                | "wide" -> "wide"
+                | "" -> if tex_mode_2 then "tex" else ""
+                | _ -> ""
+              in
               if display_none then
-                if String.length content > 3 && (tex_mode_1 || tex_mode_2) then
-                  let content = Sutil.replace '[' '{' content in
-                  let content = Sutil.replace ']' '}' content in
-                  let content =
-                    if tex_mode_2 then
-                      String.sub content 4 (String.length content - 7)
+                match mode with
+                | "tex" ->
+                    if String.length content > 3 then
+                      let content = Sutil.replace '[' '{' content in
+                      let content = Sutil.replace ']' '}' content in
+                      let content =
+                        if tex_mode_2 then
+                          String.sub content 4 (String.length content - 7)
+                        else content
+                      in
+                      let i =
+                        try String.index_from content 0 '%'
+                        with Not_found -> -1
+                      in
+                      if i > 0 then
+                        String.sub content 0 i
+                        ^ String.sub content (i + 1)
+                            (String.length content - i - 1)
+                      else content
                     else content
-                  in
-                  let i =
-                    try String.index_from content 0 '%' with Not_found -> -1
-                  in
-                  if i > 0 then
-                    String.sub content 0 i
-                    ^ String.sub content (i + 1) (String.length content - i - 1)
-                  else content
-                else content
-              else if highlight_mode then
-                if List.mem content !highlights then
-                  Format.sprintf "{\\hl{\\bf %s}}" content
-                else Format.sprintf "{\\bf %s}" content
+                | "highlight" ->
+                    if List.mem content !highlights then
+                      Format.sprintf "{\\hl{\\bf %s}}" content
+                    else content
+                | _ -> ""
               else content
             in
             str
@@ -922,7 +957,8 @@ let one_http_call och line =
           if bad_code code then (
             Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
             output_string och
-              (Format.sprintf "Bad code when fetching %s: %d!\n" (Lutil.escape url) code))
+              (Format.sprintf "Bad code when fetching %s: %d!\n"
+                 (Lutil.escape url) code))
           else
             let _ = process_html och body in
             ()
@@ -1060,9 +1096,10 @@ let main () =
   Arg.parse speclist anonfun usage;
 
   (* for my convenience. Win env may differ *)
-  if Sys.argv.(0) = "_build/install/default/bin/gwl" ||
-     Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
-  then dev:= true;
+  if
+    Sys.argv.(0) = "_build/install/default/bin/gwl"
+    || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
+  then dev := true;
   (* install tex templates in bases/etc *)
   (* on excute dans le repo (dev) ou dans bases_dir *)
   let dist_dir = if !dev then "." else "./gw2l_dist" in
