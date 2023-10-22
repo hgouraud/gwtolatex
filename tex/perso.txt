@@ -16,7 +16,7 @@
 
 
 %define;hgindex(alxx, snxx, fnxx, occxx)
-  %if;(snxx!="." and snxx!="X" and (snxx!="?" or fnxx!="?"))
+  %if;(snxx!="." and snxx!="X" and (not (snxx="?" and fnxx="?")))
     %if;(alxx = "0")
       %if;(occxx = "0")
         \index{snxx, fnxx}
