@@ -22,6 +22,53 @@ let convert_html str =
   in
   loop str ""
 
+let encode s =
+  let special = function
+    | '\000'..'\031' | '\127'..'\255' | '<' | '>' | '"' | '#' | '%' | '{'
+    | '}' | '|' | '\\' | '^' | '~' | '[' | ']' | '`' | ';' | '/' | '?' | ':'
+    | '@' | '=' | '&' | '+' -> true
+    | _ -> false
+  in
+  let hexa_digit x =
+    if x >= 10 then Char.chr (Char.code 'A' + x - 10)
+    else Char.chr (Char.code '0' + x)
+  in
+  let rec need_code i =
+    if i < String.length s then
+      match s.[i] with
+        ' ' -> true
+      | x -> if special x then true else need_code (succ i)
+    else false
+  in
+  let rec compute_len i i1 =
+    if i < String.length s then
+      let i1 = if special s.[i] then i1 + 3 else succ i1 in
+      compute_len (succ i) i1
+    else i1
+  in
+  let rec copy_code_in s1 i i1 =
+    if i < String.length s then
+      let i1 =
+        match s.[i] with
+          ' ' -> Bytes.set s1 i1 '+'; succ i1
+        | c ->
+            if special c then
+              begin
+                Bytes.set s1 i1 '%';
+                Bytes.set s1 (i1 + 1) (hexa_digit (Char.code c / 16));
+                Bytes.set s1 (i1 + 2) (hexa_digit (Char.code c mod 16));
+                i1 + 3
+              end
+            else begin Bytes.set s1 i1 c; succ i1 end
+      in
+      copy_code_in s1 (succ i) i1
+    else Bytes.unsafe_to_string s1
+  in
+  if need_code 0 then
+    let len = compute_len 0 0 in
+    copy_code_in (Bytes.create len) 0 0
+  else s
+
 (* convert %xx utf-8 notation *)
 let decode s =
   let hexa_val conf =

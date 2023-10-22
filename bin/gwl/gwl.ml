@@ -1055,6 +1055,11 @@ let show_process_time start =
   let process_time = Unix.gettimeofday () -. start in
   Format.sprintf "%.3f" process_time
 
+
+(* current version reads family.txt and runs pdflatex and makeindex *)
+(* in a short future makeBook will handle the whole process including  *)
+(* addition in each personnal page of image index information *)
+
 let main () =
   let usage =
     "Usage: " ^ Filename.basename Sys.argv.(0) ^ " [options] where options are:"

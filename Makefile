@@ -46,7 +46,8 @@ distrib:
 	mkdir $(DISTRIB_DIR)
 	mkdir $(DISTRIB_DIR)/etc
 	mkdir $(DISTRIB_DIR)/tmp
-	cp $(BUILD_DIR)default/bin/gwl.exe $(DISTRIB_DIR)/gwl$(EXT)
+	cp $(BUILD_DIR)default/bin/gwl/gwl.exe $(DISTRIB_DIR)/gwl$(EXT)
+	cp $(BUILD_DIR)default/bin/makeImgDict/makeImgDict.exe $(DISTRIB_DIR)/makeImgDict$(EXT)
 	cp -R ./tex $(DISTRIB_DIR)
 	cp ./gwl.sh $(DISTRIB_DIR)
 	cp ./chausey.sh $(DISTRIB_DIR)

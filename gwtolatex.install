@@ -31,6 +31,7 @@ libexec: [
 ]
 bin: [
   "_build/install/default/bin/gwl"
+  "_build/install/default/bin/makeImgDict"
 ]
 doc: [
   "_build/install/default/doc/gwtolatex/README.txt"
