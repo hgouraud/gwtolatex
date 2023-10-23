@@ -30,8 +30,11 @@ libexec: [
   "_build/install/default/lib/gwtolatex/gwtolatex.cmxs"
 ]
 bin: [
-  "_build/install/default/bin/gwl"
-  "_build/install/default/bin/makeImgDict"
+  "_build/install/default/bin/mkBook"
+  "_build/install/default/bin/mkImgDict"
+  "_build/install/default/bin/mkNewGw"
+  "_build/install/default/bin/mkTex"
+  "_build/install/default/bin/mkTweekInd"
 ]
 doc: [
   "_build/install/default/doc/gwtolatex/README.txt"

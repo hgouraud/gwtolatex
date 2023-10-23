@@ -1055,7 +1055,6 @@ let show_process_time start =
   let process_time = Unix.gettimeofday () -. start in
   Format.sprintf "%.3f" process_time
 
-
 (* current version reads family.txt and runs pdflatex and makeindex *)
 (* in a short future makeBook will handle the whole process including  *)
 (* addition in each personnal page of image index information *)
@@ -1136,7 +1135,7 @@ let main () =
   let ic = open_in_bin fname_in in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  Printf.eprintf "\nThis is GwToLaTeX version %s on %s to %s (%d)\n" version
+  Printf.eprintf "\nThis is mkTeX version %s on %s to %s (%d)\n" version
     fname_in fname_out !debug;
   flush stderr;
 
@@ -1176,36 +1175,42 @@ let main () =
   let error = Sys.command do_pdflatex in
   if error <> 0 then (
     Printf.eprintf "Error in pdflatex processing (%d)\n" error;
-    Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
     exit 0);
 
+  if !index = 0 then (
+    let fname =
+      String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".pdf" ]
+    in
+    Printf.eprintf "Result file is in %s ( %s s)\n" fname
+      (show_process_time start_time);
+    exit 0);
+
+  (* makeindex does not like absolute paths! *)
   Printf.eprintf "Building index\n";
   flush stderr;
-  if !test && !index = 0 then (
-    Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
-    exit 0);
-  (* makeindex does not like absolute paths! *)
   let fname =
     String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".idx" ]
   in
-  let do_makeindex = Printf.sprintf "makeindex %s" fname in
+  let verbose = if !verbose then "" else "-q" in
+  let do_makeindex = Printf.sprintf "makeindex %s %s" verbose fname in
   for _i = 0 to !index do
     let error = Sys.command do_makeindex in
     if error <> 0 then (
       Printf.eprintf "Error in makeindex processing (%d)\n" error;
-      Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
-      exit 0)
+      exit 1)
   done;
 
   if !second then (
-    Printf.eprintf "Second pass at pdflatex \n";
+    Printf.eprintf "Second pass at pdflatex and makeindex \n";
     flush stderr;
     let error = Sys.command do_pdflatex in
-    if error <> 0 then
+    if error <> 0 then (
       Printf.eprintf "Error in 2nd pdflatex processing (%d)\n" error;
+      exit 1);
     let error = Sys.command do_makeindex in
-    if error <> 0 then
-      Printf.eprintf "Error in makeindex processing (%d)\n" error);
+    if error <> 0 then (
+      Printf.eprintf "Error in 2nd makeindex processing (%d)\n" error;
+      exit 1));
 
   let fname = Filename.basename fname_out |> Filename.remove_extension in
   let pdf_name =
@@ -1214,10 +1219,13 @@ let main () =
   let dir = if !dev then "test" else !livres in
   let do_move_pdf = Printf.sprintf "mv %s %s" pdf_name dir in
   let error = Sys.command do_move_pdf in
-  if error <> 0 then Printf.eprintf "Error in moving pdf file (%d)\n" error;
+  if error <> 0 then (
+    Printf.eprintf "Error in moving pdf file (%d)\n" error;
+    exit 1);
 
-  Printf.eprintf "Result file is in %s\n" (Filename.concat dir (fname ^ ".pdf"));
-  Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
+  Printf.eprintf "Result file is in %s (in %s s)\n"
+    (Filename.concat dir (fname ^ ".pdf"))
+    (show_process_time start_time);
   flush stderr
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

@@ -1,4 +1,5 @@
 (* Copyright (c) 2013 H.Gouraud *)
+open Gwtolatex
 
 let base = ref ""
 let family = ref ""
@@ -11,7 +12,6 @@ let verbose = ref false
 let debug = ref 0
 let test_nb = ref 0
 let version = "1.0"
-
 
 let show_process_time start =
   let process_time = Unix.gettimeofday () -. start in
@@ -40,7 +40,7 @@ let _executable_magic =
   | None -> Digest.file Sys.executable_name
 
 let _random_magic =
-  Random.self_init () ;
+  Random.self_init ();
   Random.bits () |> string_of_int
 
 let check_magic magic ic =
@@ -48,63 +48,69 @@ let check_magic magic ic =
   let pos = pos_in ic in
   if in_channel_length ic - pos < len then false
   else if magic = really_input_string ic len then true
-  else begin seek_in ic pos ; false end
+  else (
+    seek_in ic pos;
+    false)
 
 let read_or_create_channel ?magic ?(wait = false) fname read write =
-  if Sys.os_type = "Win32" then let _ = wait in ();
-  assert (Secure.check fname) ;
-  let fd = Unix.openfile fname [ Unix.O_RDWR ; Unix.O_CREAT ] 0o666 in
-  if Sys.os_type <> "Win32" then
-    begin try
-      Unix.lockf fd (if wait then Unix.F_LOCK else Unix.F_TLOCK) 0
-      with e -> Unix.close fd; raise e
-    end;
-  let ic = Unix.in_channel_of_descr fd in
-  let read () =
-    seek_in ic 0;
-    try
-      match magic with
-      | Some m when check_magic m ic ->
-         let r = Some (read ic) in
-         let _ = seek_in ic (in_channel_length ic - (String.length m)) in
-         assert (check_magic m ic);
-         r
-      | Some _ -> None
-      | None -> Some (read ic)
-    with _ -> None
-  in
-  match read () with
-  | Some v -> (
-    if Sys.os_type <> "Win32" then Unix.lockf fd Unix.F_ULOCK 0;
-     close_in ic;
-     v)
-  | None -> (
-     Unix.ftruncate fd 0 ;
-     let oc = Unix.out_channel_of_descr fd in
-     seek_out oc 0;
-     begin match magic with Some m -> seek_out oc (String.length m) | None -> () end;
-     let v = write oc in
-     flush oc;
-     let _ = seek_out oc (out_channel_length oc) in
-     begin match magic with Some m -> output_string oc m | None -> () end;
-     begin match magic with Some m -> seek_out oc 0 ; output_string oc m | None -> () end ;
-     flush oc;
-     if Sys.os_type <> "Win32" then Unix.lockf fd Unix.F_ULOCK 0;
-     close_out oc;
-     v)
+  if Sys.os_type = "Win32" then (
+    let _ = wait in
+    ();
+    assert (Secure.check fname);
+    let fd = Unix.openfile fname [ Unix.O_RDWR; Unix.O_CREAT ] 0o666 in
+    if Sys.os_type <> "Win32" then (
+      try Unix.lockf fd (if wait then Unix.F_LOCK else Unix.F_TLOCK) 0
+      with e ->
+        Unix.close fd;
+        raise e);
+    let ic = Unix.in_channel_of_descr fd in
+    let read () =
+      seek_in ic 0;
+      try
+        match magic with
+        | Some m when check_magic m ic ->
+            let r = Some (read ic) in
+            let _ = seek_in ic (in_channel_length ic - String.length m) in
+            assert (check_magic m ic);
+            r
+        | Some _ -> None
+        | None -> Some (read ic)
+      with _ -> None
+    in
+    match read () with
+    | Some v ->
+        if Sys.os_type <> "Win32" then Unix.lockf fd Unix.F_ULOCK 0;
+        close_in ic;
+        v
+    | None ->
+        Unix.ftruncate fd 0;
+        let oc = Unix.out_channel_of_descr fd in
+        seek_out oc 0;
+        (match magic with
+        | Some m -> seek_out oc (String.length m)
+        | None -> ());
+        let v = write oc in
+        flush oc;
+        let _ = seek_out oc (out_channel_length oc) in
+        (match magic with Some m -> output_string oc m | None -> ());
+        (match magic with
+        | Some m ->
+            seek_out oc 0;
+            output_string oc m
+        | None -> ());
+        flush oc;
+        if Sys.os_type <> "Win32" then Unix.lockf fd Unix.F_ULOCK 0;
+        close_out oc;
+        v)
 
 let _read_or_create_value ?magic ?wait fname create =
   let read ic = Marshal.from_channel ic in
   let write oc =
     let v = create () in
-    Marshal.to_channel oc v [ Marshal.No_sharing ; Marshal.Closures ];
+    Marshal.to_channel oc v [ Marshal.No_sharing; Marshal.Closures ];
     v
   in
-  try read_or_create_channel ?magic ?wait fname read write
-  with _ -> create ()
-
-
-
+  try read_or_create_channel ?magic ?wait fname read write with _ -> create ()
 
 let main () =
   let usage =
@@ -145,17 +151,30 @@ let main () =
     || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
   then dev := true;
 
-  let _och = stderr in
-  let _ic = open_in_bin "fname_in" in
-  if !debug = -1 then Sys.enable_runtime_warnings false;
-
-  Printf.eprintf "\nThis is makeImgDict version %s on %s to %s (%d)\n" version
-    "fname_in" "fname_out" !debug;
+  Printf.eprintf "\nThis is mkImgDict version %s for %s (%d)\n" version !family
+    !debug;
   flush stderr;
 
+  let in_file =
+    String.concat Filename.dir_sep
+      [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
+  in
+  let out_file =
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "imgDict.tmp" ]
+  in
 
-  Printf.eprintf "Result file is in %s\n" (Filename.concat "dir" ("fname" ^ ".pdf"));
-  Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
-  flush stderr
+  let ic = open_in in_file in
+  let oc = open_out_bin out_file in
+  if !debug = -1 then Sys.enable_runtime_warnings false;
+
+  while true do
+    match Sutil.read_line ic with
+    | Some _line -> ()
+    | None ->
+        Printf.eprintf "mkTweekInd done in %s s\n"
+          (show_process_time start_time);
+        close_in ic;
+        close_out oc
+  done
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

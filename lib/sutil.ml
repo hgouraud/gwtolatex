@@ -1,6 +1,17 @@
 (* strings utilities *)
 (* v1  Henri, 2023/10/16 *)
 
+(** Read a line. If line is empty or only contains a comment (#), then read next line  *)
+let rec input_real_line ic =
+  let x = input_line ic in
+  if x = "" || x.[0] = '#' then input_real_line ic else x
+
+let read_line ic =
+  try
+    let str = input_real_line ic in
+    Some str
+  with End_of_file -> None
+
 (* convert &#xx; html notation *)
 let convert_html str =
   let rec loop str1 str2 =
@@ -24,9 +35,11 @@ let convert_html str =
 
 let encode s =
   let special = function
-    | '\000'..'\031' | '\127'..'\255' | '<' | '>' | '"' | '#' | '%' | '{'
-    | '}' | '|' | '\\' | '^' | '~' | '[' | ']' | '`' | ';' | '/' | '?' | ':'
-    | '@' | '=' | '&' | '+' -> true
+    | '\000' .. '\031'
+    | '\127' .. '\255'
+    | '<' | '>' | '"' | '#' | '%' | '{' | '}' | '|' | '\\' | '^' | '~' | '['
+    | ']' | '`' | ';' | '/' | '?' | ':' | '@' | '=' | '&' | '+' ->
+        true
     | _ -> false
   in
   let hexa_digit x =
@@ -36,7 +49,7 @@ let encode s =
   let rec need_code i =
     if i < String.length s then
       match s.[i] with
-        ' ' -> true
+      | ' ' -> true
       | x -> if special x then true else need_code (succ i)
     else false
   in
@@ -50,16 +63,18 @@ let encode s =
     if i < String.length s then
       let i1 =
         match s.[i] with
-          ' ' -> Bytes.set s1 i1 '+'; succ i1
+        | ' ' ->
+            Bytes.set s1 i1 '+';
+            succ i1
         | c ->
-            if special c then
-              begin
-                Bytes.set s1 i1 '%';
-                Bytes.set s1 (i1 + 1) (hexa_digit (Char.code c / 16));
-                Bytes.set s1 (i1 + 2) (hexa_digit (Char.code c mod 16));
-                i1 + 3
-              end
-            else begin Bytes.set s1 i1 c; succ i1 end
+            if special c then (
+              Bytes.set s1 i1 '%';
+              Bytes.set s1 (i1 + 1) (hexa_digit (Char.code c / 16));
+              Bytes.set s1 (i1 + 2) (hexa_digit (Char.code c mod 16));
+              i1 + 3)
+            else (
+              Bytes.set s1 i1 c;
+              succ i1)
       in
       copy_code_in s1 (succ i) i1
     else Bytes.unsafe_to_string s1

@@ -1,6 +1,6 @@
 (executable
- (public_name makeNewGw)
- (name makeNewGw)
+ (public_name mkImgDict)
+ (name mkImgDict)
  (libraries
   gwtolatex
   ezcurl
