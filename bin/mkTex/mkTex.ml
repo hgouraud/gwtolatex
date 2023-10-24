@@ -60,8 +60,11 @@ let index = ref 0
 let verbose = ref false
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
-let livres = ref (try Sys.getenv "GWTL_LIVRES" with Not_found -> "./Livres")
-let bases = ref (try Sys.getenv "GWTL_BASES" with Not_found -> "./")
+let gw2l_dist =
+  ref (try Sys.getenv "GW2L_DIST" with Not_found -> "./gw2l_dist")
+
+let livres = ref (try Sys.getenv "GW2L_LIVRES" with Not_found -> "./Livres")
+let bases = ref (try Sys.getenv "GW2L_BASES" with Not_found -> "./")
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
@@ -853,7 +856,9 @@ let one_command och line =
   | "CollectImages" -> collect_images := param = "on" || param = "On"
   | "Ep" -> ep := param = "on" || param = "On"
   | "Fiches" -> section_on_a_tag := param = "on" || param = "On"
-  | "FontSize" -> fontsize := param
+  | "FontSize" ->
+      if param = "off" || param = "Off" || param = "" then fontsize := ""
+      else fontsize := param
   | "HighLight" -> highlights := param :: !highlights
   | "Hrule" -> hrule := param = "on" || param = "On"
   | "ImageLabels" -> (
@@ -861,11 +866,13 @@ let one_command och line =
   | "ImageWidth" -> imgwidth := Float.of_string param
   | "Input" -> (
       let param = Sutil.replace_str param "%%%LIVRES%%%" !livres in
+      let param = Sutil.replace_str param "%%%GW2L_DIST%%%" !gw2l_dist in
       let ic = open_in param in
       try
         while true do
           let line = input_line ic in
           let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
+          let line = Sutil.replace_str line "%%%GW2L_DIST%%%" !gw2l_dist in
           output_string och (line ^ "\n")
         done
       with End_of_file -> close_in ic)
@@ -1001,6 +1008,7 @@ let print_images och images_list =
 
 let process_one_line och line =
   let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
+  let line = Sutil.replace_str line "%%%BASE%%%" !base in
   match line.[0] with
   | '<' -> (
       match line.[1] with
@@ -1104,6 +1112,18 @@ let main () =
     Sys.argv.(0) = "_build/install/default/bin/gwl"
     || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
   then dev := true;
+
+  if !verbose then
+    for i = 0 to Array.length Sys.argv - 1 do
+      Printf.printf "[%i] %s " i Sys.argv.(i)
+    done;
+
+  (* for my convenience. Win env may differ *)
+  if
+    Sys.argv.(0) = "_build/install/default/bin/gwl"
+    || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
+  then dev := true;
+
   (* install tex templates in bases/etc *)
   (* on excute dans le repo (dev) ou dans bases_dir *)
   let dist_dir = if !dev then "." else "./gw2l_dist" in
@@ -1124,14 +1144,15 @@ let main () =
   let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
   let fname_all = Filename.concat !livres (!family ^ ".txt") in
   let fname_out =
-    String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".tex" ]
+    if !out_file <> "" then !out_file
+    else String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".tex" ]
   in
   let mode, fname_in =
     if Sys.file_exists fname_txt then ("txt", fname_txt)
     else if Sys.file_exists fname_htm then ("html", fname_htm)
     else ("", fname_all)
   in
-  let och = if !follow then open_out fname_out else stderr in
+  let och = open_out fname_out in
   let ic = open_in_bin fname_in in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 

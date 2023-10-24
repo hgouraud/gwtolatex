@@ -34,7 +34,7 @@ let main () =
   let speclist =
     [
       ("-bases", Arg.String (fun x -> bases := x), " Where are bases.");
-      ("-base", Arg.String (fun x -> base := x), " Choose base.");
+      ("-base", Arg.String (fun x -> base := x), " Which base.");
       ("-family", Arg.String (fun x -> family := x), " Choose family.");
       ("-famille", Arg.String (fun x -> family := x), " Choose family.");
       ( "-livres",
@@ -57,7 +57,7 @@ let main () =
   let start_time = Unix.gettimeofday () in
   let speclist = List.sort compare speclist in
   let speclist = Arg.align speclist in
-  let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
+  let anonfun s = base := s in
   Arg.parse speclist anonfun usage;
 
   (* for my convenience. Win env may differ *)
@@ -66,26 +66,29 @@ let main () =
     || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
   then dev := true;
 
+  if !verbose then
+    for i = 0 to Array.length Sys.argv - 1 do
+      Printf.printf "[%i] %s " i Sys.argv.(i)
+    done;
+
   Printf.eprintf "\nThis is makeNewGw version %s for %s (%d)\n" version !base
     !debug;
   flush stderr;
 
   let in_file = String.concat Filename.dir_sep [ "."; !base ^ ".gw" ] in
-  let out_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !base ^ "-new.gw" ]
-  in
+  let out_file = String.concat Filename.dir_sep [ "."; !base ^ "-new.gw" ] in
 
   let ic = open_in in_file in
   let oc = open_out out_file in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  while true do
-    match Sutil.read_line ic with
-    | Some line -> output_string oc line
-    | None ->
-        Printf.eprintf "makeNewGw done in %s s\n" (show_process_time start_time);
-        close_in ic;
-        close_out oc
-  done
+  try
+    while true do
+      output_string oc (input_line ic ^ "\n")
+    done
+  with End_of_file ->
+    Printf.eprintf "makeNewGw done in %s s\n" (show_process_time start_time);
+    close_in ic;
+    close_out oc
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

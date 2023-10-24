@@ -6,7 +6,7 @@
 \tracingoutput=1
 \makeindex
 
-\input{./Gw2LaTeX-env.tex}
+<x Input %%%GW2L_DIST%%%/Gw2LaTeX-env.tex>
 
 \title{Un aperçu de la généalogie chausiaise}
 \author{Henri Gouraud \\
@@ -22,10 +22,10 @@ Henri.Gouraud@LaPoste.net \\
 
 <y Version>
 <x Chapter Avant-propos>
-<x Input %%%LIVRES%%%/Chausey-inputs/Notes.tex>
+<x Input %%%LIVRES%%%/%%%BASE%%%-inputs/Notes.tex>
 
 <x Chapter Un peu d'histoire>
-<a href="http://127.0.0.1:2317/Chausey?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=anciens+proprietaires;n=chausey;templ=tex;w=hg:1045">Anciens propriétaires</a>Propriétaires<br>
 <x Wide on>
 <x Ep Off>
 
@@ -37,29 +37,29 @@ voir Famille Fortin (Chocolat)
 <y HighLight works only in descendant trees>
 <x HighLight Leperchois Pierre>
 
-<a href="http://127.0.0.1:2317/Chausey?m=D;p=francois;n=bahurel;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Famille Bahurel</a>Bahurel (Famille)<br>
-<a href="http://127.0.0.1:2317/Chausey?m=D;p=pierre;n=leperchois;oc=0;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Leperchois, Pierre</a><br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=francois;n=bahurel;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Famille Bahurel</a>Bahurel (Famille)<br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=pierre;n=leperchois;oc=0;v=4;t=L;spouses=on;parents=on;templ=tex;w=hg:1045">Leperchois, Pierre</a><br>
 
 <x ImageLabels 4>
 <x CollectImages on>
 
 <x Chapter Fiches maisons>
-<a href="http://127.0.0.1:2317/Chausey?p=maisons;n=chausey;templ=tex;w=hg:1045">La Grande Île</a>La Grande Île<br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=maisons;n=chausey;templ=tex;w=hg:1045">La Grande Île</a>La Grande Île<br>
 <x Section Côté public>
 <x Sub on>
-<a href="http://127.0.0.1:2317/Chausey?p=la+maison;n=de+la+cale;templ=tex;w=hg:1045">La Maison de la Cale (Pichard)</a>La Maison de la Cale<br>
-<a href="http://127.0.0.1:2317/Chausey?p=le+poste;n=SNSM-CRS;templ=tex;w=hg:1045">Le Poste de secours (SNSM, CRS)</a>Le Poste de secours<br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=la+maison;n=de+la+cale;templ=tex;w=hg:1045">La Maison de la Cale (Pichard)</a>La Maison de la Cale<br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=le+poste;n=SNSM-CRS;templ=tex;w=hg:1045">Le Poste de secours (SNSM, CRS)</a>Le Poste de secours<br>
 
 <x Section Côté SCI>
 <x VignWidth 2.0>
-<a href="http://127.0.0.1:2317/Chausey?p=la+maison;n=de+marin;templ=tex;w=hg:1045">La Maison de Marin</a><br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=la+maison;n=de+marin;templ=tex;w=hg:1045">La Maison de Marin</a><br>
 <x VignWidth off>
-<a href="http://127.0.0.1:2317/Chausey?p=la+maison;n=robin;templ=tex;w=hg:1045">Maison Robin (Jacqueline Marie)</a>Maison Robin<br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=la+maison;n=robin;templ=tex;w=hg:1045">Maison Robin (Jacqueline Marie)</a>Maison Robin<br>
 
 <x Section Aneret>
 Deux maisons ont été construites sur le domaine maritime.
 
-<a href="http://127.0.0.1:2317/Chausey?p=la+maison;n=lapie;oc=0;templ=tex;w=hg:1045">La Maison Lapie</a><br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=la+maison;n=lapie;oc=0;templ=tex;w=hg:1045">La Maison Lapie</a><br>
 
 <x ImageLabels 3>
 
@@ -69,33 +69,33 @@ See famille Ernouf
 <x LaTeX \label{Ernouf}>
 <x BumpSub off>
 <x WideImages on>
-<a href="http://127.0.0.1:2317/Chausey?p=jacques;n=marie;oc=1;templ=tex;w=hg:1045">Marie, Jacques (1)</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=jacques;n=marie;oc=1;templ=tex;w=hg:1045">Marie, Jacques (1)</a>
 <x WideImages off>
-<a href="http://127.0.0.1:2317/Chausey?p=jules;n=durand;oc=0;templ=tex;w=hg:1045">Durand, Jules</a>
-<a href="http://127.0.0.1:2317/Chausey?p=philippe;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Philippe\index{Gouraud, Philippe}</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=jules;n=durand;oc=0;templ=tex;w=hg:1045">Durand, Jules</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=philippe;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Philippe\index{Gouraud, Philippe}</a>
 <x BumpSub on>
-<a href="http://127.0.0.1:2317/Chausey?p=henri;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Henri</a>
-<a href="http://127.0.0.1:2317/Chausey?p=albert;n=marie;oc=0;templ=tex;w=hg:1045">Marie, Albert (Toumagi)/a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=henri;n=gouraud;oc=0;templ=tex;w=hg:1045">Gouraud, Henri</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=albert;n=marie;oc=0;templ=tex;w=hg:1045">Marie, Albert (Toumagi)/a>
 
 <x Chapter Arbres généalogiques>
-<x Input %%%LIVRES%%%/Chausey-inputs/Notes-arbres.tex>
+<x Input %%%LIVRES%%%/%%%BASE%%%-inputs/Notes-arbres.tex>
 <x Newpage>
 <x Trees on>
 <x Arbres on>
 <x TreeMode 1>
-<a href="http://127.0.0.1:2317/Chausey?m=D;p=henri;n=gouraud;v=3;t=TV;templ=tex;w=hg:1045;dag=on">Arbre descendant d'Henri Gouraud (t=TV)</a>
-<a href="http://127.0.0.1:2317/Chausey?m=D;p=henri&n=gouraud;v=3;t=T;templ=tex;w=hg:1045">Arbre descendant d'Henri (t=T)</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=henri;n=gouraud;v=3;t=TV;templ=tex;w=hg:1045;dag=on">Arbre descendant d'Henri Gouraud (t=TV)</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=henri&n=gouraud;v=3;t=T;templ=tex;w=hg:1045">Arbre descendant d'Henri (t=T)</a>
 
 <x Sideways on>
 <x FontSize tiny>
 <x LaTeX \index{Marie, Albert (Toumagi)}>
-<a href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045">Arbre descendant d'Albert Marie (Toumagi)</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=hg:1045">Arbre descendant d'Albert Marie (Toumagi)</a>
 <x Sideways off>
 <x FontSize>
 
-<a href="http://127.0.0.1:2317/Chausey_xolieymqd?m=RLM&&im=off&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri (m=RLM)</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%_xolieymqd?m=RLM&&im=off&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri (m=RLM)</a>
 <x TreeMode 0>
-<a href="http://127.0.0.1:2317/Chausey_xolieymqd?m=RLM&im=off&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri (m=RLM)</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%_xolieymqd?m=RLM&im=off&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=hg:1045">Relation Henri (m=RLM)</a>
 
 <x Trees off>
 <x Arbres off>
@@ -105,8 +105,8 @@ See famille Ernouf
 \begin{figure}
 \begin{center}
 \vspace {-0.5 cm}
-\includegraphics[width=16 cm]{Chausey-inputs/Chausey-ign-0.jpg}
-\label{Big-Chausey}
+\includegraphics[width=16 cm]{%%%LIVRES%%%/%%%BASE%%%-inputs/Chausey-ign-0.jpg}
+\label{Big-%%%BASE%%%}
 \thesection.2 -- Vue aérienne de l'archipel - Source Géoportail IGN, 2014 ou 2015.
 \end{center}
 \end{figure}
@@ -115,14 +115,14 @@ See famille Ernouf
 <x Fiches off>
 
 <x Chapter Régates de Chausey>
-<a href="http://127.0.0.1:2317/Chausey?p=regates;n=chausey;oc=0;templ=tex;w=hg:1045">Régates de Chausey\index{Régates}</a><br>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1922;templ=tex;w=hg:1045">Régates de 1922\index{Régates, 1922}</a><br>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1937;templ=tex;w=hg:1045">Régates de 1937\index{Régates, 1937}</a><br>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1938;templ=tex;w=hg:1045">Régates de 1938\index{Régates, 1938}</a><br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=regates;n=chausey;oc=0;templ=tex;w=hg:1045">Régates de Chausey\index{Régates}</a><br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES;f=regates-chausey-1922;templ=tex;w=hg:1045">Régates de 1922\index{Régates, 1922}</a><br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES;f=regates-chausey-1937;templ=tex;w=hg:1045">Régates de 1937\index{Régates, 1937}</a><br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES;f=regates-chausey-1938;templ=tex;w=hg:1045">Régates de 1938\index{Régates, 1938}</a><br>
 < Newpage>
 <x WideImages on>
 <x CollectImages off>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979\index{Régates, 1979}</a><br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES;f=regates-Chausey-1979;templ=tex;w=hg:1045">Régates de 1979\index{Régates, 1979}</a><br>
 <x WideImages off>
 
 

@@ -34,7 +34,8 @@ bin: [
   "_build/install/default/bin/mkImgDict"
   "_build/install/default/bin/mkNewGw"
   "_build/install/default/bin/mkTex"
-  "_build/install/default/bin/mkTweekInd"
+  "_build/install/default/bin/mkTweekIndMerge"
+  "_build/install/default/bin/mkTweekIndSort"
 ]
 doc: [
   "_build/install/default/doc/gwtolatex/README.txt"

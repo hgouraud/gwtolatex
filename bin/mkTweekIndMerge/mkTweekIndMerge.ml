@@ -6,7 +6,7 @@ let family = ref ""
 let livres = ref (try Sys.getenv "GWTL_LIVRES" with Not_found -> "./Livres")
 let bases = ref (try Sys.getenv "GWTL_BASES" with Not_found -> "./")
 let test = ref false
-let out_file = ref ""
+let out_file = ref "./tmp/temp"
 let dev = ref false
 let verbose = ref false
 let debug = ref 0
@@ -152,29 +152,31 @@ let main () =
     || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
   then dev := true;
 
-  Printf.eprintf "\nThis is TweekInd version %s on %s to %s (%d)\n" version
-    "fname_in" "fname_out" !debug;
+  if !verbose then
+    for i = 0 to Array.length Sys.argv - 1 do
+      Printf.printf "[%i] %s " i Sys.argv.(i)
+    done;
+
+  let in_file =
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".ind" ]
+  in
+
+  Printf.eprintf "\nThis is TweekIndMerge version %s on %s to %s (%d)\n" version
+    in_file !out_file !debug;
   flush stderr;
 
-  let ic =
-    if List.length !input_files = 0 then stdin
-    else open_in (List.nth !input_files 0 ^ ".tmp")
-  in
-  let oc =
-    if !out_file = "" then
-      if ic = stdin then stdout else open_out (List.nth !input_files 0)
-    else open_out !out_file
-  in
+  let ic = open_in in_file in
+  let oc = open_out !out_file in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  while true do
-    match Sutil.read_line ic with
-    | Some line -> output_string oc line
-    | None ->
-        Printf.eprintf "mkTweekInd done in %s s\n"
-          (show_process_time start_time);
-        close_in ic;
-        close_out oc
-  done
+  try
+    while true do
+      let line = input_line ic in
+      output_string oc (line ^ "\n")
+    done
+  with End_of_file ->
+    Printf.eprintf "%s\n" (show_process_time start_time);
+    close_in ic;
+    close_out oc
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

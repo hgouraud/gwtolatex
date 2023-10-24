@@ -235,6 +235,16 @@ let suppress_leading_sp str =
   in
   loop true 0
 
+(** Removes spaces at the begining and at the end of string. *)
+let cut_space x =
+  let len = String.length x in
+  if len = 0 then x
+  else if x = " " then ""
+  else
+    let start = if x.[0] = ' ' then 1 else 0 in
+    let stop = if x.[len - 1] = ' ' then len - 1 else len in
+    if start = 0 && stop = len then x else String.sub x start (stop - start)
+
 let replace_utf8_bar str =
   let rec loop s =
     let i = try String.index s '\xE2' with Not_found -> -1 in

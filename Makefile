@@ -33,21 +33,20 @@ fmt:
 # [BEGIN] Installation / Distribution section
 
 build: ## Build the geneweb package (libraries and binaries)
-build:
 	-dune build @fmt --auto-promote
 	dune build -p gwtolatex 
 
 BUILD_DISTRIB_DIR=$(BUILD_DIR)/bin/
 
-distrib: ## Build the project and copy what is necessary for distribution
-distrib:
+distrib: build ## Build the project and copy what is necessary for distribution
 	$(RM) -r $(DISTRIB_DIR)
 	dune build -p gwtolatex
 	mkdir $(DISTRIB_DIR)
 	mkdir $(DISTRIB_DIR)/etc
 	mkdir $(DISTRIB_DIR)/tmp
 	cp $(BUILD_DIR)default/bin/mkTex/mkTex.exe $(DISTRIB_DIR)/mkTex$(EXT)
-	cp $(BUILD_DIR)default/bin/mkTweekInd/mkTweekInd.exe $(DISTRIB_DIR)/mkTweekInd$(EXT)
+	cp $(BUILD_DIR)default/bin/mkTweekIndSort/mkTweekIndSort.exe $(DISTRIB_DIR)/mkTweekIndSort$(EXT)
+	cp $(BUILD_DIR)default/bin/mkTweekIndMerge/mkTweekIndMerge.exe $(DISTRIB_DIR)/mkTweekIndMerge$(EXT)
 	cp $(BUILD_DIR)default/bin/mkImgDict/mkImgDict.exe $(DISTRIB_DIR)/mkImgDict$(EXT)
 	cp $(BUILD_DIR)default/bin/mkNewGw/mkNewGw.exe $(DISTRIB_DIR)/mkNewGw$(EXT)
 	cp $(BUILD_DIR)default/bin/mkBook/mkBook.exe $(DISTRIB_DIR)/mkBook$(EXT)

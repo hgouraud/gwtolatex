@@ -1,6 +1,6 @@
 (executable
- (public_name mkTweekInd)
- (name mkTweekInd)
+ (public_name mkTweekIndMerge)
+ (name mkTweekIndMerge)
  (libraries
   gwtolatex
   ezcurl

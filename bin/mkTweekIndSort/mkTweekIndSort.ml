@@ -1,17 +1,17 @@
 (* Copyright (c) 2013 H.Gouraud *)
-open Gwtolatex
 
 let base = ref ""
 let family = ref ""
 let livres = ref (try Sys.getenv "GWTL_LIVRES" with Not_found -> "./Livres")
 let bases = ref (try Sys.getenv "GWTL_BASES" with Not_found -> "./")
 let test = ref false
-let out_file = ref ""
+let out_file = ref "./tmp/temp"
 let dev = ref false
 let verbose = ref false
 let debug = ref 0
 let test_nb = ref 0
 let version = "1.0"
+let input_files = ref []
 
 let show_process_time start =
   let process_time = Unix.gettimeofday () -. start in
@@ -125,7 +125,7 @@ let main () =
       ( "-livres",
         Arg.String (fun x -> livres := x),
         " Where are the families files." );
-      ( "-out",
+      ( "-o",
         Arg.String (fun x -> out_file := x),
         " Name of the result (default family.idct)." );
       ("-dev", Arg.Set dev, " Run in the GitHub repo.");
@@ -142,7 +142,7 @@ let main () =
   let start_time = Unix.gettimeofday () in
   let speclist = List.sort compare speclist in
   let speclist = Arg.align speclist in
-  let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
+  let anonfun s = input_files := s :: !input_files in
   Arg.parse speclist anonfun usage;
 
   (* for my convenience. Win env may differ *)
@@ -156,30 +156,26 @@ let main () =
       Printf.printf "[%i] %s " i Sys.argv.(i)
     done;
 
-  Printf.eprintf "\nThis is mkImgDict version %s for %s (%d)\n" version !family
-    !debug;
+  let in_file =
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".idx" ]
+  in
+
+  Printf.eprintf "\nThis is TweekIndSort version %s on %s to %s (%d)\n" version
+    in_file !out_file !debug;
   flush stderr;
 
-  let in_file =
-    String.concat Filename.dir_sep
-      [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
-  in
-  let out_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "-imgDict.tmp" ]
-  in
-
   let ic = open_in in_file in
-  let oc = open_out_bin out_file in
+  let oc = open_out !out_file in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  while true do
-    match Sutil.read_line ic with
-    | Some line -> output_string oc line
-    | None ->
-        Printf.eprintf "mkTweekInd done in %s s\n"
-          (show_process_time start_time);
-        close_in ic;
-        close_out oc
-  done
+  try
+    while true do
+      let line = input_line ic in
+      output_string oc (line ^ "\n")
+    done
+  with End_of_file ->
+    Printf.eprintf "%s\n" (show_process_time start_time);
+    close_in ic;
+    close_out oc
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)
