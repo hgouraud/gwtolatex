@@ -53,6 +53,7 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	cp $(BUILD_DIR)default/bin/mkBook/mkBook.exe $(DISTRIB_DIR)/mkBook$(EXT)
 	cp -R ./tex $(DISTRIB_DIR)
 	cp ./gwl.sh $(DISTRIB_DIR)
+	cp ./Blank.pdf $(DISTRIB_DIR)
 	cp ./make-*.sh $(DISTRIB_DIR)
 	# Apple extended attributes
 	# xattr -d com.apple.quarantine $(DISTRIB_DIR)/make-*.sh;

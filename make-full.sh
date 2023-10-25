@@ -93,15 +93,19 @@ mv $TMP/$FAMILY.pdf $LIVRES/$FAMILY.pdf
 
 echo "--------------------------------------------------------------------------------"
 touch pages.tmp
-grep "Output written on $FAMILY.pdf" $TMP/$FAMILY.log | \
-sed s/"Output written on $FAMILY.pdf ("// | \
+grep "Output written on $TMP/$FAMILY.pdf" $TMP/$FAMILY.log | \
+sed s!"Output written on $TMP/$FAMILY.pdf ("!! | \
 sed s/" pages".*//> pages.tmp
 PAGES=`cat pages.tmp`
+cat pages.tmp
+echo "Nb of pages: ($PAGES)"
 ODDEVEN=`expr $PAGES % 2`
+
+echo "Nb of pages: $PAGES, odd/even: $ODDEVEN"
 
 if test $ODDEVEN -eq 1
 then echo "Number of pages is : $PAGES (odd)"
-./cpdf $LIVRES/$FAMILY.pdf  $LIVRES/Blank.pdf ./$FAMILY-inputs/annexes.pdf -o $LIVRES/$FAMILY-full.pdf  2>/dev/null
+./cpdf $LIVRES/$FAMILY.pdf  $GW2L/Blank.pdf ./$FAMILY-inputs/annexes.pdf -o $LIVRES/$FAMILY-full.pdf  2>/dev/null
 fi
 
 if test $ODDEVEN -eq 0
