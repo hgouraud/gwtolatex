@@ -92,11 +92,12 @@ pdflatex $VERBPDF -output-directory="$TMP" $TMP/$FAMILY
 mv $TMP/$FAMILY.pdf $LIVRES/$FAMILY.pdf
 
 echo "--------------------------------------------------------------------------------"
-echo "\nNombre de pages ->"
 touch pages.tmp
 grep "Output written on $FAMILY.pdf" $TMP/$FAMILY.log | \
 sed s/"Output written on $FAMILY.pdf ("// | \
 sed s/" pages".*//> pages.tmp
+PAGES=`cat pages.tmp`
+ODDEVEN=`expr $PAGES % 2`
 
 if test $ODDEVEN -eq 1
 then echo "Number of pages is : $PAGES (odd)"
@@ -107,5 +108,6 @@ if test $ODDEVEN -eq 0
 then echo "Number of pages is : $PAGES (even)"
 ./cpdf $LIVRES/$FAMILY.pdf  $LIVRES/$FAMILY-inputs/annexes.pdf -o $LIVRES/$FAMILY-full.pdf  2>/dev/null
 fi
+rm pages.tmp
 
 echo "--------------------------------------------------------------------------------"

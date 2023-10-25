@@ -34,8 +34,8 @@ let split_href href =
     List.map
       (fun (k, v) ->
         ( (if String.length k > 2 && k.[0] = '{' && k.[1] = '}' then
-           String.sub k 2 (String.length k - 2)
-          else k),
+             String.sub k 2 (String.length k - 2)
+           else k),
           if String.length v > 0 && v.[String.length v - 1] = '\\' then
             String.sub v 0 (String.length v - 1)
           else v ))

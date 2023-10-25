@@ -528,9 +528,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
       if not vignette then incr image_nbr;
       let image =
         ( (if vignette then Vignette
-          else if k <> "" then Imagek
-          else if s <> "" then Images
-          else Portrait),
+           else if k <> "" then Imagek
+           else if s <> "" then Images
+           else Portrait),
           (if k <> "" then image_label else s),
           (!chapter, !section, !subsection, !subsubsection),
           !image_nbr )
@@ -1137,7 +1137,7 @@ let main () =
 
   let fname_txt, family_out =
     ( (if !family <> "" then Filename.concat !livres (!family ^ ".txt")
-      else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
+       else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
       if !family <> "" then !family
       else Printf.sprintf "gwtolatex-test%d" !test_nb )
   in

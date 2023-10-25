@@ -167,10 +167,10 @@ let main () =
   if !verbose then Printf.eprintf "Create temp dir\n";
   let tmp = String.concat Filename.dir_sep [ "."; "tmp" ] in
   (if not (Sys.file_exists tmp) then
-   try
-     let _ = Sys.command (Format.sprintf "mkdir %s 755" tmp) in
-     ()
-   with Sys_error _ -> Printf.eprintf "Failed to create tmp dir\n");
+     try
+       let _ = Sys.command (Format.sprintf "mkdir %s 755" tmp) in
+       ()
+     with Sys_error _ -> Printf.eprintf "Failed to create tmp dir\n");
   flush stderr;
 
   (* Create base.gw file *)

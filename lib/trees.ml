@@ -123,11 +123,11 @@ let copy_row row lr side =
       ( w,
         s,
         (if side = "bar" then match ty with "Te" | "It" -> "Hv2" | _ -> ty
-        else ty),
+         else ty),
         (if side = "bar" then ""
-        else match ty with "Te" -> get_part lr side te | _ -> te),
+         else match ty with "Te" -> get_part lr side te | _ -> te),
         (if side = "bar" then ""
-        else match ty with "It" -> get_part lr side it | _ -> it),
+         else match ty with "It" -> get_part lr side it | _ -> it),
         if side = "bar" then ""
         else match ty with "Im" -> get_part lr side im | _ -> im ))
     row
@@ -315,7 +315,7 @@ let print_tree base tree mode textwidth textheight _margin debug fontsize
     in
     let cell_wid =
       (if sideways then textheight *. if twopages then 3.0 else 1.0
-      else textwidth)
+       else textwidth)
       /. Float.of_int non_empty_col_nbr
     in
     let half_cell_wid = cell_wid /. 2.0 in
