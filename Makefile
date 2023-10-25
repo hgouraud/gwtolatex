@@ -4,7 +4,8 @@
 PREFIX=/usr
 DISTRIB_DIR=gw2l_dist
 BUILD_DIR=_build/
-
+BASES=$(GW2L_BASES)
+#OS_TYPE=$(shell `uname -r`) ???
 # [BEGIN] Generated files section
 
 CPPO_D=$(GWDB_D) $(OS_D) $(SYSLOG_D) $(SOSA_D)
@@ -52,11 +53,17 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	cp $(BUILD_DIR)default/bin/mkBook/mkBook.exe $(DISTRIB_DIR)/mkBook$(EXT)
 	cp -R ./tex $(DISTRIB_DIR)
 	cp ./gwl.sh $(DISTRIB_DIR)
-	cp ./chausey.sh $(DISTRIB_DIR)
+	cp ./make-*.sh $(DISTRIB_DIR)
+	# Apple extended attributes
+	# xattr -d com.apple.quarantine $(DISTRIB_DIR)/make-*.sh;
 	cp ./Gw2LaTeX-env.tex $(DISTRIB_DIR)
 	cp ../geneweb/hd/etc/version.txt $(DISTRIB_DIR)/gw_version.txt
 	cp ./version.txt $(DISTRIB_DIR)
 
+install: distrib
+	$(RM) -r $(BASES)/$(DISTRIB_DIR)
+	cp -R $(DISTRIB_DIR) $(BASES)
+	
 clean:
 	@echo -n "Cleaning…"
 	@$(RM) $(GENERATED_FILES_DEP)

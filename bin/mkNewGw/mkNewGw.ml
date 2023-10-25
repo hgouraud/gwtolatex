@@ -15,7 +15,6 @@ let out_file = ref ""
 let debug = ref 0
 let dev = ref false
 let verbose = ref false
-let version = "1.0"
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
 let livres = ref (try Sys.getenv "GWTL_LIVRES" with Not_found -> "./Livres")
@@ -71,8 +70,8 @@ let main () =
       Printf.printf "[%i] %s " i Sys.argv.(i)
     done;
 
-  Printf.eprintf "\nThis is makeNewGw version %s for %s (%d)\n" version !base
-    !debug;
+  Printf.eprintf "\nThis is makeNewGw version %s for %s (%d)\n" Sutil.version
+    !base !debug;
   flush stderr;
 
   let in_file = String.concat Filename.dir_sep [ "."; !base ^ ".gw" ] in

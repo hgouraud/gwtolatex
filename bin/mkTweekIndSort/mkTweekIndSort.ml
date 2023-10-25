@@ -1,16 +1,16 @@
 (* Copyright (c) 2013 H.Gouraud *)
+open Gwtolatex
 
 let base = ref ""
 let family = ref ""
 let livres = ref (try Sys.getenv "GWTL_LIVRES" with Not_found -> "./Livres")
 let bases = ref (try Sys.getenv "GWTL_BASES" with Not_found -> "./")
 let test = ref false
-let out_file = ref "./tmp/temp"
+let out_file = ref "./gw2l_dist/tmp/temp"
 let dev = ref false
 let verbose = ref false
 let debug = ref 0
 let test_nb = ref 0
-let version = "1.0"
 let input_files = ref []
 
 let show_process_time start =
@@ -157,11 +157,11 @@ let main () =
     done;
 
   let in_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".idx" ]
+    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".idx" ]
   in
 
-  Printf.eprintf "\nThis is TweekIndSort version %s on %s to %s (%d)\n" version
-    in_file !out_file !debug;
+  Printf.eprintf "\nThis is TweekIndSort version %s on %s to %s (%d)\n"
+    Sutil.version in_file !out_file !debug;
   flush stderr;
 
   let ic = open_in in_file in

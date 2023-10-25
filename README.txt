@@ -1,4 +1,5 @@
-GwToLaTeX is a tool to produce a "book" from pages extracted from a GeneWeb data base.
+GwToLaTeX is a set of tools to produce a "book" from pages extracted
+from a GeneWeb data base.
 
 A typical GeneWeb "page" can expand across several physical book pages.
 Pages can be almost any GeneWeb query.
@@ -24,8 +25,8 @@ The source material for the book is a text file containing :
       | "Chapter" -> new chapter
       | "ImageLabel" -> nbr of items in image numbering (ch, sec, ssec, i_nbr)
       | "CollectImages" -> "on/off", collect_images to be printed at end of page
-      | "FontSize" -> set font size (small, tiny)
-      | "HighLight" ->
+      | "FontSize" -> set font size (small, tiny, off -> returns to default)
+      | "HighLight" -> highlight a first_name, occ, surname person
       | "Hrule" -> produce a hrule after each individual page
       | "ImageLabel" ->
       | "ImageWidth" -> set image width (string -> \textwidth, 5.1cm)
@@ -52,6 +53,14 @@ The source material for the book is a text file containing :
 This package includes test and example files named gwtolatex-testn.{txt/html}
 The html files contain only <a ... > tags and do not produce any pdf output.
 
+The tools include:
+- mkImgDict -> creates an image database for further use
+- mkNewGw -> inserts in a .gw file the necessary elements for image
+    cross reference
+- mkTex -> main tool: produces a .tex file from a family.txt file
+- mkTweekIndSort and mkTweekIndMerge -> manipulate the index files to
+    integrate photo references
+
 The launch parameters are:
  -base (wip, is in fact defined in the <a commands in the input file)
  -bases (wip, for the time being "."; implies gwl is executed in bases)
@@ -71,27 +80,42 @@ The launch parameters are:
 In its current form, GwToLaTeX must run in the folder containing the target base.
 
 Install and test
-
 - clone the gwtolatex repo
 - dune build
-- copy your base in the gwtolatex folder (interim solution)
-- dune exec -- gwtolatex -test n to try gwttolatex-testn.ext
+- dune exec -- mkTex -test n to try gwttolatex-testn.ext
   where ext is txt or html
+- make install will install the gw2l_dist folder into your BASES folder
 
 Make distribution will create a folder gw2l_dist containing the necessary components
 Copy or move this folder into your bases folder.
 Create a folder Livres containing the input file Xxxx.txt and possible supplemental files
 associated to <x Input file> commands that may appear in Xxxx.txt.
 In those files, the macro %%%LIVRES%%% will be replaced by the value of the -livres
-start parameter.
-Run the gwl.sh script after editing your preferences.
-The resulting .pdf file would be moved into the Livres folder
+start parameter, and %%%BASE%%% by the valur of the -base parameter
+Two scripts are available:
+- make-simple.sh runs gwu, mkTex, pdflatex and makeindex
+- make-full.sh runs additionnal processing tools for photo references
+  and multiple passes of padlatex makeindex
+Parameters to those scripts are:
+-b|--base -> base
+-f|--family -> family
+-l|--livres -> where your books are defined and stored
+          (possibly defined as a GW2L_LIVRES env variable)
+-v| -> runs pdflatex in verbose mode
+-g|gw -> where your GeneWeb binaries sit
+          (possibly defined as a GW env variable)
+
 
 Warning:
-Running pdftolatex is rather tricky and assumes that you have some knowledge of TeX and LaTeX behaviours. The Web is a good source of information, but usually rather obscure.
+Running pdftolatex is rather tricky and assumes that you have some knowledge
+of TeX and LaTeX behaviours.
+The Web is a good source of information, but usually rather obscure.
 Trial and error is your friend.
 
-The -v option provides interactive mode for pdftolatex, helping you to understand where the problem may come from.
+The -v option provides interactive mode for pdftolatex,
+hopefully helping you to understand where the problem may come from.
+A typical problem is the absence of an image file.
+Another one is the spurious introduction of & characters.
 
 Test files make reference to my base for extraction of surnames/first_names.
 Edit the test files according to your own base.

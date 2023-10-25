@@ -68,7 +68,6 @@ let bases = ref (try Sys.getenv "GW2L_BASES" with Not_found -> "./")
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
-let version = "1.0"
 
 (* current values *)
 let current_level = ref 0
@@ -492,7 +491,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
         else if String.lowercase_ascii b <> String.lowercase_ascii !base then
-          Format.sprintf "%s\\footnote{%s}" content (Lutil.escape href)
+          Format.sprintf "%s\\footnote{%s}" content (Sutil.replace '&' ';' href)
         else if s <> "" then make_image_str s k content mode caption
         else "{\\bf " ^ content ^ "}"
       in
@@ -906,7 +905,7 @@ let one_command och line =
       else (
         imgwidth := imgwidth_default;
         arbres := false)
-  | "Version" -> output_string och (version ^ "\n")
+  | "Version" -> output_string och (Sutil.version ^ "\n")
   | "WideImages" ->
       if param = "on" || param = "On" then (
         imgwidth := !textwidth;
@@ -1156,8 +1155,8 @@ let main () =
   let ic = open_in_bin fname_in in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  Printf.eprintf "\nThis is mkTeX version %s on %s to %s (%d)\n" version
-    fname_in fname_out !debug;
+  Printf.eprintf "\nThis is mkTeX version %s for %s on base %s to %s (%d)\n"
+    Sutil.version fname_in !base fname_out !debug;
   flush stderr;
 
   (match mode with

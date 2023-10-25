@@ -1,6 +1,8 @@
 (* strings utilities *)
 (* v1  Henri, 2023/10/16 *)
 
+let version = "1.0"
+
 (** Read a line. If line is empty or only contains a comment (#), then read next line  *)
 let rec input_real_line ic =
   let x = input_line ic in

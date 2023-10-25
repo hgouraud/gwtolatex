@@ -13,7 +13,7 @@
 
 <x Width \textwidth>
 <x CollectImages off>
-<a href="http://127.0.0.1:2317/Chausey?m=NOTES;f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979\index{Régates, 1979}</a><br>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES;f=regates-chausey-1979;templ=tex;w=hg:1045">Régates de 1979\index{Régates, 1979}</a><br>
 <x Width 5.1cm>
 \clearpage
 

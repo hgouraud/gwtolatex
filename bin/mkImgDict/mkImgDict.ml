@@ -11,7 +11,6 @@ let dev = ref false
 let verbose = ref false
 let debug = ref 0
 let test_nb = ref 0
-let version = "1.0"
 
 let show_process_time start =
   let process_time = Unix.gettimeofday () -. start in
@@ -156,8 +155,8 @@ let main () =
       Printf.printf "[%i] %s " i Sys.argv.(i)
     done;
 
-  Printf.eprintf "\nThis is mkImgDict version %s for %s (%d)\n" version !family
-    !debug;
+  Printf.eprintf "\nThis is mkImgDict version %s for %s (%d)\n" Sutil.version
+    !family !debug;
   flush stderr;
 
   let in_file =
