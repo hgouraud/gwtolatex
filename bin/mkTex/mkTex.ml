@@ -491,7 +491,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
         else if String.lowercase_ascii b <> String.lowercase_ascii !base then
-          Format.sprintf "%s\\footnote{%s}" content (Sutil.replace '&' ';' href)
+          Format.sprintf "%s\\footnote{%s}" content
+            (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
         else if s <> "" then make_image_str s k content mode caption
         else "{\\bf " ^ content ^ "}"
       in
