@@ -72,7 +72,7 @@ cp -R $GW2L/tex ./etc
 
 echo "Running make-generic for $FAMILY on $BASE"
 $GW/gwu ./$BASE -o ./$BASE.gw
-$GW2L/mkImgDict -family $FAMILY -base $BASE
+$GW2L/mkImgDict -family $FAMILY -base $BASE -livres $LIVRES
 $GW2L/mkNewGw -family $FAMILY -base $BASE -o ./$BASE-new.gw
 $GW/gwc -f ./$BASE-new.gw -o ./$BASE-new 2&> $TMP/gwc.log
 echo "gwc warnings available in $TMP/gwc.log"

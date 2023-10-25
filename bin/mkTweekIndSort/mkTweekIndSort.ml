@@ -174,7 +174,7 @@ let main () =
       output_string oc (line ^ "\n")
     done
   with End_of_file ->
-    Printf.eprintf "%s\n" (show_process_time start_time);
+    Printf.eprintf "Done in %s s\n" (show_process_time start_time);
     close_in ic;
     close_out oc
 

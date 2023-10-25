@@ -1247,6 +1247,8 @@ let main () =
   Printf.eprintf "Result file is in %s (in %s s)\n"
     (Filename.concat dir (fname ^ ".pdf"))
     (show_process_time start_time);
+  close_in ic;
+  close_out och;
   flush stderr
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

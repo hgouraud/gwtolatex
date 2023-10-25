@@ -3,8 +3,8 @@ open Gwtolatex
 
 let base = ref ""
 let family = ref ""
-let livres = ref (try Sys.getenv "GWTL_LIVRES" with Not_found -> "./Livres")
-let bases = ref (try Sys.getenv "GWTL_BASES" with Not_found -> "./")
+let livres = ref (try Sys.getenv "GW2L_LIVRES" with Not_found -> "./Livres")
+let bases = ref (try Sys.getenv "GW2L_BASES" with Not_found -> "./")
 let test = ref false
 let out_file = ref ""
 let dev = ref false
@@ -164,21 +164,22 @@ let main () =
       [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
   in
   let out_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "-imgDict.tmp" ]
+    String.concat Filename.dir_sep
+      [ "."; "gw2l_dist"; "tmp"; !family ^ "-imgDict.tmp" ]
   in
 
   let ic = open_in in_file in
   let oc = open_out_bin out_file in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  while true do
-    match Sutil.read_line ic with
-    | Some line -> output_string oc line
-    | None ->
-        Printf.eprintf "mkTweekInd done in %s s\n"
-          (show_process_time start_time);
-        close_in ic;
-        close_out oc
-  done
+  try
+    while true do
+      let line = input_line ic in
+      output_string oc (line ^ "\n")
+    done
+  with End_of_file ->
+    Printf.eprintf "Done in %s s\n" (show_process_time start_time);
+    close_in ic;
+    close_out oc
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

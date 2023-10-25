@@ -86,7 +86,7 @@ let main () =
       output_string oc (input_line ic ^ "\n")
     done
   with End_of_file ->
-    Printf.eprintf "makeNewGw done in %s s\n" (show_process_time start_time);
+    Printf.eprintf "Done in %s s\n" (show_process_time start_time);
     close_in ic;
     close_out oc
 
