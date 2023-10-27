@@ -52,6 +52,7 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	cp $(BUILD_DIR)default/bin/mkNewGw/mkNewGw.exe $(DISTRIB_DIR)/mkNewGw$(EXT)
 	cp $(BUILD_DIR)default/bin/mkBook/mkBook.exe $(DISTRIB_DIR)/mkBook$(EXT)
 	cp -R ./tex $(DISTRIB_DIR)
+	cp -R ./tex $(BASES)/etc
 	cp ./gwl.sh $(DISTRIB_DIR)
 	cp ./Blank.pdf $(DISTRIB_DIR)
 	cp ./make-*.sh $(DISTRIB_DIR)
