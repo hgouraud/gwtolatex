@@ -437,7 +437,6 @@ let rec process_tree_cumul och cumul tree (row, col) =
     (* TODO identify vignettes ! -> special width *)
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
-    Printf.eprintf "A tag: %s\n" href;
     let mode = try List.assoc "mode" attr with Not_found -> "" in
     let caption = try List.assoc "caption" attr with Not_found -> "" in
     let href_attrl = Hutil.split_href href in
@@ -468,6 +467,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
           Format.sprintf "%s\\footnote{%s}" content
             (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
         else if s <> "" then make_image_str s k content mode caption
+        else if m = "CAL" then content ^ index_s
         else "{\\bf " ^ content ^ "}" ^ index_s
       in
       str
@@ -613,12 +613,14 @@ let rec process_tree_cumul och cumul tree (row, col) =
                 | "tex" -> "tex"
                 | "highlight" -> "highlight"
                 | "wide" -> "wide"
+                | "a_ref" -> "a_ref"
                 | "" -> if tex_mode_2 then "tex" else ""
                 | _ -> ""
               in
               if display_none then
                 match mode with
                 | "tex" ->
+                    (* extract TeX command from content *)
                     if String.length content > 3 then
                       let content = Sutil.replace '[' '{' content in
                       let content = Sutil.replace ']' '}' content in
@@ -638,10 +640,28 @@ let rec process_tree_cumul och cumul tree (row, col) =
                       else content
                     else content
                 | "highlight" ->
+                    (* highlight content *)
                     if List.mem content !highlights then
                       Format.sprintf "{\\hl{\\bf %s}}" content
                     else content
                 | _ -> ""
+              else if
+                (* <span mode="a_ref" gw2w="which" gw2sn="snxx" *)
+                (*   gw2fn="fnxx" gw2oc="ocxx" gw2al="alxx"> *)
+                mode = "a_ref"
+              then
+                let str =
+                  let _w = Hutil.get_attr attributes "gw2w" in
+                  let sn = Hutil.get_attr attributes "gw2sn" in
+                  let fn = Hutil.get_attr attributes "gw2fn" in
+                  let oc = Hutil.get_attr attributes "gw2oc" in
+                  let _al = Hutil.get_attr attributes "gw2al" in
+                  let fn, sn, oc, sp, index_l =
+                    Hutil.get_real_person !my_base "" fn sn oc
+                  in
+                  index_l
+                in
+                content ^ str
               else content
             in
             str

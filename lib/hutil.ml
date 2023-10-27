@@ -51,6 +51,8 @@ let open_base basename =
       | Some base -> base)
 
 let get_real_person base i p n oc =
+  let p = Name.lower p in
+  let n = Name.lower n in
   let ip =
     match
       Gwdb.person_of_key base p n (try int_of_string oc with Failure _ -> 0)
@@ -82,20 +84,21 @@ let get_real_person base i p n oc =
   let sp1 =
     match sp with Some sp -> Format.sprintf " (ep %s)" sp | None -> ""
   in
+  let ocnn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
   let aliases = Gwdb.get_aliases person in
   let ind1 =
     if List.mem sn dummy_sn then Format.sprintf "\\index{%s}" fn
     else if List.mem fn dummy_fn then Format.sprintf "\\index{%s}" sn
-    else Format.sprintf "\\index{%s, %s%s}" sn fn sp1
+    else Format.sprintf "\\index{%s, %s%s%s}" sn fn ocnn sp1
   in
   let aliases =
     List.map
       (fun a ->
         let a = Gwdb.sou base a in
         if List.mem sn dummy_sn then Format.sprintf "\\index{%s voir %s}" a fn
-        else if List.mem fn dummy_fn then
+        else if List.mem fn dummy_fn && a <> sn then
           Format.sprintf "\\index{%s voir %s}" a sn
-        else Format.sprintf "\\index{%s voir %s, %s}" a sn fn)
+        else Format.sprintf "\\index{%s voir %s, %s%s}" a sn fn ocnn)
       aliases
   in
   let ind2 = String.concat "" aliases in
@@ -109,6 +112,9 @@ let get_attr attributes attr =
   List.fold_left
     (fun c ((_, k), v) -> if k = attr then v ^ c else c)
     "" attributes
+
+let show_attr attributes =
+  List.fold_left (fun c ((_, k), v) -> k ^ "=" ^ v ^ ", " ^ c) "" attributes
 
 (* <a href="base?m=IM&p=first_name&n=surname&occ=noc&k=first_name.noc.surname" *)
 (* <a href="base?m=IM;s=test/filaname.jpg"> *)
