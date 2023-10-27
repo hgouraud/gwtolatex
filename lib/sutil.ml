@@ -3,10 +3,23 @@
 
 let version = "1.0"
 
+let start_with ini i s =
+  let inilen = String.length ini in
+  let strlen = String.length s in
+  if i < 0 || i > strlen then raise (Invalid_argument "start_with");
+  let rec loop i1 i2 =
+    if i1 = inilen then true
+    else if i2 = strlen then false
+    else if String.unsafe_get s i2 = String.unsafe_get ini i1 then
+      loop (i1 + 1) (i2 + 1)
+    else false
+  in
+  loop 0 i
+
 (** Read a line. If line is empty or only contains a comment (#), then read next line  *)
 let rec input_real_line ic =
   let x = input_line ic in
-  if x = "" || x.[0] = '#' then input_real_line ic else x
+  if String.length x > 0 && x.[0] = '#' then input_real_line ic else x
 
 let read_line ic =
   try

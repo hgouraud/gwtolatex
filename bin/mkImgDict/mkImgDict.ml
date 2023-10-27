@@ -1,7 +1,7 @@
 (* Copyright (c) 2013 H.Gouraud *)
 open Gwtolatex
 
-let base = ref ""
+let basename = ref "chausey"
 let family = ref ""
 let livres = ref (try Sys.getenv "GW2L_LIVRES" with Not_found -> "./Livres")
 let bases = ref (try Sys.getenv "GW2L_BASES" with Not_found -> "./")
@@ -111,6 +111,67 @@ let _read_or_create_value ?magic ?wait fname create =
   in
   try read_or_create_channel ?magic ?wait fname read write with _ -> create ()
 
+let dict1 = Hashtbl.create 100
+
+(* # uid;n;texte descriptif;nom-de-fichier.jpg *)
+(* # voir ... *)
+(* \index{X, Y}/z  ;z indique N° d'occurrence, "z" si ?? *)
+
+let process base ic line =
+  try
+    let parts = String.split_on_char ';' line in
+    if List.length parts <> 4 then
+      Printf.eprintf "Bad image definition %s\n" line
+    else if line = "" then ()
+    else
+      let uid = List.nth parts 0 in
+      Printf.eprintf "Uid1: %s\n" uid;
+      let anx_page = List.nth parts 1 in
+      let desc = List.nth parts 2 in
+      let fname = List.nth parts 3 in
+      if Hashtbl.mem dict1 uid then
+        Printf.eprintf "Duplicate image definition %s, %s\n" uid desc
+      else
+        let line = Sutil.input_real_line ic in
+        let index_l =
+          let rec loop line index_l =
+            if line = "" then index_l
+            else if Sutil.start_with "\\index" 0 line then
+              let i = try String.index line '{' with Not_found -> -1 in
+              let j = try String.index line '}' with Not_found -> -1 in
+              if i <> -1 && j <> -1 then (
+                let str = String.sub line (i + 1) (j - i - 1) in
+                let ocn =
+                  if String.length line > j + 2 then
+                    String.sub line (j + 2) (String.length line - j - 2)
+                  else ""
+                in
+                let parts = String.split_on_char ',' str in
+                let sn =
+                  if List.length parts > 0 then List.nth parts 0 else ""
+                in
+                let fn =
+                  if List.length parts > 1 then List.nth parts 1 else ""
+                in
+                if ocn <> "" then Printf.eprintf "P: %s.%s %s\n" fn ocn sn;
+                if sn = "" && fn = "" then loop (input_line ic) index_l
+                else if ocn = "z" then
+                  loop (input_line ic) ((fn, sn, 0) :: index_l)
+                else
+                  let fn, sn, ocn, _sp, _index_s =
+                    Hutil.get_real_person base "" fn sn ocn
+                  in
+                  loop (input_line ic) ((fn, sn, ocn) :: index_l))
+              else index_l
+            else index_l
+          in
+          loop line []
+        in
+        Hashtbl.add dict1 uid (anx_page, desc, fname, index_l)
+  with
+  | Failure _ -> Printf.eprintf "Bad image definition %s\n" line
+  | End_of_file -> ()
+
 let main () =
   let usage =
     "Usage: " ^ Filename.basename Sys.argv.(0) ^ " [options] where options are:"
@@ -118,7 +179,7 @@ let main () =
   let speclist =
     [
       ("-bases", Arg.String (fun x -> bases := x), " Where are bases.");
-      ("-base", Arg.String (fun x -> base := x), " Choose base.");
+      ("-base", Arg.String (fun x -> basename := x), " Choose base.");
       ("-family", Arg.String (fun x -> family := x), " Choose family.");
       ("-famille", Arg.String (fun x -> family := x), " Choose family.");
       ( "-livres",
@@ -144,10 +205,12 @@ let main () =
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
 
+  let base = Hutil.open_base (Filename.concat "." !basename) in
+
   (* for my convenience. Win env may differ *)
   if
-    Sys.argv.(0) = "_build/install/default/bin/gwl"
-    || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
+    Sys.argv.(0) = "_build/install/default/bin/mkImgDict"
+    || Sys.argv.(0) = "_build\\install\\default\\bin\\mkImgDict.exe"
   then dev := true;
 
   if !verbose then
@@ -174,8 +237,8 @@ let main () =
 
   try
     while true do
-      let line = input_line ic in
-      output_string oc (line ^ "\n")
+      let line = Sutil.input_real_line ic in
+      process base ic line
     done
   with End_of_file ->
     Printf.eprintf "Done in %s s\n" (show_process_time start_time);

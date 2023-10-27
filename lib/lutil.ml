@@ -79,7 +79,12 @@ let escape str =
 
 (* ATTENTION there is alse a macro %hgindex(...) in tex/perso.txt *)
 (* ocn has been put in the form " (n)" or "" if 0 *)
-let build_index fn sn ocn content check =
+let build_index fn sn ocn sp content check =
+  (* TODO rajouter \index{Spouse-sn, fn} *)
+  (* ajouter alias *)
+  let sp =
+    match sp with Some sp -> Format.sprintf " (ep %s)" sp | None -> ""
+  in
   (* cover cases with sn = . (houses) or X (boats) and ? ? *)
   match (fn, sn) with
   | "?", "?" -> ""
@@ -90,7 +95,8 @@ let build_index fn sn ocn content check =
       ^ Format.sprintf "\\index{Famille %s}" sn
   | fn, sn ->
       Format.sprintf "{\\bf %s}" content
-      ^ Format.sprintf "\\index{%s, %s%s}" sn fn ocn
+      ^ Format.sprintf "\\index{%s, %s%s%s}" sn fn ocn sp
+      ^ (if sp <> "" then Format.sprintf "\\index{%s, %s}" sp fn else "")
       ^
       if
         check <> content (* TODO parametrize this *)

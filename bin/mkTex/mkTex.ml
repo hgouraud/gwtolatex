@@ -102,22 +102,8 @@ let xoffset = ref 0.0
 let yoffset = ref 0.0
 let twopages = ref false
 
-let open_base basename =
-  match basename with
-  | "" ->
-      Printf.eprintf "No basename supplied\n";
-      exit 1
-  | bfile -> (
-      let bfile = bfile ^ ".gwb" in
-      let base = try Some (Gwdb.open_base bfile) with _ -> None in
-      match base with
-      | None ->
-          Printf.eprintf "Cannot open base %s\n" bfile;
-          exit 1
-      | Some base -> base)
-
 (* TODO find a way to open base remotely *)
-let my_base = ref (open_base (Filename.concat "." !base))
+let my_base = ref (Hutil.open_base (Filename.concat "." !base))
 
 let _strip_nl s =
   let b = Buffer.create 10 in
@@ -451,15 +437,16 @@ let rec process_tree_cumul och cumul tree (row, col) =
     (* TODO identify vignettes ! -> special width *)
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
+    Printf.eprintf "A tag: %s\n" href;
     let mode = try List.assoc "mode" attr with Not_found -> "" in
     let caption = try List.assoc "caption" attr with Not_found -> "" in
     let href_attrl = Hutil.split_href href in
     let b = Hutil.get_href_attr "b" href_attrl in
     let m = Hutil.get_href_attr "m" href_attrl in
+    let i = Hutil.get_href_attr "i" href_attrl in
     let p = Hutil.get_href_attr "p" href_attrl in
     let n = Hutil.get_href_attr "n" href_attrl in
     let oc = Hutil.get_href_attr "oc" href_attrl in
-    let i = Hutil.get_href_attr "i" href_attrl in
     let k = Hutil.get_href_attr "k" href_attrl in
     let s = Hutil.get_href_attr "s" href_attrl in
     let v = Hutil.get_href_attr "v" href_attrl in
@@ -468,25 +455,12 @@ let rec process_tree_cumul och cumul tree (row, col) =
     else
       let content = get_child children in
       (* between <a...> and </a> *)
-      let ip =
-        match
-          Gwdb.person_of_key !my_base p n
-            (try int_of_string oc with Failure _ -> 0)
-        with
-        | Some ip -> ip
-        | None -> (
-            try Gwdb.iper_of_string i with Failure _ -> Gwdb.dummy_iper)
-      in
+      let fn, sn, ocn, sp, index_s = Hutil.get_real_person !my_base i p n oc in
       let str =
-        let person = Gwdb.poi !my_base ip in
-        let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
-        let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
-        let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
         let ocn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
-        (* TODO verify uppercase! (le Fort), (Le Fort) *)
         let check = Printf.sprintf "%s %s%s" fn sn ocn in
         if (fn <> "" || sn <> "") && s <> "" && k = "" then
-          Lutil.build_index fn sn ocn content check
+          Lutil.build_index fn sn ocn sp content check
         else if m = "SRC" || m = "DOC" then read_src_file v content
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
@@ -494,7 +468,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
           Format.sprintf "%s\\footnote{%s}" content
             (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
         else if s <> "" then make_image_str s k content mode caption
-        else "{\\bf " ^ content ^ "}"
+        else "{\\bf " ^ content ^ "}" ^ index_s
       in
       str
   in
@@ -509,21 +483,11 @@ let rec process_tree_cumul och cumul tree (row, col) =
     let i = Hutil.get_href_attr "i" href_attrl in
     let k = Hutil.get_href_attr "k" href_attrl in
     let s = Hutil.get_href_attr "s" href_attrl in
-    let ip =
-      match
-        Gwdb.person_of_key !my_base p n
-          (try int_of_string oc with Failure _ -> 0)
-      with
-      | Some ip -> ip
-      | None -> if i = "" then Gwdb.dummy_iper else Gwdb.iper_of_string i
-    in
     let str =
-      let person = Gwdb.poi !my_base ip in
-      let fn = Gwdb.sou !my_base (Gwdb.get_first_name person) in
-      let sn = Gwdb.sou !my_base (Gwdb.get_surname person) in
-      let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
-      let image_label = Format.sprintf "%s.%d.%s" fn ocn sn in
-      (* TODO identify vignettes ! -> special width *)
+      let fn, sn, ocn, sp, index_s = Hutil.get_real_person !my_base i p n oc in
+      (* TODO lower?? *)
+      let ocn = if ocn = 0 then "0" else string_of_int ocn in
+      let image_label = Format.sprintf "%s.%s.%s" fn ocn sn in
       let vignette = Sutil.contains s "-vignette" in
       if not vignette then incr image_nbr;
       let image =
@@ -537,7 +501,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
       in
       if !collect_images && not vignette then
         images_in_page := image :: !images_in_page;
-      print_image image
+      print_image image ^ index_s
     in
     str
   in
@@ -970,7 +934,7 @@ let one_http_call och line =
             let _ = process_html och body in
             ()
       | Error (_, msg) ->
-          Printf.eprintf "error when fetching %s:\n  %s\n%!" url
+          Printf.eprintf "error when fetching %s\n %s\n%!" url
             (Lutil.escape msg);
           output_string och
             (Format.sprintf "Error when fetching %s:\n %s\n" (Lutil.escape url)
@@ -1014,6 +978,16 @@ let process_one_line och line =
       match line.[1] with
       | 'a' ->
           let content = get_a_content line in
+          let href = Hutil.get_href line in
+          let href_attrl = Hutil.split_href href in
+          let i = Hutil.get_href_attr "i" href_attrl in
+          let p = Hutil.get_href_attr "p" href_attrl in
+          let n = Hutil.get_href_attr "n" href_attrl in
+          let oc = Hutil.get_href_attr "oc" href_attrl in
+          (* get_real_person builds \index if any *)
+          let _fn, _sn, _ocn, _sp, _index_s =
+            Hutil.get_real_person !my_base i p n oc
+          in
           let sec =
             (* -> chapter, 1-> section, ... *)
             match !current_level with
@@ -1052,7 +1026,8 @@ let process_one_line och line =
           if !collect_images && !images_in_page <> [] then
             print_images och !images_in_page;
           images_in_page := [];
-          if !hrule then output_string och (Format.sprintf "\\par\\hrule\n")
+          if !hrule then
+            output_string och (Format.sprintf "\\par\\vspace{0.5cm}\\hrule\n")
       | 'b' -> one_page och line
       | 'x' -> one_command och line
       | 'y' -> output_string och ""
