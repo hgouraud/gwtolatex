@@ -621,23 +621,29 @@ let rec process_tree_cumul och cumul tree (row, col) =
                 match mode with
                 | "tex" ->
                     (* extract TeX command from content *)
-                    if String.length content > 3 then
+                    if String.length content > 3 then (
                       let content = Sutil.replace '[' '{' content in
                       let content = Sutil.replace ']' '}' content in
+                      (* TODO in includegraphics replace {width=xxyy} by [width=xxyy] *)
+                      if Sutil.contains content "Hasse" then
+                        Printf.eprintf "Span1: %s\n" content;
                       let content =
                         if tex_mode_2 then
                           String.sub content 4 (String.length content - 7)
                         else content
                       in
                       let i =
+                        (* ???? old format !! *)
                         try String.index_from content 0 '%'
                         with Not_found -> -1
                       in
+                      if Sutil.contains content "Hasse" then
+                        Printf.eprintf "Span2: (%d) %s\n" i content;
                       if i > 0 then
                         String.sub content 0 i
                         ^ String.sub content (i + 1)
                             (String.length content - i - 1)
-                      else content
+                      else content)
                     else content
                 | "highlight" ->
                     (* highlight content *)

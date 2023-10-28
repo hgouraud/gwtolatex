@@ -120,12 +120,11 @@ let dict1 = Hashtbl.create 100
 let process base ic line =
   try
     let parts = String.split_on_char ';' line in
-    if List.length parts <> 4 then
+    if line = "" then ()
+    else if List.length parts <> 4 then
       Printf.eprintf "Bad image definition %s\n" line
-    else if line = "" then ()
     else
       let uid = List.nth parts 0 in
-      Printf.eprintf "Uid1: %s\n" uid;
       let anx_page = List.nth parts 1 in
       let desc = List.nth parts 2 in
       let fname = List.nth parts 3 in
@@ -139,7 +138,7 @@ let process base ic line =
             else if Sutil.start_with "\\index" 0 line then
               let i = try String.index line '{' with Not_found -> -1 in
               let j = try String.index line '}' with Not_found -> -1 in
-              if i <> -1 && j <> -1 then (
+              if i <> -1 && j <> -1 then
                 let str = String.sub line (i + 1) (j - i - 1) in
                 let ocn =
                   if String.length line > j + 2 then
@@ -153,7 +152,6 @@ let process base ic line =
                 let fn =
                   if List.length parts > 1 then List.nth parts 1 else ""
                 in
-                if ocn <> "" then Printf.eprintf "P: %s.%s %s\n" fn ocn sn;
                 if sn = "" && fn = "" then loop (input_line ic) index_l
                 else if ocn = "z" then
                   loop (input_line ic) ((fn, sn, 0) :: index_l)
@@ -161,7 +159,7 @@ let process base ic line =
                   let fn, sn, ocn, _sp, _index_s =
                     Hutil.get_real_person base "" fn sn ocn
                   in
-                  loop (input_line ic) ((fn, sn, ocn) :: index_l))
+                  loop (input_line ic) ((fn, sn, ocn) :: index_l)
               else index_l
             else index_l
           in
