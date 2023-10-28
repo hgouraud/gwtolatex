@@ -110,6 +110,32 @@ let suite =
              test "5abc  def" "5abc xyz def" "xyz" "";
              test "6abc xyz def" "6abc xyz def" "" "xx";
              test "" "" "" "" );
+           ( "replace_str2" >:: fun _ ->
+             let test aaa bbb sub1 sub2 =
+               let ccc = Sutil.replace_str2 bbb sub1 sub2 in
+               if aaa <> ccc then Printf.eprintf "Fail:(%s) (%s)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             test "1abc xyz ghi" "1abc def ghi" "def" "xyz";
+             test "1abc def ghi" "1abc def ghi" "" "xyz";
+             test "" "" "def" "";
+             test "abc%" "abc%" "%%%" "xyz";
+             test "1abc  ghi" "1abc def ghi" "def" "";
+             test "xyz 2ghi" "def 2ghi" "def" "xyz";
+             test "3abc xyz" "3abc def" "def" "xyz";
+             (*test "4abc_def" "4abc\\_{}def" "\\_{}" "_";*)
+             test "5abc  def" "5abc xyz def" "xyz" "";
+             test "6abc xyz def" "6abc xyz def" "" "xx";
+             test "" "" "" "" );
+           ( "particles" >:: fun _ ->
+             let test aaa bbb =
+               let ccc = Sutil.particles bbb in
+               if aaa <> ccc then Printf.eprintf "Fail:(%s) (%s)\n" aaa ccc;
+               assert (aaa = ccc)
+             in
+             test "Charnacé (de)" "de Charnacé";
+             test "Gouraud" "Gouraud";
+             test "" "" );
            ( "replace_utf8_bar" >:: fun _ ->
              let test aaa bbb =
                let ccc = Sutil.replace_utf8_bar bbb in

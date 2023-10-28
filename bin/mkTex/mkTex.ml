@@ -454,13 +454,11 @@ let rec process_tree_cumul och cumul tree (row, col) =
     else
       let content = get_child children in
       (* between <a...> and </a> *)
-      let fn, sn, ocn, sp, index_s = Hutil.get_real_person !my_base i p n oc in
+      let _fn, _sn, _ocn, _sp, index_s =
+        Hutil.get_real_person !my_base i p n oc content
+      in
       let str =
-        let ocn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
-        let check = Printf.sprintf "%s %s%s" fn sn ocn in
-        if (fn <> "" || sn <> "") && s <> "" && k = "" then
-          Lutil.build_index fn sn ocn sp content check
-        else if m = "SRC" || m = "DOC" then read_src_file v content
+        if m = "SRC" || m = "DOC" then read_src_file v content
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
         else if String.lowercase_ascii b <> String.lowercase_ascii !base then
@@ -484,7 +482,9 @@ let rec process_tree_cumul och cumul tree (row, col) =
     let k = Hutil.get_href_attr "k" href_attrl in
     let s = Hutil.get_href_attr "s" href_attrl in
     let str =
-      let fn, sn, ocn, sp, index_s = Hutil.get_real_person !my_base i p n oc in
+      let fn, sn, ocn, _sp, index_s =
+        Hutil.get_real_person !my_base i p n oc ""
+      in
       (* TODO lower?? *)
       let ocn = if ocn = 0 then "0" else string_of_int ocn in
       let image_label = Format.sprintf "%s.%s.%s" fn ocn sn in
@@ -625,6 +625,14 @@ let rec process_tree_cumul och cumul tree (row, col) =
                       let content = Sutil.replace '[' '{' content in
                       let content = Sutil.replace ']' '}' content in
                       (* TODO in includegraphics replace {width=xxyy} by [width=xxyy] *)
+                      let reg1 = Str.regexp {|{width=\(.*\)}|} in
+                      let content =
+                        if Str.string_match reg1 content 0 then
+                          let xxyy = Str.matched_group 1 content in
+                          let new_s = "[width=" ^ xxyy ^ "]" in
+                          Str.global_replace reg1 new_s content
+                        else content
+                      in
                       if Sutil.contains content "Hasse" then
                         Printf.eprintf "Span1: %s\n" content;
                       let content =
@@ -662,8 +670,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
                   let fn = Hutil.get_attr attributes "gw2fn" in
                   let oc = Hutil.get_attr attributes "gw2oc" in
                   let _al = Hutil.get_attr attributes "gw2al" in
-                  let fn, sn, oc, sp, index_l =
-                    Hutil.get_real_person !my_base "" fn sn oc
+                  let _fn, _sn, _oc, _sp, index_l =
+                    Hutil.get_real_person !my_base "" fn sn oc ""
                   in
                   index_l
                 in
@@ -1012,7 +1020,7 @@ let process_one_line och line =
           let oc = Hutil.get_href_attr "oc" href_attrl in
           (* get_real_person builds \index if any *)
           let _fn, _sn, _ocn, _sp, _index_s =
-            Hutil.get_real_person !my_base i p n oc
+            Hutil.get_real_person !my_base i p n oc content
           in
           let sec =
             (* -> chapter, 1-> section, ... *)

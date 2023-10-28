@@ -50,7 +50,8 @@ let open_base basename =
           exit 1
       | Some base -> base)
 
-let get_real_person base i p n oc =
+let get_real_person base i p n oc _content =
+  (* TODO check <> content *)
   let p = Name.lower p in
   let n = Name.lower n in
   let ip =
@@ -71,9 +72,8 @@ let get_real_person base i p n oc =
   let sex = Gwdb.get_sex person in
   let ocn = try Gwdb.get_occ person with Failure _ -> 0 in
   (* TODO verify uppercase! (le Fort), (Le Fort) *)
-  (* TODO if female and married, get spouse surname *)
-  (* TODO ajouter index alias *)
   let fams = Gwdb.get_family person in
+  let sn1 = Sutil.particles sn in
   let sp =
     if sex = Female && Array.length fams > 0 then
       let ifam = fams.(Array.length fams - 1) in
@@ -88,17 +88,15 @@ let get_real_person base i p n oc =
   let aliases = Gwdb.get_aliases person in
   let ind1 =
     if List.mem sn dummy_sn then Format.sprintf "\\index{%s}" fn
-    else if List.mem fn dummy_fn then Format.sprintf "\\index{%s}" sn
-    else Format.sprintf "\\index{%s, %s%s%s}" sn fn ocnn sp1
+    else if List.mem fn dummy_fn then Format.sprintf "\\index{%s}" sn1
+    else Format.sprintf "\\index{%s, %s%s%s}" sn1 fn ocnn sp1
   in
   let aliases =
     List.map
       (fun a ->
         let a = Gwdb.sou base a in
-        if List.mem sn dummy_sn then Format.sprintf "\\index{%s voir %s}" a fn
-        else if List.mem fn dummy_fn && a <> sn then
-          Format.sprintf "\\index{%s voir %s}" a sn
-        else Format.sprintf "\\index{%s voir %s, %s%s}" a sn fn ocnn)
+        if List.mem fn dummy_fn || List.mem sn dummy_sn then ""
+        else Format.sprintf "\\index{%s, {\\it{}voir} %s, %s%s}" a sn1 fn ocnn)
       aliases
   in
   let ind2 = String.concat "" aliases in

@@ -157,7 +157,7 @@ let process base ic line =
                   loop (input_line ic) ((fn, sn, 0) :: index_l)
                 else
                   let fn, sn, ocn, _sp, _index_s =
-                    Hutil.get_real_person base "" fn sn ocn
+                    Hutil.get_real_person base "" fn sn ocn ""
                   in
                   loop (input_line ic) ((fn, sn, ocn) :: index_l)
               else index_l

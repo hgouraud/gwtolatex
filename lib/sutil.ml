@@ -3,6 +3,12 @@
 
 let version = "1.0"
 
+let partics =
+  [ "d'"; "d‘"; "d’"; "Dr"; "M."; "Mr"; "Mme"; "de"; "di"; "du"; "von" ]
+
+let apostr = [ "d'"; "d‘"; "d’" ]
+(* TODO expand partics, make it a parameter *)
+
 let start_with ini i s =
   let inilen = String.length ini in
   let strlen = String.length s in
@@ -15,6 +21,23 @@ let start_with ini i s =
     else false
   in
   loop 0 i
+
+let particles sn =
+  let rec loop partics =
+    match partics with
+    | [] -> sn
+    | p :: partics ->
+        if start_with p 0 sn then
+          (* TODO test for fancy apostrophs as well *)
+          let len = String.length p in
+          let delta = if List.mem p apostr then 0 else 1 in
+          if String.length sn > len + delta then
+            String.sub sn (len + delta) (String.length sn - len - delta)
+            ^ Format.sprintf " (%s)" p
+          else sn
+        else loop partics
+  in
+  loop partics
 
 (** Read a line. If line is empty or only contains a comment (#), then read next line  *)
 let rec input_real_line ic =
@@ -185,6 +208,11 @@ let replace x y str =
     (fun c -> if c = x then Buffer.add_char b y else Buffer.add_char b c)
     str;
   Buffer.contents b
+
+let replace_str2 line sub1 sub2 =
+  if String.length sub1 > 0 && String.length line > 0 then
+    Str.global_replace (Str.regexp sub1) sub2 line
+  else line
 
 let replace_str line sub1 sub2 =
   if String.length sub1 > 0 && String.length line > 0 then
