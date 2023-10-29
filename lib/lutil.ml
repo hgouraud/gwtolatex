@@ -76,33 +76,3 @@ let escape str =
             ^ str2)
     in
     loop str ""
-
-(* ATTENTION there is alse a macro %hgindex(...) in tex/perso.txt *)
-(* ocn has been put in the form " (n)" or "" if 0 *)
-let build_index fn sn ocn sp content check =
-  (* TODO rajouter \index{Spouse-sn, fn} *)
-  (* ajouter alias *)
-  (* coordinate with Hutil.get_real_person *)
-  let sp =
-    match sp with Some sp -> Format.sprintf " (ep %s)" sp | None -> ""
-  in
-  (* cover cases with sn = . (houses) or X (boats) and ? ? *)
-  let sn1 = Sutil.particles sn in
-  match (fn, sn) with
-  | "?", "?" -> ""
-  | fn, "." | fn, "X" ->
-      Format.sprintf "{\\bf %s}" content ^ Format.sprintf "\\index{%s}" fn
-  | "Famille", sn ->
-      Format.sprintf "{\\bf %s}" content
-      ^ Format.sprintf "\\index{Famille %s}" sn1
-  | fn, sn ->
-      Format.sprintf "{\\bf %s}" content
-      ^ Format.sprintf "\\index{%s, %s%s%s}" sn1 fn ocn sp
-      ^ (if sp <> "" then Format.sprintf "\\index{%s, %s}" sp fn else "")
-      ^
-      if
-        check <> content (* TODO parametrize this *)
-        && sn <> "." && sn <> "X" && sn <> "?" && fn <> "?"
-      then
-        Format.sprintf "\\index{%s, {\\it{}voir} %s, %s%s}" content sn1 fn ocn
-      else ""

@@ -466,6 +466,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
             (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
         else if s <> "" then make_image_str s k content mode caption
         else if m = "CAL" then content ^ index_s
+        else if Sutil.contains content "includegraphics" then
+          "{\\bf " ^ content ^ "}"
         else "{\\bf " ^ content ^ "}" ^ index_s
       in
       str
@@ -633,8 +635,6 @@ let rec process_tree_cumul och cumul tree (row, col) =
                           Str.global_replace reg1 new_s content
                         else content
                       in
-                      if Sutil.contains content "Hasse" then
-                        Printf.eprintf "Span1: %s\n" content;
                       let content =
                         if tex_mode_2 then
                           String.sub content 4 (String.length content - 7)
@@ -645,8 +645,8 @@ let rec process_tree_cumul och cumul tree (row, col) =
                         try String.index_from content 0 '%'
                         with Not_found -> -1
                       in
-                      if Sutil.contains content "Hasse" then
-                        Printf.eprintf "Span2: (%d) %s\n" i content;
+                      if Sutil.contains content "orrigan" then
+                        Printf.eprintf "Tex Content: %s, (%d)\n" content i;
                       if i > 0 then
                         String.sub content 0 i
                         ^ String.sub content (i + 1)

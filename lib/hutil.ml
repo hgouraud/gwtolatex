@@ -87,16 +87,22 @@ let get_real_person base i p n oc _content =
   let ocnn = if ocn = 0 then "" else Format.sprintf " (%d)" ocn in
   let aliases = Gwdb.get_aliases person in
   let ind1 =
-    if List.mem sn dummy_sn then Format.sprintf "\\index{%s}" fn
-    else if List.mem fn dummy_fn then Format.sprintf "\\index{%s}" sn1
-    else Format.sprintf "\\index{%s, %s%s%s}" sn1 fn ocnn sp1
+    if List.mem sn dummy_sn && fn <> "" then Format.sprintf "\\index{%s}" fn
+    else if List.mem fn dummy_fn && sn1 <> "" then
+      Format.sprintf "\\index{%s}" sn1
+    else if sn1 <> "" && fn <> "" then
+      Format.sprintf "\\index{%s, %s%s%s}" sn1 fn ocnn sp1
+    else ""
   in
   let aliases =
     List.map
       (fun a ->
         let a = Gwdb.sou base a in
-        if List.mem fn dummy_fn || List.mem sn dummy_sn then ""
-        else Format.sprintf "\\index{%s, {\\it{}voir} %s, %s%s}" a sn1 fn ocnn)
+        if
+          List.mem fn dummy_fn || List.mem sn dummy_sn || a = ""
+          || (sn1 = "" && fn = "")
+        then ""
+        else Format.sprintf "\\index{%s, voir %s, %s%s}" a sn1 fn ocnn)
       aliases
   in
   let ind2 = String.concat "" aliases in
