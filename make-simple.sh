@@ -19,6 +19,7 @@ check_errs()
 
 VERBPDF="-interaction=batchmode"
 POSITIONAL_ARGS=()
+DEBUG="0"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -39,6 +40,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     -g|--gw)
       GW="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -d|--debug)
+      DEBUG="$2"
       shift # past argument
       shift # past value
       ;;
@@ -74,7 +80,7 @@ echo "Running make-simple for $FAMILY on $BASE"
 $GW/gwu ./$BASE -o ./$BASE.gw
 echo "gwc warnings available in $TMP/gwc.log"
 rm $TMP/$FAMILY.aux
-$GW2L/mkTex -family $FAMILY -base $BASE -o $TMP/$FAMILY.tex -livres $LIVRES
+$GW2L/mkTex -family $FAMILY -base $BASE -o $TMP/$FAMILY.tex -livres $LIVRES -debug $DEBUG
 pdflatex $VERBPDF -output-directory="$TMP" $TMP/$FAMILY
 check_errs $? "pdflatex"
 makeindex $TMP/$FAMILY

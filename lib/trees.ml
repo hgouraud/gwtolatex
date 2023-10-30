@@ -255,6 +255,70 @@ let get_img_name base im =
 - recompute colspan ??
 *)
 
+let expand_hrl_cells tree =
+  let rec expand row new_row =
+    match row with
+    | (w1, s1, ty1, te1, it1, im1) :: row -> (
+        match ty1 with
+        | "Hl" when s1 > 1 ->
+            Printf.eprintf "Hl: %d\n" s1;
+            let elts =
+              if s1 / 2 * 2 = s1 then
+                let rec loop acc s =
+                  if s = 0 then acc
+                  else if s <= s1 / 2 then
+                    loop ([ (w1, 1, "E", "", "", "") ] @ acc) (s - 1)
+                  else loop ([ (w1, 1, "Hc", "", "", "") ] @ acc) (s - 1)
+                in
+                loop [] s1
+              else
+                let rec loop acc s =
+                  if s = 0 then acc
+                  else if s < s1 / 2 then
+                    loop ([ (w1, 1, "E", "", "", "") ] @ acc) (s - 1)
+                  else if s = s1 / 2 then
+                    loop ([ (w1, 1, "Hl", "", "", "") ] @ acc) (s - 1)
+                  else loop ([ (w1, 1, "Hc", "", "", "") ] @ acc) (s - 1)
+                in
+                loop [] s1
+            in
+            expand row (elts @ new_row)
+        | "Hr" when s1 > 1 ->
+            Printf.eprintf "Hr: %d\n" s1;
+            let elts =
+              if s1 / 2 * 2 = s1 then
+                let rec loop acc s =
+                  if s = 0 then acc
+                  else if s <= s1 / 2 then
+                    loop ([ (w1, 1, "Hc", "", "", "") ] @ acc) (s - 1)
+                  else loop ([ (w1, 1, "E", "", "", "") ] @ acc) (s - 1)
+                in
+                loop [] s1
+              else
+                let rec loop acc s =
+                  if s = 0 then acc
+                  else if s < s1 / 2 then
+                    loop ([ (w1, 1, "Hc", "", "", "") ] @ acc) (s - 1)
+                  else if s = s1 / 2 then
+                    loop ([ (w1, 1, "Hr", "", "", "") ] @ acc) (s - 1)
+                  else loop ([ (w1, 1, "E", "", "", "") ] @ acc) (s - 1)
+                in
+                loop [] s1
+            in
+            expand row (elts @ new_row)
+        | _ -> expand row ([ (w1, s1, ty1, te1, it1, im1) ] @ new_row))
+    | _ -> List.rev (List.rev row @ new_row)
+  in
+  let tree =
+    let rec loop tree new_tree =
+      match tree with
+      | [] -> new_tree
+      | row :: tree -> loop tree (expand row [] :: new_tree)
+    in
+    loop tree []
+  in
+  List.rev tree
+
 let expand_cells tree =
   let rec expand row new_row =
     match row with
@@ -263,21 +327,36 @@ let expand_cells tree =
       :: (w3, s3, ty3, te3, it3, im3)
       :: row -> (
         match (ty1, ty2, ty3) with
-        | "X", ty2, "X" ->
-            if s1 >= 2 && s3 >= 2 then
-              expand
-                ([
-                   (w2, s2 + 2, ty2, te2, it2, im2);
-                   (w3, s3 - 1, ty3, te3, it3, im3);
-                 ]
-                @ row)
-                ([ (w1, s1 - 1, ty1, te1, it1, im1) ] @ new_row)
-            else
-              expand
-                ([ (w2, s2, ty2, te2, it2, im2); (w3, s3, ty3, te3, it3, im3) ]
-                @ row)
-                ([ (w1, s1, ty1, te1, it1, im1) ] @ new_row)
-        | _ ->
+        | ty1, ty2, ty3
+          when ty1 = "E" && s1 = 1 && ty3 = "E" && s3 = 1 && ty2 <> "E"
+               && (te2 <> "" || it2 <> "" || im2 <> "") ->
+            expand row ([ (w2, s2 + 2, ty2, te2, it2, im2) ] @ new_row)
+        | ty1, ty2, ty3
+          when ty1 = "E" && s1 >= 2 && ty3 = "E" && s3 = 1 && ty2 <> "E"
+               && (te2 <> "" || it2 <> "" || im2 <> "") ->
+            expand row
+              ([
+                 (w1, s1 - 1, ty1, te1, it1, im1);
+                 (w2, s2 + 2, ty2, te2, it2, im2);
+               ]
+              @ new_row)
+        | ty1, ty2, ty3
+          when ty1 = "E" && s1 = 1 && ty3 = "E" && s3 >= 2 && ty2 <> "E"
+               && (te2 <> "" || it2 <> "" || im2 <> "") ->
+            expand
+              ([ (w3, s3 - 1, ty3, te3, it3, im3) ] @ row)
+              ([ (w2, s2 + 2, ty2, te2, it2, im2) ] @ new_row)
+        | ty1, ty2, ty3
+          when ty1 = "E" && s1 >= 2 && ty3 = "E" && s3 >= 2 && ty2 <> "E"
+               && (te2 <> "" || it2 <> "" || im2 <> "") ->
+            expand
+              ([ (w3, s3 - 1, ty3, te3, it3, im3) ] @ row)
+              ([
+                 (w2, s2 + 2, ty2, te2, it2, im2);
+                 (w1, s1 - 1, ty1, te1, it1, im1);
+               ]
+              @ new_row)
+        | ty1, ty2, ty3 ->
             expand
               ([ (w2, s2, ty2, te2, it2, im2); (w3, s3, ty3, te3, it3, im3) ]
               @ row)
@@ -297,15 +376,17 @@ let expand_cells tree =
 let print_tree base tree mode textwidth textheight _margin debug fontsize
     sideways imgwidth twopages =
   if debug <> 0 then
-    Printf.eprintf "Print Tree mode=%d, depth=%d\n" mode (List.length tree);
+    Printf.eprintf "Print Tree g=%d, depth=%d\n" mode (List.length tree);
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
     exit 1);
   if mode = 1 then
+    let _nb_col = List.length (List.nth tree 0) in
     let cols = find_empty_columns tree in
     (*let tree = split_rows_with_vbar tree in*)
     let tree = expand_cells tree in
+    let tree = expand_hrl_cells tree in
     let non_empty_col_nbr =
       List.fold_left (fun a c -> if c.[0] = 'F' then a + 1 else a) 0 cols
     in
@@ -314,8 +395,9 @@ let print_tree base tree mode textwidth textheight _margin debug fontsize
       loop "ccccc" (List.length cols)
     in
     let cell_wid =
-      (if sideways then textheight *. if twopages then 3.0 else 1.0
-       else textwidth)
+      ((if sideways then textheight *. if twopages then 2.0 else 1.0
+        else textwidth)
+      -. 4.0)
       /. Float.of_int non_empty_col_nbr
     in
     let half_cell_wid = cell_wid /. 2.0 in
@@ -421,7 +503,7 @@ let print_tree base tree mode textwidth textheight _margin debug fontsize
                     | "Im" ->
                         Format.sprintf
                           {|\\begin{center}
-                          uu\\includegraphics[width=%1.2fcm]{%s}
+                          \\includegraphics[width=%1.2fcm]{%s}
                           \\end{center}|}
                           imgwidth (get_img_name base im)
                     | _ -> "??")
@@ -436,7 +518,9 @@ let print_tree base tree mode textwidth textheight _margin debug fontsize
         "" tree
     ^ tabular_e
   else
-    let tree = split_rows_with_vbar tree in
+    (*let tree = split_rows_with_vbar tree in*)
+    let tree = expand_cells tree in
+    let tree = expand_hrl_cells tree in
     let tree, _n =
       List.fold_left
         (fun (acc1, r) row ->

@@ -246,7 +246,8 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
   match im_type with
   | Portrait | Imagek ->
       (* TODO manage images location *)
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n" !imgwidth
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\\\\\n"
+        !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "images"; !base ])
         Filename.dir_sep
@@ -254,7 +255,8 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
         (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
         "jpg"
   | Images ->
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !imgwidth
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\\\\\n"
+        !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
         Filename.dir_sep name
@@ -526,7 +528,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
             let content = get_child children in
             Lutil.simple_tag_1 t content
         (* TODO check here we are terminating something!! *)
-        | "br" -> " \\\\\n"
+        | "br" -> "\\leavevmode\\\\\n"
         | "sup" ->
             let content = get_child children in
             if content <> "" then Format.sprintf "\\textsuperscript{%s}" content
@@ -835,7 +837,7 @@ let one_command och line =
       output_string och
         (Format.sprintf "Newwidth {\\bf %s}\n" (* TODO *)
            (if param <> "" then param else "7cm"))
-  | "Arbres" ->
+  | "Arbres" | "Trees" ->
       if param = "on" || param = "On" then (
         imgwidth := 1.5;
         arbres := true)
@@ -861,7 +863,7 @@ let one_command och line =
   | "Hrule" -> hrule := param = "on" || param = "On"
   | "ImageLabels" -> (
       image_label := try int_of_string param with Failure _ -> 3)
-  | "ImageWidth" -> imgwidth := Float.of_string param
+  | "ImgWidth" -> imgwidth := Float.of_string param
   | "Input" -> (
       let param = Sutil.replace_str param "%%%LIVRES%%%" !livres in
       let param = Sutil.replace_str param "%%%GW2L_DIST%%%" !gw2l_dist in
@@ -897,13 +899,6 @@ let one_command och line =
       out "subsubsection" param;
       incr subsubsection;
       current_level := 3
-  | "Trees" ->
-      if param = "on" || param = "On" then (
-        imgwidth := 1.5;
-        arbres := true)
-      else (
-        imgwidth := imgwidth_default;
-        arbres := false)
   | "Version" -> output_string och (Sutil.version ^ "\n")
   | "WideImages" ->
       if param = "on" || param = "On" then (
