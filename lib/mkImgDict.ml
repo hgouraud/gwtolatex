@@ -163,11 +163,13 @@ let process dict1 ic line =
                 let i = try String.index fn '(' with Not_found -> -1 in
                 let j = try String.index fn ')' with Not_found -> -1 in
                 let fn =
-                  if i <> -1 && j <> -1 then String.sub fn 0 (i - 1) else fn
+                  if i <> -1 && j <> -1 && String.length fn > i + 2 &&
+                  fn.[i + 1] = 'e' && fn.[i + 2] = 'p' 
+                  then String.sub fn 0 (i - 1) else fn
                 in
+                let sn = undo_particle sn in
                 let sn = Sutil.replace ' ' '_' sn in
                 let fn = Sutil.replace ' ' '_' fn in
-                let sn = undo_particle sn in
                 let (key : key) =
                   {pk_first_name=fn; pk_surname=sn; pk_occ=int_of_string ocn }
                 in

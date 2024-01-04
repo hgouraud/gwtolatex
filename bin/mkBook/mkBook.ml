@@ -95,12 +95,6 @@ let main () =
     version !base !family !debug;
   flush stderr;
 
-  (* for my convenience. Win env may differ *)
-  if
-    Sys.argv.(0) = "_build/install/default/bin/gwl"
-    || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
-  then dev := true;
-
   let print_chan channel =
     let rec loop () =
       let () = print_endline (input_line channel) in
@@ -126,12 +120,6 @@ let main () =
     close_in chan;
     s
   in
-
-  if !verbose then
-    for i = 0 to Array.length Sys.argv - 1 do
-      Printf.printf "[%i] %s " i Sys.argv.(i)
-    done;
-  flush stderr;
 
   (* install tex templates in bases/etc *)
   (* on excute dans le repo (dev) ou dans bases_dir *)

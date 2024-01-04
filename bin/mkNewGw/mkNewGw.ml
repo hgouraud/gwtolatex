@@ -203,6 +203,8 @@ let read_family ic = function
   | Some (str, "notes" :: l) -> (
       let surname, l = get_name str l in
       let first_name, occ, l = get_fst_name str l in
+      if surname = "Guérin" || surname = "Guerin" then
+        Printf.eprintf "%s, %s %s\n" str surname first_name;
       if l <> [] then failwith "str"
       else
         match read_line ic with
@@ -233,9 +235,12 @@ let output_string_nl oc str =
 let has_notes = ref []
 
 let notes_header oc (key : MkImgDict.key) =
+  let sn = Sutil.replace ' ' '_' key.pk_surname in
+  let fn = Sutil.replace ' ' '_' key.pk_first_name in
+  if sn = "Guerin" || fn = "Guérin" then
+    Printf.eprintf "notes for %s %s\n" fn sn;
   output_string oc 
-    (Format.sprintf "notes %s %s%sbeg\n"
-      key.pk_surname key.pk_first_name
+    (Format.sprintf "notes %s %s%sbeg\n" sn fn
       (if key.pk_occ <> 0 then Format.sprintf ".%d\n" key.pk_occ else "\n"))
 
 (** prints the list of images on which person appears
@@ -248,8 +253,10 @@ let notes_header oc (key : MkImgDict.key) =
 *)
 
 let print_img_list oc images_l dict1 =
-  output_string oc ((Format.sprintf "\\italic{Présent(e) aussi sur %s ")
-    (if List.length images_l = 1 then "la photo" else "les photos"));
+  output_string oc ((Format.sprintf {|
+<p>
+<span style="display:none" mode="tex">\textit[Présent(e) aussi sur %s |})
+(if List.length images_l = 1 then "la photo" else "les photos"));
   let img_l =
     List.fold_left ( fun acc image_id ->
       let (anx_page, desc, _fname, _index_l) = Hashtbl.find dict1 image_id in
@@ -260,7 +267,7 @@ let print_img_list oc images_l dict1 =
     ) [] images_l
   in
   output_string oc (String.concat ",\n" img_l);
-  output_string oc "}\n"
+  output_string oc "]</span>\n"
 
 (** add image information at end of notes *)
 let print_notes oc key notes dict1 dict2 cnt =
@@ -358,8 +365,8 @@ let main () =
     !base !debug;
   flush stderr;
 
-  let in_file = String.concat Filename.dir_sep [ !livres; !base ^ ".gw" ] in
-  let out_file = String.concat Filename.dir_sep [ "."; !base ^ "-new.gw" ] in
+  let in_file = Filename.concat "." (!base ^ ".gw")  in
+  let out_file = Filename.concat "." (!base ^ "-new.gw") in
 
   let ic = open_in in_file in
   let oc = open_out out_file in
