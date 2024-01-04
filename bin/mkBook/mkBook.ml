@@ -1,7 +1,7 @@
-(* Copyright (c) 2013 H.Gouraud *)
+(* Copyright (c) 2024 H.Gouraud *)
 
 (* execution context *)
-let dist_dir = ref (Filename.concat "." "gw2l_dist")
+let dist_dir = ref (try Sys.getenv "GW2L_DIST" with Not_found -> "./gw2l_dist")
 let base = ref "chausey"
 let family = ref ""
 let out_file = ref ""
@@ -13,55 +13,29 @@ let index = ref 0
 let verbose = ref false
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
-let livres = ref (try Sys.getenv "GWTL_LIVRES" with Not_found -> "./Livres")
-let bases = ref (try Sys.getenv "GWTL_BASES" with Not_found -> "./")
-let gw_dir = ref (try Sys.getenv "GW" with Not_found -> "./")
+let livres = ref (try Sys.getenv "GW2L_LIVRES" with Not_found -> "./Livres")
+let bases = ref (try Sys.getenv "GW2L_BASES" with Not_found -> "./")
+let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
+let gw2l_dir = ref (try Sys.getenv "GW2L_BIN" with Not_found -> "./")
 let test = ref false
 let test_nb = ref 0
 let version = "1.0"
 
 (*
-Make a book for -family using data from -base with options
+Make a book for -family using data from -base with gw2l_options
 Families info are stored in -livres
 Bases are in -bases
 
 The process is decomposed as follows
-- run makeImgDict to collect image information from family-inputs/group-index.tex (or txt)
-- run gw/gwu on family to create family.gw
-- run makeNewGw to create family-new.gw containing images reference data
-- run gw/gwc on family-new.gw to create new temporary base
-- run gw2l on family-new to create family.tex file
+- run gw/gwu on base to create base.gw
+- run gw2l/mkNewGw to create base-new.gw containing images reference data
+- run gw/gwc on base-new.gw to create new temporary base
+- run gw2l/mkTex on base-new and family to create family.tex file
 - run pdflatex on family.tex
 - run tweekIndex on family.ind to adjust/merge index entries
 - run pdflatex to obtain final version
 
-
-# needs : a working base (Chausey-new), a txt file (Chausey.txt) storing requests to the base
-# reads in Chausey-new-ImgDict1.pkl (created by pass 1, used by pass 2)
-# reads in Chausey-new-ImgDict2.pkl (created from Chausey-inputs/index-groupes.txt)
-#          Chausey-new-IndexDict.pkl
-#          Chausey-inputs/index-groupes-out.txt (read in for addition into index)
-# produces Chausey.pdf
-# A-Make_genea-generic         Base        Family  nb-photos/page   index-group-photos
-# Input: Chausey.txt
-# Input: Nom-Prénoms.txt
-# Input: Chausey-inputs/index-groupes-out.txt
-# Input: Chausey-new-ImgDict2.pkl
-# Input  (pass2): Chausey-new-ImgDict1.pkl
-# Input: Cleanup files: Generic-cleanup.txt, Chausey-cleanup.txt
-# Output (pass1): Chausey-new-ImgDict1.pkl
-# Output: Chausey.tex
-# Output: Chausey.pdf
-# 
-# Deux traitements supplémentaires sur l'index pour le compacter
-# Make-tweek-index-sorting.py
-# Make-tweek-index-merge.py
-#
-
-pdflatex   $MODE $FAMILY
-makeindex $FAMILY
-pdflatex  $MODE $FAMILY
-
+(from the old Python solution)
 Make-tweek-index-sorting.py $BASE $FAMILY
 mv ./$FAMILY.idx ./$FAMILY-idx.sav
 mv -f ./$FAMILY-out.idx ./$FAMILY.idx
@@ -79,7 +53,7 @@ let show_process_time start =
 
 let main () =
   let usage =
-    "Usage: " ^ Filename.basename Sys.argv.(0) ^ " [options] where options are:"
+    "Usage: " ^ Filename.basename Sys.argv.(0) ^ " [gw2l_options] where gw2l_options are:"
   in
   let speclist =
     [
@@ -117,7 +91,7 @@ let main () =
   Arg.parse speclist anonfun usage;
 
   let base_new = !base ^ "-new" in
-  Printf.eprintf "\nThis is mkBook version %s on base %s for family %s (%d)\n"
+  Printf.eprintf "\nThis is \027[32mmkBook\027[0m version %s on base %s for family %s (%d)\n"
     version !base !family !debug;
   flush stderr;
 
@@ -135,7 +109,7 @@ let main () =
     try loop () with End_of_file -> close_in channel
   in
 
-  let exec cmd =
+  let _exec cmd =
     let ocaml_stdout, ocaml_stdin, ocaml_stderr =
       Unix.open_process_full cmd [||]
     in
@@ -144,7 +118,14 @@ let main () =
     print_chan ocaml_stderr
   in
 
-  Printf.printf "test\n";
+  let _string_of_command () =
+    let tmp_file = Filename.temp_file "" ".txt" in
+    let _ = Sys.command @@ "minisat test.txt | grep 'SATIS' >" ^ tmp_file in
+    let chan = open_in tmp_file in
+    let s = input_line chan in
+    close_in chan;
+    s
+  in
 
   if !verbose then
     for i = 0 to Array.length Sys.argv - 1 do
@@ -173,62 +154,46 @@ let main () =
      with Sys_error _ -> Printf.eprintf "Failed to create tmp dir\n");
   flush stderr;
 
+  (* collect options *)
+  let gw2l_options = [] in
+  let gw2l_options = if !livres <> "" then
+    (Format.sprintf "-livres %s" !livres) :: gw2l_options else gw2l_options
+  in
+  let gw2l_options = if !family <> "" then
+    (Format.sprintf "-family %s" !family) :: gw2l_options else gw2l_options
+  in
+  let gw2l_options = if !base <> "" then
+    (Format.sprintf "-base %s" !base) :: gw2l_options else gw2l_options
+  in
+  let gw2l_options = if !verbose then "-v" :: gw2l_options else gw2l_options in
+  let gw2l_options = String.concat " " gw2l_options in
+
   (* Create base.gw file *)
   if !verbose then Printf.eprintf "Create %s.gw file\n" !base;
-  Printf.eprintf "Gw_dir: %s\n" !gw_dir;
   let gwu = Filename.concat !gw_dir "gwu" in
-  let out = Filename.concat !bases !base ^ ".gw" in
+  let out = Filename.concat "." !base ^ ".gw" in
   let make_gw_file = Format.sprintf "%s -o %s %s" gwu out !base in
-
-  exec make_gw_file;
-
-  Printf.eprintf "After exec\n";
-  (* rm imgDict ?? *)
-  flush stderr;
-
-  (* run mkImgDict *)
-  if !verbose then Printf.eprintf "Run mkImgDict\n";
-  let in_file =
-    String.concat Filename.dir_sep
-      [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
-  in
-  let out_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "-images_dict.tmp" ]
-  in
-  let make_imgDict =
-    Format.sprintf "%s%smkImgDict -in %s -o %s" !dist_dir Filename.dir_sep
-      in_file out_file
-  in
-  if !verbose then Printf.eprintf "Commd: %s\n" make_imgDict;
-  let error = Sys.command make_imgDict in
+  if !verbose then Printf.eprintf "Commd: %s\n" make_gw_file;
+  let error = Sys.command make_gw_file in
   if error > 0 then (
-    Printf.eprintf "Error while creating imgDict (%d)\n" error;
+    Printf.eprintf "Error while creating .gw file (%d)\n" error;
     exit 0);
   flush stderr;
 
-  let _string_of_command () =
-    let tmp_file = Filename.temp_file "" ".txt" in
-    let _ = Sys.command @@ "minisat test.txt | grep 'SATIS' >" ^ tmp_file in
-    let chan = open_in tmp_file in
-    let s = input_line chan in
-    close_in chan;
-    s
-  in
 
-  (* make new base *)
+  (* make new .gw file *)
   if !verbose then Printf.eprintf "Make new %s-new.gw file\n" !base;
-  let make_new_gw_file =
-    Format.sprintf "%s%s/mkNewGw %s\n" !dist_dir Filename.dir_sep !base
-  in
+  let make_new_gw = Filename.concat !dist_dir "mkNewGw" in
+  let make_new_gw_file = Format.sprintf "%s %s\n" make_new_gw gw2l_options in
   if !verbose then Printf.eprintf "Commd: %s\n" make_new_gw_file;
   let error = Sys.command make_new_gw_file in
   if error > 0 then (
-    Printf.eprintf "Error while creating new gw file (%d)\n" error;
+    Printf.eprintf "Error while creating new gw file (%d)\n\n" error;
     exit 0);
   flush stderr;
 
   (* make new base from base-new.gw *)
-  if !verbose then Printf.eprintf "Make new bae: %s-new.gw\n" !base;
+  if !verbose then Printf.eprintf "Make new base: %s-new.gw\n" !base; flush stderr;
   let gwc = Filename.concat !gw_dir "gwc" in
   let in_file = String.concat Filename.dir_sep [ "."; base_new ^ ".gw" ] in
   let log_file = String.concat Filename.dir_sep [ "."; "tmp"; "gwc.log" ] in
@@ -238,18 +203,26 @@ let main () =
   if !verbose then Printf.eprintf "Commd: %s\n" make_new_base;
   let error = Sys.command make_new_base in
   if error > 0 then (
-    Printf.eprintf "Error while creating new base (%d)\n" error;
+    Printf.eprintf "Error while creating new base (%d)\n\n" error;
     exit 0);
   flush stderr;
 
   (* run mkTex *)
   (* output and aux files are in ./tmp  (mkdir ./tmp if needed) *)
-  if !verbose then Printf.eprintf "Run MkTeX\n";
-  let gwl = String.concat Filename.dir_sep [ "."; "gw2l_dir"; "gwl" ] in
-  let make_tex_file =
-    Format.sprintf "%s -base %s -family %s -livres %s" gwl base_new !family
-      !livres
+  if !verbose then Printf.eprintf "Run MkTeX\n"; flush stderr;
+  let mkTex_exe =
+    if !dev then "_build/default/bin/mkTex/mkTex.exe"
+    else Filename.concat !gw2l_dir "mkTex"
   in
+  let gw2l_options =
+    Str.global_replace
+      (Str.regexp ("-base " ^ !base)) ("-base " ^ !base ^ "-new")
+      gw2l_options
+  in
+  let make_tex_file =
+    Format.sprintf "%s %s" mkTex_exe gw2l_options
+  in
+  if !verbose then Printf.eprintf "Commd: %s\n" make_tex_file;
   let error = Sys.command make_tex_file in
   if error > 0 then (
     Printf.eprintf "Error while creating .tex file (%d)\n" error;
@@ -259,69 +232,107 @@ let main () =
   (* run pdflatex *)
   if !verbose then Printf.eprintf "Run pdflatex\n";
   let aux_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "-new.aux" ]
+    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".aux" ]
   in
   let do_rm_aux = Printf.sprintf "rm %s" aux_file in
   let _ = Sys.command do_rm_aux in
   let mode = if !verbose then "" else "-interaction=batchmode" in
   let tex_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "-new.tex" ]
+    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".tex" ]
   in
   let make_pdf_file =
     Printf.sprintf "pdflatex -output-directory=%s %s %s"
-      (String.concat Filename.dir_sep [ "."; "tmp" ])
+      (String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp" ])
       mode tex_file
   in
+  if !verbose then Printf.eprintf "Commd: %s\n" make_pdf_file;
   let error = Sys.command make_pdf_file in
   if error > 0 then (
-    Printf.eprintf "Error while creating .pdf file (%d)\n" error;
+    Printf.eprintf "Error while creating .pdf file (%d)\n\n" error;
     exit 0);
   flush stderr;
 
   (* run makeindex *)
   if !verbose then Printf.eprintf "Run makeindex\n";
   let idx_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "-new.idx" ]
+    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".idx" ]
   in
   (* makeindex does not like absolute paths! *)
   let make_index = Printf.sprintf "makeindex %s" idx_file in
+  if !verbose then Printf.eprintf "Commd: %s\n" make_index;
   let error = Sys.command make_index in
   if error > 0 then (
-    Printf.eprintf "Error while creating index file (%d)\n" error;
+    Printf.eprintf "Error while creating index file (%d)\n\n" error;
     exit 0);
   flush stderr;
 
-  (* run mkTweekInd *)
+  (* run mkTweekIndMerge *)
   if !verbose then Printf.eprintf "Run mkTweekInd\n";
-  let ind_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "-new.ind" ]
+  let tweek_index_exe =
+    if !dev then "_build/default/bin/mkTweekIndMerge/mkTweekIndMerge.exe"
+    else Filename.concat !gw2l_dir "mkTweekIndMerge"
   in
-  let ind_file_tmp =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "-new.ind.tmp" ]
+  let idx_file =
+    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".idx" ]
+  in
+  let idx_file_tmp =
+    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".idx.tmp" ]
   in
   (* makeindex does not like absolute paths! *)
-  let move_index = Printf.sprintf "mv %s %s" ind_file ind_file_tmp in
-  let tweek_index = Printf.sprintf "mkTweekInd %s" ind_file_tmp in
+  let move_index = Printf.sprintf "mv %s %s" idx_file idx_file_tmp in
+  let tweek_index = Printf.sprintf "%s %s" tweek_index_exe gw2l_options in
+  if !verbose then Printf.eprintf "Commd: %s\n" move_index;
+  if !verbose then Printf.eprintf "Commd: %s\n" tweek_index;
   let _ = Sys.command move_index in
   let error = Sys.command tweek_index in
   if error > 0 then (
-    Printf.eprintf "Error while merging index file (%d)\n" error;
+    Printf.eprintf "Error while merging index file (%d)\n\n" error;
     exit 0);
+  let move_index_back = Printf.sprintf "mv %s %s" idx_file_tmp idx_file in
+  if !verbose then Printf.eprintf "Commd: %s\n" move_index_back;
+  let _ = Sys.command move_index_back in
 
   flush stderr;
+
+  (* run mkTweekIndSort *)
+  if !verbose then Printf.eprintf "Run mkTweekIndSort\n";
+  let tweek_index_exe =
+    if !dev then "_build/default/bin/mkTweekIndSort/mkTweekIndSort.exe"
+    else Filename.concat !gw2l_dir "mkTweekIndSort"
+  in
+  let ind_file =
+    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".ind" ]
+  in
+  let ind_file_tmp =
+    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".ind.tmp" ]
+  in
+  (* makeindex does not like absolute paths! *)
+  let move_index = Printf.sprintf "mv %s %s" ind_file ind_file_tmp in
+  let tweek_index = Printf.sprintf "%s %s" tweek_index_exe gw2l_options in
+  if !verbose then Printf.eprintf "Commd: %s\n" move_index;
+  if !verbose then Printf.eprintf "Commd: %s\n" tweek_index;
+  let _ = Sys.command move_index in
+  let error = Sys.command tweek_index in
+  if error > 0 then (
+    Printf.eprintf "Error while sorting index file (%d)\n\n" error;
+    exit 0);
+  flush stderr;
+  let move_index_back = Printf.sprintf "mv %s %s" ind_file_tmp ind_file in
+  if !verbose then Printf.eprintf "Commd: %s\n" move_index_back;
+  let _ = Sys.command move_index_back in
 
   (* run pdflatex second time *)
   if !verbose then Printf.eprintf "Run pdflatex second time\n";
   let error = Sys.command make_pdf_file in
   if error > 0 then (
-    Printf.eprintf "Error while second pdflatex run (%d)\n" error;
+    Printf.eprintf "Error during second pdflatex run (%d)\n\n" error;
     exit 0);
   flush stderr;
 
   (* move pdf to livres *)
   if !verbose then Printf.eprintf "Move .pdf file to Livres\n";
   let pdf_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ "-new.pdf" ]
+    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".pdf" ]
   in
   let final_pdf_file =
     String.concat Filename.dir_sep [ !livres; !family ^ ".pdf" ]
@@ -329,7 +340,7 @@ let main () =
   let do_mv_pdf = Printf.sprintf "mv %s %s" pdf_file final_pdf_file in
   let error = Sys.command do_mv_pdf in
   if error > 0 then (
-    Printf.eprintf "Error while moving pdf file(%d)\n" error;
+    Printf.eprintf "Error while moving pdf file(%d)\n\n" error;
     exit 0);
   flush stderr;
 

@@ -1,8 +1,7 @@
 TITLE=Régates de Chausey de 1922
-<table>
-<tr>
-<td width=48%%>
-
+<div class="container" style="column-count:2;column-gap:50px">
+<div class="row">
+<div class="column">
 <p align="center"> LES RÉGATES DE CHAUSEY (1922) </p>
 
 Renouant la tradition après une interruption de près de 20 années,
@@ -46,10 +45,8 @@ En songeant aux distributions de gâteaux et brioches, comme en regardant
 les jolies bibelots qu'ils conserveront précieusement, les petits insulaires
 souhaitent le retour de semblables fêtes tous les dimanches.
 
-</td>
-<td width=4%%></td>
-
-<td width=48%%>
+</div>
+<div class="column">
 
 Le soir, la distribution des prix se fit à l'[[hotel/du fort/Hôtel du
 Fort]]. La grande et belle salle était comble, et c'est au son de la
@@ -99,8 +96,8 @@ J. Q.
 <i>Course d'honneur, canots 12 et 11 pouces (sic)</i> : - 1er, 2e et 3e prix, 1 objet d'art.
 
 (1) Il reste une incertitude sur certains noms&nbsp;: par exemple, Melle Leperchois est elle Eugénie (ep Collet) ou [[marie/leperchois/Marie]] (ep Batany)? Est-ce Louis ou Léopold qui a gagné la course des Canots 11 pieds?
-</td>
-</tr>
-</table>
+</div>
+</div>
+</div>
 
 <a href="%sm=IMH;s=regates-22-compte-rendu.jpg">Original</a>.

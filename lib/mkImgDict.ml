@@ -1,5 +1,4 @@
 (* Copyright (c) 2013 H.Gouraud *)
-open Gwtolatex
 
 let basename = ref "chausey"
 let family = ref ""
@@ -12,12 +11,26 @@ let verbose = ref false
 let debug = ref 0
 let test_nb = ref 0
 
-let show_process_time start =
-  let process_time = Unix.gettimeofday () -. start in
-  Format.sprintf "%.3f" process_time
+type key = { pk_first_name : string; pk_surname : string; pk_occ : int }
+(** Key to refer a person's definition *)
+
+let undo_particle sn =
+  let i = try String.index sn '(' with Not_found -> -1 in
+  let j = try String.index sn ')' with Not_found -> -1 in
+  let particle = if i <> -1 && j <> -1 then String.sub sn (i + 1)(j - i - 1) else "" in
+  let surname = if i <> -1 && j <> -1 then String.sub sn 0 (i - 1) else sn in
+  let apostr =
+      j > 0 && sn.[j] = '\'' ||
+      (j > 3 &&
+       Char.code sn.[j - 3] = 0xE0 &&
+       Char.code sn.[j - 2] = 0x80 &&
+      (Char.code sn.[j - 1] = 0x93 || Char.code sn.[j - 1] = 0x94))
+  in
+  if particle = "" then sn
+  else Format.sprintf "%s%s%s" particle (if apostr then "" else " ") surname
 
 (*
-Read Livres/family-input/index-groups.tex
+Read Livres/family-input/who_is_where.tex
 # n;texte descriptif;nom-de-fichier.jpg
 # n = numero de page de l'annexe,
 # ou 0 pour les photos dans le corps du document
@@ -102,34 +115,23 @@ let read_or_create_channel ?magic ?(wait = false) fname read write =
         close_out oc;
         v)
 
-let _read_or_create_value ?magic ?wait fname create =
-  let read ic = Marshal.from_channel ic in
-  let write oc =
-    let v = create () in
-    Marshal.to_channel oc v [ Marshal.No_sharing; Marshal.Closures ];
-    v
-  in
-  try read_or_create_channel ?magic ?wait fname read write with _ -> create ()
-
-let dict1 = Hashtbl.create 100
-
-(* # uid;n;texte descriptif;nom-de-fichier.jpg *)
+(* # image_id;n;texte descriptif;nom-de-fichier.jpg *)
 (* # voir ... *)
 (* \index{X, Y}/z  ;z indique N° d'occurrence, "z" si ?? *)
 
-let process base ic line =
+let process dict1 ic line =
   try
     let parts = String.split_on_char ';' line in
     if line = "" then ()
     else if List.length parts <> 4 then
       Printf.eprintf "Bad image definition %s\n" line
     else
-      let uid = List.nth parts 0 in
+      let image_id = List.nth parts 0 in
       let anx_page = List.nth parts 1 in
       let desc = List.nth parts 2 in
       let fname = List.nth parts 3 in
-      if Hashtbl.mem dict1 uid then
-        Printf.eprintf "Duplicate image definition %s, %s\n" uid desc
+      if Hashtbl.mem !dict1 image_id then
+        Printf.eprintf "Duplicate image definition %s, %s\n" image_id desc
       else
         let line = Sutil.input_real_line ic in
         let index_l =
@@ -143,8 +145,9 @@ let process base ic line =
                 let ocn =
                   if String.length line > j + 2 then
                     String.sub line (j + 2) (String.length line - j - 2)
-                  else ""
+                  else "0"
                 in
+                let ocn = if ocn = "z" then "-1" else ocn in
                 let parts = String.split_on_char ',' str in
                 let sn =
                   if List.length parts > 0 then List.nth parts 0 else ""
@@ -152,95 +155,75 @@ let process base ic line =
                 let fn =
                   if List.length parts > 1 then List.nth parts 1 else ""
                 in
+                let fn =
+                  if String.length fn > 1 && fn.[0] = ' '
+                  then String.sub fn 1 (String.length fn - 1)
+                  else fn
+                in
+                let i = try String.index fn '(' with Not_found -> -1 in
+                let j = try String.index fn ')' with Not_found -> -1 in
+                let fn =
+                  if i <> -1 && j <> -1 then String.sub fn 0 (i - 1) else fn
+                in
+                let sn = Sutil.replace ' ' '_' sn in
+                let fn = Sutil.replace ' ' '_' fn in
+                let sn = undo_particle sn in
+                let (key : key) =
+                  {pk_first_name=fn; pk_surname=sn; pk_occ=int_of_string ocn }
+                in
                 if sn = "" && fn = "" then loop (input_line ic) index_l
-                else if ocn = "z" then
-                  loop (input_line ic) ((fn, sn, 0) :: index_l)
-                else
-                  let fn, sn, ocn, _sp, _index_s =
-                    Hutil.get_real_person base "" fn sn ocn ""
-                  in
-                  loop (input_line ic) ((fn, sn, ocn) :: index_l)
+                else loop (input_line ic) (key :: index_l)
               else index_l
             else index_l
           in
           loop line []
         in
-        Hashtbl.add dict1 uid (anx_page, desc, fname, index_l)
+        Hashtbl.add !dict1 image_id (anx_page, desc, fname, index_l)
   with
   | Failure _ -> Printf.eprintf "Bad image definition %s\n" line
   | End_of_file -> ()
 
-let main () =
-  let usage =
-    "Usage: " ^ Filename.basename Sys.argv.(0) ^ " [options] where options are:"
+let print_key key =
+  Printf.eprintf "(%s) (%s) (%d)\n"
+    key.pk_surname key.pk_first_name key.pk_occ
+
+(** dict1 image_id, (annex_page, description, file_name, person_list)
+    dict2 person_key, images_id list
+    dict3 file_name, image_id *)
+let create_images_dicts img_file =
+  let dict1 = ref (Hashtbl.create 100) in
+  let dict2 = Hashtbl.create 100 in
+  let dict3 = Hashtbl.create 100 in
+
+  let ic = open_in img_file in
+  let rec loop line =
+    match line with
+    | Some line -> process dict1 ic line; loop (Sutil.read_line ic)
+    | None -> close_in ic
   in
-  let speclist =
-    [
-      ("-bases", Arg.String (fun x -> bases := x), " Where are bases.");
-      ("-base", Arg.String (fun x -> basename := x), " Choose base.");
-      ("-family", Arg.String (fun x -> family := x), " Choose family.");
-      ("-famille", Arg.String (fun x -> family := x), " Choose family.");
-      ( "-livres",
-        Arg.String (fun x -> livres := x),
-        " Where are the families files." );
-      ( "-out",
-        Arg.String (fun x -> out_file := x),
-        " Name of the result (default family.idct)." );
-      ("-dev", Arg.Set dev, " Run in the GitHub repo.");
-      ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
-      ("-v", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
-      ( "-test",
-        Arg.Int
-          (fun x ->
-            test_nb := x;
-            test := true),
-        " Choose test file." );
-    ]
+  loop (Sutil.read_line ic);
+
+  (* dict1 has been built, now we build the inverse indexes *)
+  Hashtbl.iter (fun image_id (_anx_page, _desc, fname, index_l) ->
+    Hashtbl.add dict3 fname image_id;
+    let rec loop index_l =
+      match index_l with
+      | [] -> ()
+      | key :: index_l ->
+          if !verbose then print_key key;
+          match Hashtbl.find_opt dict2 key with
+          | Some x -> Hashtbl.replace dict2 key (image_id :: x)
+          | None -> Hashtbl.add dict2 key [image_id];
+          loop index_l;
+    in 
+    loop index_l) !dict1;
+  let img_name_l =
+    Hashtbl.fold (fun name id acc -> (name, id) :: acc) dict3 []
   in
-  let start_time = Unix.gettimeofday () in
-  let speclist = List.sort compare speclist in
-  let speclist = Arg.align speclist in
-  let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
-  Arg.parse speclist anonfun usage;
-
-  let base = Hutil.open_base (Filename.concat "." !basename) in
-
-  (* for my convenience. Win env may differ *)
-  if
-    Sys.argv.(0) = "_build/install/default/bin/mkImgDict"
-    || Sys.argv.(0) = "_build\\install\\default\\bin\\mkImgDict.exe"
-  then dev := true;
-
-  if !verbose then
-    for i = 0 to Array.length Sys.argv - 1 do
-      Printf.printf "[%i] %s " i Sys.argv.(i)
-    done;
-
-  Printf.eprintf "\nThis is mkImgDict version %s for %s (%d)\n" Sutil.version
-    !family !debug;
-  flush stderr;
-
-  let in_file =
-    String.concat Filename.dir_sep
-      [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
+  let img_name_l = List.sort_uniq compare img_name_l in
+  let img_name_l =
+    List.sort_uniq (fun (_name1, id1) (_name2, id2) ->
+      (int_of_string id1) - (int_of_string id2)) img_name_l
   in
-  let out_file =
-    String.concat Filename.dir_sep
-      [ "."; "gw2l_dist"; "tmp"; !family ^ "-imgDict.tmp" ]
-  in
+  (!dict1, dict2, img_name_l)
 
-  let ic = open_in in_file in
-  let oc = open_out_bin out_file in
-  if !debug = -1 then Sys.enable_runtime_warnings false;
-
-  try
-    while true do
-      let line = Sutil.input_real_line ic in
-      process base ic line
-    done
-  with End_of_file ->
-    Printf.eprintf "Done in %s s\n" (show_process_time start_time);
-    close_in ic;
-    close_out oc
-
-let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

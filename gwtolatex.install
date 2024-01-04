@@ -14,6 +14,9 @@ lib: [
   "_build/install/default/lib/gwtolatex/gwtolatex__Lutil.cmi"
   "_build/install/default/lib/gwtolatex/gwtolatex__Lutil.cmt"
   "_build/install/default/lib/gwtolatex/gwtolatex__Lutil.cmx"
+  "_build/install/default/lib/gwtolatex/gwtolatex__MkImgDict.cmi"
+  "_build/install/default/lib/gwtolatex/gwtolatex__MkImgDict.cmt"
+  "_build/install/default/lib/gwtolatex/gwtolatex__MkImgDict.cmx"
   "_build/install/default/lib/gwtolatex/gwtolatex__Sutil.cmi"
   "_build/install/default/lib/gwtolatex/gwtolatex__Sutil.cmt"
   "_build/install/default/lib/gwtolatex/gwtolatex__Sutil.cmx"
@@ -22,6 +25,7 @@ lib: [
   "_build/install/default/lib/gwtolatex/gwtolatex__Trees.cmx"
   "_build/install/default/lib/gwtolatex/hutil.ml"
   "_build/install/default/lib/gwtolatex/lutil.ml"
+  "_build/install/default/lib/gwtolatex/mkImgDict.ml"
   "_build/install/default/lib/gwtolatex/opam"
   "_build/install/default/lib/gwtolatex/sutil.ml"
   "_build/install/default/lib/gwtolatex/trees.ml"
@@ -30,8 +34,8 @@ libexec: [
   "_build/install/default/lib/gwtolatex/gwtolatex.cmxs"
 ]
 bin: [
+  "_build/install/default/bin/minitest"
   "_build/install/default/bin/mkBook"
-  "_build/install/default/bin/mkImgDict"
   "_build/install/default/bin/mkNewGw"
   "_build/install/default/bin/mkTex"
   "_build/install/default/bin/mkTweekIndMerge"

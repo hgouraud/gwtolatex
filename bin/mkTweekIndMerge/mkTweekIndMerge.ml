@@ -139,28 +139,16 @@ let main () =
         " Choose test file." );
     ]
   in
-  let start_time = Unix.gettimeofday () in
   let speclist = List.sort compare speclist in
   let speclist = Arg.align speclist in
   let anonfun s = input_files := s :: !input_files in
   Arg.parse speclist anonfun usage;
 
-  (* for my convenience. Win env may differ *)
-  if
-    Sys.argv.(0) = "_build/install/default/bin/gwl"
-    || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
-  then dev := true;
-
-  if !verbose then
-    for i = 0 to Array.length Sys.argv - 1 do
-      Printf.printf "[%i] %s " i Sys.argv.(i)
-    done;
-
   let in_file =
     String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".ind" ]
   in
 
-  Printf.eprintf "\nThis is TweekIndMerge version %s on %s to %s (%d)\n"
+  Printf.eprintf "This is \027[32mTweekIndMerge\027[0m version %s on %s to %s (%d)\n"
     Sutil.version in_file !out_file !debug;
   flush stderr;
 
@@ -174,7 +162,7 @@ let main () =
       output_string oc (line ^ "\n")
     done
   with End_of_file ->
-    Printf.eprintf "Done in %s s\n" (show_process_time start_time);
+    Printf.eprintf "\n";
     close_in ic;
     close_out oc
 

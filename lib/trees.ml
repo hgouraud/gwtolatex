@@ -261,7 +261,6 @@ let expand_hrl_cells tree =
     | (w1, s1, ty1, te1, it1, im1) :: row -> (
         match ty1 with
         | "Hl" when s1 > 1 ->
-            Printf.eprintf "Hl: %d\n" s1;
             let elts =
               if s1 / 2 * 2 = s1 then
                 let rec loop acc s =
@@ -284,7 +283,6 @@ let expand_hrl_cells tree =
             in
             expand row (elts @ new_row)
         | "Hr" when s1 > 1 ->
-            Printf.eprintf "Hr: %d\n" s1;
             let elts =
               if s1 / 2 * 2 = s1 then
                 let rec loop acc s =

@@ -19,7 +19,7 @@
  (name gwtolatex)
  (synopsis "GeneWeb to LaTeX")
  (description "A longer description")
- (depends ocaml dune ezcurl ounit)
+ (depends ocaml dune ezcurl ounit (unidecode (= "0.2.0")))
  (tags
   (topics "to describe" your project)))
 

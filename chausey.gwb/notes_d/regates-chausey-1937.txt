@@ -37,9 +37,9 @@ d'une nombreuse assistance.
 très applaudis.
 
 <p> A l'issue de la cérémonie, un vin d'honneur très bien servi à
-l'[[la/crabière/Hôtel des Îles]]<span style="display:none">tex\footnote
-{Est-ce vraiment l'Hôtel des Îles ou l'Hôtel du Fort?}
-tex</span> et empreint de la plus grande cordialité termina cette
+l'[[la/crabière/Hôtel des Îles]]<span style="display:none" mode="tex">\footnote
+[Est-ce vraiment l'Hôtel des Îles ou l'Hôtel du Fort?]</span>
+et empreint de la plus grande cordialité termina cette
 première partie de la fête.
 
 <p> Pendant ce temps, dans une note attrayante au possible, arrivaient

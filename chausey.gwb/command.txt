@@ -1,1 +1,1 @@
-/Users/Henri/GitHub/hgouraud/geneweb/distribution/gw/gwc -nofail -f /Users/Henri/Genea/GeneWeb-Bases/chausey.gw -o chausey
+/Users/Henri/GitHub/hgouraud/geneweb/distribution/gw/gwc -nofail -f /Users/Henri/Genea/GeneWeb-Bases/chausey.gw -o Chausey-tex

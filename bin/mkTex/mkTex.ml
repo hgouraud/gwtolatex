@@ -59,6 +59,8 @@ let second = ref false
 let index = ref 0
 let verbose = ref false
 
+let img_name_list = ref []
+
 (* Assumes we are running in bases folder GeneWeb security constraint *)
 let gw2l_dist =
   ref (try Sys.getenv "GW2L_DIST" with Not_found -> "./gw2l_dist")
@@ -255,11 +257,19 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
         (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
         "jpg"
   | Images ->
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\\\\\n"
+      let image_id = 
+        match List.assoc_opt name !img_name_list with
+        | Some id -> id
+        | None -> ""
+      in
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\\\\\n"
         !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
         Filename.dir_sep name
+        (if image_id <> "" && false then
+          Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec nb
+        else "")
   | Vignette ->
       Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !vignwidth
         !unit
@@ -322,7 +332,9 @@ let dummy_tags_3 =
 let skip_m_cmd = [ "MOD_NOTES" ]
 let one_page och line = output_string och line
 
-(* process_tree_cumul accumulates results in a string *)
+(** process_tree_cumul accumulates results in a string
+    each tag is processed according to its role
+*)
 
 let rec process_tree_cumul och cumul tree (row, col) =
   let get_child children =
@@ -594,7 +606,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
             if content <> "" then Format.sprintf "\\item{}{%s}" content else ""
         | "span" ->
             (* look for potential TeX code *)
-            (* <span style="display:none" mode="tex">\index%{Gelin, Zacharie}</span> *)
+            (* <span style="display:none" mode="tex">\index{Gelin, Zacharie}</span> *)
             (* or \highlight *)
             (* <span mode="highlight">sn fn%if;(oc != "0") (oc)%end;</span> *)
             (* or instruction for display next image *)
@@ -969,6 +981,7 @@ let one_http_call och line =
             (Format.sprintf "Error when fetching %s:\n %s\n" (Lutil.escape url)
                (Lutil.escape msg))
 
+(** print all images mentioned in the notes of a person *)
 let print_images och images_list =
   output_string och (Format.sprintf "\\par\n");
   (* TODO manage Wide *)
@@ -979,6 +992,7 @@ let print_images och images_list =
       match im_type with
       | Imagek | Portrait | Vignette -> ()
       | Images ->
+          let name1 = (Sutil.replace_str name "\\_{}" "_") in
           let name = Filename.remove_extension name in
           let images_dir =
             "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images"
@@ -989,6 +1003,16 @@ let print_images och images_list =
             | 3 -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
             | 4 -> Format.sprintf "\n\\hglabxb{%d}{%d}{%d}{%d}" ch sec ssec nbr
             | _ -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
+          in
+          let image_id = 
+            match List.assoc_opt name1 !img_name_list with
+            | Some id -> id
+            | None -> ""
+          in
+          let _label_2 =
+            if image_id <> "" && false then
+              Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec nbr
+            else ""
           in
           output_string och
             (Format.sprintf
@@ -1105,35 +1129,28 @@ let main () =
         " Choose test file." );
     ]
   in
-  let start_time = Unix.gettimeofday () in
   let speclist = List.sort compare speclist in
   let speclist = Arg.align speclist in
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
 
-  (* for my convenience. Win env may differ *)
-  if
-    Sys.argv.(0) = "_build/install/default/bin/gwl"
-    || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
-  then dev := true;
+  let img_file =
+    String.concat Filename.dir_sep
+      [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
+  in
 
-  if !verbose then
-    for i = 0 to Array.length Sys.argv - 1 do
-      Printf.printf "[%i] %s " i Sys.argv.(i)
-    done;
-
-  (* for my convenience. Win env may differ *)
-  if
-    Sys.argv.(0) = "_build/install/default/bin/gwl"
-    || Sys.argv.(0) = "_build\\install\\default\\bin\\gwl.exe"
-  then dev := true;
-
+  (* build images dictionnaries *)
+  if !verbose then Printf.printf "Build images dicts\n";
+  let (_dict1, _dict2, img_name_l) = MkImgDict.create_images_dicts img_file in
+  img_name_list := img_name_l;
+  
   (* install tex templates in bases/etc *)
   (* on excute dans le repo (dev) ou dans bases_dir *)
   let dist_dir = if !dev then "." else "./gw2l_dist" in
   let etc_dir = Filename.concat !bases "etc" in
   let tex_dir = String.concat Filename.dir_sep [ dist_dir; "tex" ] in
   let do_load_tex_files = Format.sprintf "cp -R %s %s" tex_dir etc_dir in
+  if !verbose then Printf.printf "Install TeX templates\n";
   let error = Sys.command do_load_tex_files in
   if error > 0 then (
     Printf.eprintf "Error while loading tex templates files (%d)\n" error;
@@ -1160,7 +1177,7 @@ let main () =
   let ic = open_in_bin fname_in in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  Printf.eprintf "\nThis is mkTeX version %s for %s on base %s to %s (%d)\n"
+  Printf.eprintf "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
     Sutil.version fname_in !base fname_out !debug;
   flush stderr;
 
@@ -1180,79 +1197,7 @@ let main () =
       with End_of_file ->
         close_in ic;
         close_out och));
-  Printf.eprintf "Done txt parsing in %s s\n" (show_process_time start_time);
-  flush stderr;
-
-  let mode = if !verbose then "" else "-interaction=batchmode" in
-  let fname =
-    String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".aux" ]
-  in
-  let do_rm_aux = Printf.sprintf "rm %s" fname in
-  let do_pdflatex =
-    Printf.sprintf "pdflatex -output-directory=%s %s %s"
-      (String.concat Filename.dir_sep [ dist_dir; "tmp" ])
-      mode fname_out
-  in
-
-  Printf.eprintf "First pass at pdflatex \n";
-  flush stderr;
-  let _ = Sys.command do_rm_aux in
-  let error = Sys.command do_pdflatex in
-  if error <> 0 then (
-    Printf.eprintf "Error in pdflatex processing (%d)\n" error;
-    exit 0);
-
-  if !index = 0 then (
-    let fname =
-      String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".pdf" ]
-    in
-    Printf.eprintf "Result file is in %s ( %s s)\n" fname
-      (show_process_time start_time);
-    exit 0);
-
-  (* makeindex does not like absolute paths! *)
-  Printf.eprintf "Building index\n";
-  flush stderr;
-  let fname =
-    String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".idx" ]
-  in
-  let verbose = if !verbose then "" else "-q" in
-  let do_makeindex = Printf.sprintf "makeindex %s %s" verbose fname in
-  for _i = 0 to !index do
-    let error = Sys.command do_makeindex in
-    if error <> 0 then (
-      Printf.eprintf "Error in makeindex processing (%d)\n" error;
-      exit 1)
-  done;
-
-  if !second then (
-    Printf.eprintf "Second pass at pdflatex and makeindex \n";
-    flush stderr;
-    let error = Sys.command do_pdflatex in
-    if error <> 0 then (
-      Printf.eprintf "Error in 2nd pdflatex processing (%d)\n" error;
-      exit 1);
-    let error = Sys.command do_makeindex in
-    if error <> 0 then (
-      Printf.eprintf "Error in 2nd makeindex processing (%d)\n" error;
-      exit 1));
-
-  let fname = Filename.basename fname_out |> Filename.remove_extension in
-  let pdf_name =
-    String.concat Filename.dir_sep [ dist_dir; "tmp"; fname ^ ".pdf" ]
-  in
-  let dir = if !dev then "test" else !livres in
-  let do_move_pdf = Printf.sprintf "mv %s %s" pdf_name dir in
-  let error = Sys.command do_move_pdf in
-  if error <> 0 then (
-    Printf.eprintf "Error in moving pdf file (%d)\n" error;
-    exit 1);
-
-  Printf.eprintf "Result file is in %s (in %s s)\n"
-    (Filename.concat dir (fname ^ ".pdf"))
-    (show_process_time start_time);
-  close_in ic;
-  close_out och;
+  Printf.eprintf "\n";
   flush stderr
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)
