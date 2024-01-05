@@ -86,25 +86,14 @@ Install and test
   where ext is txt or html
 - make install will install the gw2l_dist folder into your BASES folder
 
-Make distribution will create a folder gw2l_dist containing the necessary components
+- run ./run-test.sh should create a test document in the ./livres folder
+
+Make distrib will create a folder gw2l_dist containing the necessary components
 Copy or move this folder into your bases folder.
 Create a folder Livres containing the input file Xxxx.txt and possible supplemental files
 associated to <x Input file> commands that may appear in Xxxx.txt.
 In those files, the macro %%%LIVRES%%% will be replaced by the value of the -livres
 start parameter, and %%%BASE%%% by the valur of the -base parameter
-Two scripts are available:
-- make-simple.sh runs gwu, mkTex, pdflatex and makeindex
-- make-full.sh runs additionnal processing tools for photo references
-  and multiple passes of padlatex makeindex
-Parameters to those scripts are:
--b|--base -> base
--f|--family -> family
--l|--livres -> where your books are defined and stored
-          (possibly defined as a GW2L_LIVRES env variable)
--v| -> runs pdflatex in verbose mode
--g|gw -> where your GeneWeb binaries sit
-          (possibly defined as a GW env variable)
-
 
 Warning:
 Running pdftolatex is rather tricky and assumes that you have some knowledge
@@ -130,7 +119,8 @@ or by mail to me (henri.gouraud@laposte.net).
   <x Width off> resets the width at its default value
     (5.1cm allowing for 3 images per line).
 - Images containing "-vignette" in their name are not
-  collected and displayed "in line" with a width of 1cm (adjustable with VignWidth).
-- Images containing "-wide" in their name are displayed "\textwidth"
+  collected and are displayed "in line" with a width of 1cm (adjustable with VignWidth).
+- Images containing "-wide" in their name are displayed across the full width 
+  of the page ("\textwidth")
 
 more to follow

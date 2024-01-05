@@ -3,10 +3,9 @@ open Gwtolatex
 
 let base = ref ""
 let family = ref ""
-let livres = ref (try Sys.getenv "GWTL_LIVRES" with Not_found -> "./Livres")
-let bases = ref (try Sys.getenv "GWTL_BASES" with Not_found -> "./")
+let livres = ref ""
+let bases = ref ""
 let test = ref false
-let out_file = ref "./gw2l_dist/tmp/temp"
 let dev = ref false
 let verbose = ref false
 let debug = ref 0
@@ -125,9 +124,6 @@ let main () =
       ( "-livres",
         Arg.String (fun x -> livres := x),
         " Where are the families files." );
-      ( "-o",
-        Arg.String (fun x -> out_file := x),
-        " Name of the result (default family.idct)." );
       ("-dev", Arg.Set dev, " Run in the GitHub repo.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
       ("-v", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
@@ -145,15 +141,18 @@ let main () =
   Arg.parse speclist anonfun usage;
 
   let in_file =
-    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".ind" ]
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".ind" ]
+  in
+  let out_file =
+    String.concat Filename.dir_sep [ "."; "tmp"; "temp" ]
   in
 
-  Printf.eprintf "This is \027[32mTweekIndMerge\027[0m version %s on %s to %s (%d)\n"
-    Sutil.version in_file !out_file !debug;
+  Printf.eprintf "This is \027[32mmkTweekIndMerge\027[0m version %s on %s to %s (%d)\n"
+    Sutil.version in_file out_file !debug;
   flush stderr;
 
   let ic = open_in in_file in
-  let oc = open_out !out_file in
+  let oc = open_out out_file in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
   try

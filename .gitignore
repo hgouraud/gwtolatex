@@ -1,10 +1,10 @@
 _build
+bases
 *.log
-livres
-livres/*
-Chausey*
-etc/tex
+*.gwo
+*.lck
 tmp
 test/*.pdf
+livres/*.pdf
 gw2l_dist
 

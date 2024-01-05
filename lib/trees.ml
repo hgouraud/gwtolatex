@@ -226,7 +226,7 @@ let reset_cell_width cols row textwidth imwidth =
 (* <a href="base?m=IM;s=test/filaname.jpg"> *)
 (* ATTENTION assumes .jpg portrait file extension *)
 (* TODO query the base for real extension ?? *)
-let get_img_name base im =
+let get_img_name base_name im =
   let _ext_l = [ ".jpg"; ".jpeg"; ".bnp" ] in
   let ext = ".jpg" in
   let where = "images" in
@@ -235,7 +235,7 @@ let get_img_name base im =
   let k = Hutil.get_href_attr "k" href_attrl in
   let name =
     Format.sprintf "%s"
-      (String.concat Filename.dir_sep [ "."; where; base; k ^ ext ])
+      (String.concat Filename.dir_sep [ "."; where; base_name; k ^ ext ])
   in
   Sutil.replace_str name "\\_{}" "_"
 
@@ -371,7 +371,7 @@ let expand_cells tree =
   in
   List.rev tree
 
-let print_tree base tree mode textwidth textheight _margin debug fontsize
+let print_tree base_name tree mode textwidth textheight _margin debug fontsize
     sideways imgwidth twopages =
   if debug <> 0 then
     Printf.eprintf "Print Tree g=%d, depth=%d\n" mode (List.length tree);
@@ -503,7 +503,7 @@ let print_tree base tree mode textwidth textheight _margin debug fontsize
                           {|\\begin{center}
                           \\includegraphics[width=%1.2fcm]{%s}
                           \\end{center}|}
-                          imgwidth (get_img_name base im)
+                          imgwidth (get_img_name base_name im)
                     | _ -> "??")
                   ^ Format.sprintf "%s%s" minipage_e colspan_e
                   (* end of cell *)

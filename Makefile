@@ -3,6 +3,7 @@
 # Variables for packagers.
 PREFIX=/usr
 DISTRIB_DIR=gw2l_dist
+ENV_DIR=gw2l_env
 BUILD_DIR=_build/
 BASES=$(GW2L_BASES)
 #OS_TYPE=$(shell `uname -r`) ???
@@ -43,21 +44,19 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	$(RM) -r $(DISTRIB_DIR)
 	dune build -p gwtolatex
 	mkdir $(DISTRIB_DIR)
-	mkdir $(DISTRIB_DIR)/etc
 	mkdir $(DISTRIB_DIR)/tmp
 	cp $(BUILD_DIR)default/bin/mkTex/mkTex.exe $(DISTRIB_DIR)/mkTex$(EXT)
 	cp $(BUILD_DIR)default/bin/mkTweekIndSort/mkTweekIndSort.exe $(DISTRIB_DIR)/mkTweekIndSort$(EXT)
 	cp $(BUILD_DIR)default/bin/mkTweekIndMerge/mkTweekIndMerge.exe $(DISTRIB_DIR)/mkTweekIndMerge$(EXT)
 	cp $(BUILD_DIR)default/bin/mkNewGw/mkNewGw.exe $(DISTRIB_DIR)/mkNewGw$(EXT)
 	cp $(BUILD_DIR)default/bin/mkBook/mkBook.exe $(DISTRIB_DIR)/mkBook$(EXT)
-	cp -R ./tex $(DISTRIB_DIR)
-	cp -R ./tex $(BASES)/etc
-	cp ./gwl.sh $(DISTRIB_DIR)
-	cp ./Blank.pdf $(DISTRIB_DIR)
-	cp ./make-*.sh $(DISTRIB_DIR)
+	cp -R $(ENV_DIR)/etc $(BASES)
+	cp -R $(ENV_DIR)/tex $(BASES)/etc
+	cp -R $(ENV_DIR)/tex $(DISTRIB_DIR)
+	cp $(ENV_DIR)/Blank.pdf $(DISTRIB_DIR)
 	# Apple extended attributes
 	# xattr -d com.apple.quarantine $(DISTRIB_DIR)/make-*.sh;
-	cp ./Gw2LaTeX-env.tex $(DISTRIB_DIR)
+	cp $(ENV_DIR)/Gw2LaTeX-env.tex $(DISTRIB_DIR)
 	cp ../geneweb/hd/etc/version.txt $(DISTRIB_DIR)/gw_version.txt
 	cp ./version.txt $(DISTRIB_DIR)
 

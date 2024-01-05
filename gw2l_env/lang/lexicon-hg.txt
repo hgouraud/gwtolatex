@@ -1,0 +1,69 @@
+# ajouts henri
+
+    no trees
+en: No trees
+fr: Sans arbres
+	
+    three gen tree/photos
+en: Three gen tree and photos
+fr: Arbre trois gén. et photos
+
+    seven gen tree
+en: Seven gen tree
+fr: Arbre sept générations
+	
+    printed documents
+en: Printed documents
+fr: Documents imprimés
+
+    book of %s
+en: book of %s
+fr: dictionnaire des %s
+
+    presentation
+de: Präsentation
+en: Presentation
+fr: Présentation
+he: הצגה
+it: Presentazione
+pl: Prezentacja
+ru: представление
+
+    category
+en: Category
+fr: Catégorie
+es: Categor&iacute;a
+
+    location
+de: 
+en: location
+es: Ubicación
+fr: lieux
+he: מקום
+it:
+pl: Lokalizacja
+ru: местоположение
+
+    tenants
+en: Tenants
+es: Ocupantes
+fr: Occupants
+
+    boats
+en: Boats
+fr: Bateaux
+
+    attached
+fr: Rattaché(e) à
+en: Attached to
+
+    list
+en: Lists
+fr: Listes
+
+    navigate
+en: Navigate
+fr: Naviguer
+
+
+-------

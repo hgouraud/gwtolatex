@@ -29,8 +29,8 @@ let verbose = ref false
 let no_fail = ref false
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
-let livres = ref (try Sys.getenv "GW2L_LIVRES" with Not_found -> "./Livres")
-let bases = ref (try Sys.getenv "GW2L_BASES" with Not_found -> "./")
+let livres = ref ""
+let bases = ref ""
 let test = ref false
 let test_nb = ref 0
 
@@ -254,8 +254,9 @@ let notes_header oc (key : MkImgDict.key) =
 
 let print_img_list oc images_l dict1 =
   output_string oc ((Format.sprintf {|
-<p>
-<span style="display:none" mode="tex">\textit[Présent(e) aussi sur %s |})
+<span style="display:none" mode="tex">
+\medskip
+\textit[Présent(e) aussi sur %s |})
 (if List.length images_l = 1 then "la photo" else "les photos"));
   let img_l =
     List.fold_left ( fun acc image_id ->
@@ -263,7 +264,7 @@ let print_img_list oc images_l dict1 =
       (Format.sprintf {|"%s" (%s)|}
         desc
         (if anx_page <> "0" then Format.sprintf "page %s en annexe" anx_page
-         else Format.sprintf "\\ref_%s page \\pageref{label_img_%s}" image_id image_id) :: acc)
+         else Format.sprintf "\\ref[img_ref_%s] page \\pageref[img_ref_%s]" image_id image_id) :: acc)
     ) [] images_l
   in
   output_string oc (String.concat ",\n" img_l);

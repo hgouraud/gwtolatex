@@ -49,7 +49,7 @@ let c_item = ref ""
 let c_img = ref ""
 
 (* execution context *)
-let base = ref "chausey"
+let base_name = ref ""
 let family = ref ""
 let out_file = ref ""
 let debug = ref 0
@@ -62,11 +62,9 @@ let verbose = ref false
 let img_name_list = ref []
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
-let gw2l_dist =
-  ref (try Sys.getenv "GW2L_DIST" with Not_found -> "./gw2l_dist")
-
-let livres = ref (try Sys.getenv "GW2L_LIVRES" with Not_found -> "./Livres")
-let bases = ref (try Sys.getenv "GW2L_BASES" with Not_found -> "./")
+let gw2l_dist = ref "../gw2l_dist"
+let livres = ref "../livres"
+let bases = ref "."
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
@@ -103,9 +101,6 @@ let offset = ref false
 let xoffset = ref 0.0
 let yoffset = ref 0.0
 let twopages = ref false
-
-(* TODO find a way to open base remotely *)
-let my_base = ref (Hutil.open_base (Filename.concat "." !base))
 
 let _strip_nl s =
   let b = Buffer.create 10 in
@@ -251,7 +246,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\\\\\n"
         !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
-        (String.concat Filename.dir_sep [ "."; "images"; !base ])
+        (String.concat Filename.dir_sep [ "."; "images"; !base_name ])
         Filename.dir_sep
         (* GeneWeb replaces ' ' by '_' in key computations *)
         (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
@@ -265,7 +260,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\\\\\n"
         !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
-        (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
+        (String.concat Filename.dir_sep [ "."; "src"; !base_name; "images" ])
         Filename.dir_sep name
         (if image_id <> "" && false then
           Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec nb
@@ -273,7 +268,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
   | Vignette ->
       Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !vignwidth
         !unit
-        (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
+        (String.concat Filename.dir_sep [ "."; "src"; !base_name; "images" ])
         Filename.dir_sep name
 
 (* ignore tag but read children *)
@@ -336,16 +331,16 @@ let one_page och line = output_string och line
     each tag is processed according to its role
 *)
 
-let rec process_tree_cumul och cumul tree (row, col) =
+let rec process_tree_cumul base och cumul tree (row, col) =
   let get_child children =
     List.fold_left
-      (fun acc c -> acc ^ process_tree_cumul och "" c (row, col))
+      (fun acc c -> acc ^ process_tree_cumul base och "" c (row, col))
       "" children
   in
 
   let continue cumul children =
     List.fold_left
-      (fun acc c -> acc ^ process_tree_cumul och cumul c (row, col))
+      (fun acc c -> acc ^ process_tree_cumul base och cumul c (row, col))
       cumul children
   in
 
@@ -364,7 +359,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
         Format.sprintf "%s%s\\includegraphics[width=%2.2f%s]{%s%s%s}%s%s"
           content minipage_b !textwidth
           !unit (* 5 cm in page mode, 1.5 cm in table mode *)
-          (String.concat Filename.dir_sep [ "."; "src"; !base; "images" ])
+          (String.concat Filename.dir_sep [ "."; "src"; !base_name; "images" ])
           Filename.dir_sep name caption minipage_e
     | _ ->
         let image =
@@ -400,7 +395,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
   <map name="Grande-Ile-Aerien">
   *)
   let read_src_file v content =
-    let src_dir = String.concat Filename.dir_sep [ !bases; "src"; !base ] in
+    let src_dir = String.concat Filename.dir_sep [ !bases; "src"; !base_name ] in
     let ic =
       try Some (open_in (Filename.concat src_dir (v ^ ".txt"))) with _ -> None
     in
@@ -469,13 +464,13 @@ let rec process_tree_cumul och cumul tree (row, col) =
       let content = get_child children in
       (* between <a...> and </a> *)
       let _fn, _sn, _ocn, _sp, index_s =
-        Hutil.get_real_person !my_base i p n oc content
+        Hutil.get_real_person base i p n oc content
       in
       let str =
         if m = "SRC" || m = "DOC" then read_src_file v content
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
-        else if String.lowercase_ascii b <> String.lowercase_ascii !base then
+        else if String.lowercase_ascii b <> String.lowercase_ascii !base_name then
           Format.sprintf "%s\\footnote{%s}" content
             (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
         else if s <> "" then make_image_str s k content mode caption
@@ -499,7 +494,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
     let s = Hutil.get_href_attr "s" href_attrl in
     let str =
       let fn, sn, ocn, _sp, index_s =
-        Hutil.get_real_person !my_base i p n oc ""
+        Hutil.get_real_person base i p n oc ""
       in
       (* TODO lower?? *)
       let ocn = if ocn = 0 then "0" else string_of_int ocn in
@@ -685,7 +680,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
                   let oc = Hutil.get_attr attributes "gw2oc" in
                   let _al = Hutil.get_attr attributes "gw2al" in
                   let _fn, _sn, _oc, _sp, index_l =
-                    Hutil.get_real_person !my_base "" fn sn oc ""
+                    Hutil.get_real_person base "" fn sn oc ""
                   in
                   index_l
                 in
@@ -720,7 +715,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
             in
             let content =
               List.fold_left
-                (fun acc c -> acc ^ process_tree_cumul och cumul c tabl)
+                (fun acc c -> acc ^ process_tree_cumul base och cumul c tabl)
                 "" children
             in
             if Sutil.contains clas "container" && cols > 1 then
@@ -734,7 +729,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
             new_row := [];
             let _ = continue "" children in
             if !new_row <> [] then new_tree := List.rev !new_row :: !new_tree;
-            Trees.print_tree !base (List.rev !new_tree) !mode !textwidth
+            Trees.print_tree !base_name (List.rev !new_tree) !mode !textwidth
               !textheight !margin !debug !fontsize !sideways !imgwidth !twopages
         | "cell" ->
             if !c_typ <> "" || !c_txt <> "" || !c_item <> "" || !c_img <> ""
@@ -802,7 +797,7 @@ let rec process_tree_cumul och cumul tree (row, col) =
   in
   cumul ^ element
 
-let process_html och body =
+let process_html base och body =
   let open Markup in
   let tree =
     body |> string |> parse_html |> signals
@@ -813,7 +808,7 @@ let process_html och body =
   in
   let content =
     match tree with
-    | Some tree -> process_tree_cumul och "" tree (0, 0)
+    | Some tree -> process_tree_cumul base och "" tree (0, 0)
     | _ -> "bad tree"
   in
   output_string och content
@@ -939,7 +934,7 @@ let one_command och line =
   | "Unit" -> unit := param
   | _ -> output_string och (Format.sprintf "%%%s%s\n" cmd remain)
 
-let one_http_call och line =
+let one_http_call base och line =
   let url_beg = try String.index_from line 0 '"' with Not_found -> 0 in
   let url_end =
     try String.index_from line (url_beg + 1) '"' with Not_found -> 0
@@ -972,7 +967,7 @@ let one_http_call och line =
               (Format.sprintf "Bad code when fetching %s: %d!\n"
                  (Lutil.escape url) code))
           else
-            let _ = process_html och body in
+            let _ = process_html base och body in
             ()
       | Error (_, msg) ->
           Printf.eprintf "error when fetching %s\n %s\n%!" url
@@ -995,9 +990,9 @@ let print_images och images_list =
           let name1 = (Sutil.replace_str name "\\_{}" "_") in
           let name = Filename.remove_extension name in
           let images_dir =
-            "/Users/Henri/Genea/GeneWeb-Bases/src/chausey/images"
+            String.concat Filename.dir_sep [ !bases; "src"; !base_name; "images"]
           in
-          let label =
+          let _label =
             match !image_label with
             | 1 -> Format.sprintf "\n\\hglabxsa{%d}{%d}{%d}" ch sec nbr
             | 3 -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
@@ -1009,9 +1004,9 @@ let print_images och images_list =
             | Some id -> id
             | None -> ""
           in
-          let _label_2 =
+          let label =
             if image_id <> "" && false then
-              Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec nbr
+              Format.sprintf "\\newcommand{img_ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec nbr
             else ""
           in
           output_string och
@@ -1023,9 +1018,9 @@ let print_images och images_list =
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
-let process_one_line och line =
+let process_one_line base och line =
   let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
-  let line = Sutil.replace_str line "%%%BASE%%%" !base in
+  let line = Sutil.replace_str line "%%%BASE%%%" !base_name in
   match line.[0] with
   | '<' -> (
       match line.[1] with
@@ -1039,7 +1034,7 @@ let process_one_line och line =
           let oc = Hutil.get_href_attr "oc" href_attrl in
           (* get_real_person builds \index if any *)
           let _fn, _sn, _ocn, _sp, _index_s =
-            Hutil.get_real_person !my_base i p n oc content
+            Hutil.get_real_person base i p n oc content
           in
           let sec =
             (* -> chapter, 1-> section, ... *)
@@ -1075,7 +1070,7 @@ let process_one_line och line =
           output_string och
             (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
           (match !image_label with 1 -> () | 4 -> image_nbr := 0 | _ -> ());
-          one_http_call och line;
+          one_http_call base och line;
           if !collect_images && !images_in_page <> [] then
             print_images och !images_in_page;
           images_in_page := [];
@@ -1102,7 +1097,7 @@ let main () =
   let speclist =
     [
       ("-bases", Arg.String (fun x -> bases := x), " Where are bases.");
-      ("-base", Arg.String (fun x -> base := x), " Choose base.");
+      ("-base", Arg.String (fun x -> base_name := x), " Choose base.");
       ("-family", Arg.String (fun x -> family := x), " Choose family.");
       ("-famille", Arg.String (fun x -> family := x), " Choose family.");
       ( "-livres",
@@ -1143,18 +1138,6 @@ let main () =
   if !verbose then Printf.printf "Build images dicts\n";
   let (_dict1, _dict2, img_name_l) = MkImgDict.create_images_dicts img_file in
   img_name_list := img_name_l;
-  
-  (* install tex templates in bases/etc *)
-  (* on excute dans le repo (dev) ou dans bases_dir *)
-  let dist_dir = if !dev then "." else "./gw2l_dist" in
-  let etc_dir = Filename.concat !bases "etc" in
-  let tex_dir = String.concat Filename.dir_sep [ dist_dir; "tex" ] in
-  let do_load_tex_files = Format.sprintf "cp -R %s %s" tex_dir etc_dir in
-  if !verbose then Printf.printf "Install TeX templates\n";
-  let error = Sys.command do_load_tex_files in
-  if error > 0 then (
-    Printf.eprintf "Error while loading tex templates files (%d)\n" error;
-    exit 0);
 
   let fname_txt, family_out =
     ( (if !family <> "" then Filename.concat !livres (!family ^ ".txt")
@@ -1164,27 +1147,28 @@ let main () =
   in
   let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
   let fname_all = Filename.concat !livres (!family ^ ".txt") in
-  let fname_out =
-    if !out_file <> "" then !out_file
-    else String.concat Filename.dir_sep [ dist_dir; "tmp"; family_out ^ ".tex" ]
-  in
+  let fname_out = !out_file in
   let mode, fname_in =
     if Sys.file_exists fname_txt then ("txt", fname_txt)
     else if Sys.file_exists fname_htm then ("html", fname_htm)
     else ("", fname_all)
   in
+  
+  (* TODO find a way to open base remotely *)
+  let base = Hutil.open_base (Filename.concat "." !base_name) in
+
   let och = open_out fname_out in
   let ic = open_in_bin fname_in in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
   Printf.eprintf "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
-    Sutil.version fname_in !base fname_out !debug;
+    Sutil.version fname_in !base_name fname_out !debug;
   flush stderr;
 
   (match mode with
   | "html" ->
       let body = really_input_string ic (in_channel_length ic) in
-      let _ = process_html och body in
+      let _ = process_html base och body in
       close_in ic;
       close_out och;
       exit 0
@@ -1192,7 +1176,7 @@ let main () =
       try
         while true do
           let line = input_line ic in
-          process_one_line och line
+          process_one_line base och line
         done
       with End_of_file ->
         close_in ic;

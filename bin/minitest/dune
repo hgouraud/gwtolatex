@@ -1,0 +1,4 @@
+(executable
+ (public_name minitest)
+ (name minitest)
+ (libraries markup))

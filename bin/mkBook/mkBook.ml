@@ -1,7 +1,7 @@
 (* Copyright (c) 2024 H.Gouraud *)
 
 (* execution context *)
-let dist_dir = ref (try Sys.getenv "GW2L_DIST" with Not_found -> "./gw2l_dist")
+let dist_dir = ref "../gw2l_dist"
 let base = ref "chausey"
 let family = ref ""
 let out_file = ref ""
@@ -13,10 +13,10 @@ let index = ref 0
 let verbose = ref false
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
-let livres = ref (try Sys.getenv "GW2L_LIVRES" with Not_found -> "./Livres")
-let bases = ref (try Sys.getenv "GW2L_BASES" with Not_found -> "./")
+let livres = ref "../livres"
+let bases = ref "."
 let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
-let gw2l_dir = ref (try Sys.getenv "GW2L_BIN" with Not_found -> "./")
+let gw2l_dir = ref "../gw2l_dist"
 let test = ref false
 let test_nb = ref 0
 let version = "1.0"
@@ -162,6 +162,7 @@ let main () =
   let out = Filename.concat "." !base ^ ".gw" in
   let make_gw_file = Format.sprintf "%s -o %s %s" gwu out !base in
   if !verbose then Printf.eprintf "Commd: %s\n" make_gw_file;
+  flush stderr;
   let error = Sys.command make_gw_file in
   if error > 0 then (
     Printf.eprintf "Error while creating .gw file (%d)\n" error;
@@ -174,6 +175,7 @@ let main () =
   let make_new_gw = Filename.concat !dist_dir "mkNewGw" in
   let make_new_gw_file = Format.sprintf "%s %s\n" make_new_gw gw2l_options in
   if !verbose then Printf.eprintf "Commd: %s\n" make_new_gw_file;
+  flush stderr;
   let error = Sys.command make_new_gw_file in
   if error > 0 then (
     Printf.eprintf "Error while creating new gw file (%d)\n\n" error;
@@ -189,6 +191,7 @@ let main () =
     Format.sprintf "%s -f -o %s %s > %s" gwc base_new in_file log_file
   in
   if !verbose then Printf.eprintf "Commd: %s\n" make_new_base;
+  flush stderr;
   let error = Sys.command make_new_base in
   if error > 0 then (
     Printf.eprintf "Error while creating new base (%d)\n\n" error;
@@ -199,7 +202,7 @@ let main () =
   (* output and aux files are in ./tmp  (mkdir ./tmp if needed) *)
   if !verbose then Printf.eprintf "Run MkTeX\n"; flush stderr;
   let mkTex_exe =
-    if !dev then "_build/default/bin/mkTex/mkTex.exe"
+    if !dev then "../_build/default/bin/mkTex/mkTex.exe"
     else Filename.concat !gw2l_dir "mkTex"
   in
   let gw2l_options =
@@ -207,10 +210,14 @@ let main () =
       (Str.regexp ("-base " ^ !base)) ("-base " ^ !base ^ "-new")
       gw2l_options
   in
+  let out_file =
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^".tex"]
+  in
   let make_tex_file =
-    Format.sprintf "%s %s" mkTex_exe gw2l_options
+    Format.sprintf "%s -o %s %s" mkTex_exe out_file gw2l_options
   in
   if !verbose then Printf.eprintf "Commd: %s\n" make_tex_file;
+  flush stderr;
   let error = Sys.command make_tex_file in
   if error > 0 then (
     Printf.eprintf "Error while creating .tex file (%d)\n" error;
@@ -220,20 +227,18 @@ let main () =
   (* run pdflatex *)
   if !verbose then Printf.eprintf "Run pdflatex\n";
   let aux_file =
-    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".aux" ]
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".aux" ]
   in
   let do_rm_aux = Printf.sprintf "rm %s" aux_file in
   let _ = Sys.command do_rm_aux in
   let mode = if !verbose then "" else "-interaction=batchmode" in
-  let tex_file =
-    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".tex" ]
-  in
   let make_pdf_file =
     Printf.sprintf "pdflatex -output-directory=%s %s %s"
-      (String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp" ])
-      mode tex_file
+      (String.concat Filename.dir_sep [ "."; "tmp" ])
+      mode (!family ^ ".tex")
   in
   if !verbose then Printf.eprintf "Commd: %s\n" make_pdf_file;
+  flush stderr;
   let error = Sys.command make_pdf_file in
   if error > 0 then (
     Printf.eprintf "Error while creating .pdf file (%d)\n\n" error;
@@ -243,11 +248,12 @@ let main () =
   (* run makeindex *)
   if !verbose then Printf.eprintf "Run makeindex\n";
   let idx_file =
-    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".idx" ]
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".idx" ]
   in
   (* makeindex does not like absolute paths! *)
   let make_index = Printf.sprintf "makeindex %s" idx_file in
   if !verbose then Printf.eprintf "Commd: %s\n" make_index;
+  flush stderr;
   let error = Sys.command make_index in
   if error > 0 then (
     Printf.eprintf "Error while creating index file (%d)\n\n" error;
@@ -257,20 +263,21 @@ let main () =
   (* run mkTweekIndMerge *)
   if !verbose then Printf.eprintf "Run mkTweekInd\n";
   let tweek_index_exe =
-    if !dev then "_build/default/bin/mkTweekIndMerge/mkTweekIndMerge.exe"
+    if !dev then "../_build/default/bin/mkTweekIndMerge/mkTweekIndMerge.exe"
     else Filename.concat !gw2l_dir "mkTweekIndMerge"
   in
   let idx_file =
-    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".idx" ]
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".idx" ]
   in
   let idx_file_tmp =
-    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".idx.tmp" ]
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".idx.tmp" ]
   in
   (* makeindex does not like absolute paths! *)
   let move_index = Printf.sprintf "mv %s %s" idx_file idx_file_tmp in
   let tweek_index = Printf.sprintf "%s %s" tweek_index_exe gw2l_options in
   if !verbose then Printf.eprintf "Commd: %s\n" move_index;
   if !verbose then Printf.eprintf "Commd: %s\n" tweek_index;
+  flush stderr;
   let _ = Sys.command move_index in
   let error = Sys.command tweek_index in
   if error > 0 then (
@@ -285,20 +292,21 @@ let main () =
   (* run mkTweekIndSort *)
   if !verbose then Printf.eprintf "Run mkTweekIndSort\n";
   let tweek_index_exe =
-    if !dev then "_build/default/bin/mkTweekIndSort/mkTweekIndSort.exe"
+    if !dev then "../_build/default/bin/mkTweekIndSort/mkTweekIndSort.exe"
     else Filename.concat !gw2l_dir "mkTweekIndSort"
   in
   let ind_file =
-    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".ind" ]
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".ind" ]
   in
   let ind_file_tmp =
-    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".ind.tmp" ]
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".ind.tmp" ]
   in
   (* makeindex does not like absolute paths! *)
   let move_index = Printf.sprintf "mv %s %s" ind_file ind_file_tmp in
   let tweek_index = Printf.sprintf "%s %s" tweek_index_exe gw2l_options in
   if !verbose then Printf.eprintf "Commd: %s\n" move_index;
   if !verbose then Printf.eprintf "Commd: %s\n" tweek_index;
+  flush stderr;
   let _ = Sys.command move_index in
   let error = Sys.command tweek_index in
   if error > 0 then (
@@ -311,6 +319,7 @@ let main () =
 
   (* run pdflatex second time *)
   if !verbose then Printf.eprintf "Run pdflatex second time\n";
+  flush stderr;
   let error = Sys.command make_pdf_file in
   if error > 0 then (
     Printf.eprintf "Error during second pdflatex run (%d)\n\n" error;
@@ -320,7 +329,7 @@ let main () =
   (* move pdf to livres *)
   if !verbose then Printf.eprintf "Move .pdf file to Livres\n";
   let pdf_file =
-    String.concat Filename.dir_sep [ "."; "gw2l_dist"; "tmp"; !family ^ ".pdf" ]
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".pdf" ]
   in
   let final_pdf_file =
     String.concat Filename.dir_sep [ !livres; !family ^ ".pdf" ]
