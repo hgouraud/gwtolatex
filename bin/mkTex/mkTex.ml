@@ -58,7 +58,6 @@ let dev = ref false
 let second = ref false
 let index = ref 0
 let verbose = ref false
-
 let img_name_list = ref []
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
@@ -252,7 +251,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
         (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
         "jpg"
   | Images ->
-      let image_id = 
+      let image_id =
         match List.assoc_opt name !img_name_list with
         | Some id -> id
         | None -> ""
@@ -263,7 +262,8 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
         (String.concat Filename.dir_sep [ "."; "src"; !base_name; "images" ])
         Filename.dir_sep name
         (if image_id <> "" && false then
-          Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec nb
+         Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec
+           nb
         else "")
   | Vignette ->
       Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !vignwidth
@@ -395,7 +395,9 @@ let rec process_tree_cumul base och cumul tree (row, col) =
   <map name="Grande-Ile-Aerien">
   *)
   let read_src_file v content =
-    let src_dir = String.concat Filename.dir_sep [ !bases; "src"; !base_name ] in
+    let src_dir =
+      String.concat Filename.dir_sep [ !bases; "src"; !base_name ]
+    in
     let ic =
       try Some (open_in (Filename.concat src_dir (v ^ ".txt"))) with _ -> None
     in
@@ -470,7 +472,8 @@ let rec process_tree_cumul base och cumul tree (row, col) =
         if m = "SRC" || m = "DOC" then read_src_file v content
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
-        else if String.lowercase_ascii b <> String.lowercase_ascii !base_name then
+        else if String.lowercase_ascii b <> String.lowercase_ascii !base_name
+        then
           Format.sprintf "%s\\footnote{%s}" content
             (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
         else if s <> "" then make_image_str s k content mode caption
@@ -493,9 +496,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
     let k = Hutil.get_href_attr "k" href_attrl in
     let s = Hutil.get_href_attr "s" href_attrl in
     let str =
-      let fn, sn, ocn, _sp, index_s =
-        Hutil.get_real_person base i p n oc ""
-      in
+      let fn, sn, ocn, _sp, index_s = Hutil.get_real_person base i p n oc "" in
       (* TODO lower?? *)
       let ocn = if ocn = 0 then "0" else string_of_int ocn in
       let image_label = Format.sprintf "%s.%s.%s" fn ocn sn in
@@ -503,9 +504,9 @@ let rec process_tree_cumul base och cumul tree (row, col) =
       if not vignette then incr image_nbr;
       let image =
         ( (if vignette then Vignette
-           else if k <> "" then Imagek
-           else if s <> "" then Images
-           else Portrait),
+          else if k <> "" then Imagek
+          else if s <> "" then Images
+          else Portrait),
           (if k <> "" then image_label else s),
           (!chapter, !section, !subsection, !subsubsection),
           !image_nbr )
@@ -987,10 +988,11 @@ let print_images och images_list =
       match im_type with
       | Imagek | Portrait | Vignette -> ()
       | Images ->
-          let name1 = (Sutil.replace_str name "\\_{}" "_") in
+          let name1 = Sutil.replace_str name "\\_{}" "_" in
           let name = Filename.remove_extension name in
           let images_dir =
-            String.concat Filename.dir_sep [ !bases; "src"; !base_name; "images"]
+            String.concat Filename.dir_sep
+              [ !bases; "src"; !base_name; "images" ]
           in
           let _label =
             match !image_label with
@@ -999,14 +1001,15 @@ let print_images och images_list =
             | 4 -> Format.sprintf "\n\\hglabxb{%d}{%d}{%d}{%d}" ch sec ssec nbr
             | _ -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
           in
-          let image_id = 
+          let image_id =
             match List.assoc_opt name1 !img_name_list with
             | Some id -> id
             | None -> ""
           in
           let label =
             if image_id <> "" && false then
-              Format.sprintf "\\newcommand{img_ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec nbr
+              Format.sprintf "\\newcommand{img_ref_%s}{%d.%d.%d.%d}" image_id ch
+                sec ssec nbr
             else ""
           in
           output_string och
@@ -1136,12 +1139,12 @@ let main () =
 
   (* build images dictionnaries *)
   if !verbose then Printf.printf "Build images dicts\n";
-  let (_dict1, _dict2, img_name_l) = MkImgDict.create_images_dicts img_file in
+  let _dict1, _dict2, img_name_l = MkImgDict.create_images_dicts img_file in
   img_name_list := img_name_l;
 
   let fname_txt, family_out =
     ( (if !family <> "" then Filename.concat !livres (!family ^ ".txt")
-       else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
+      else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
       if !family <> "" then !family
       else Printf.sprintf "gwtolatex-test%d" !test_nb )
   in
@@ -1153,7 +1156,7 @@ let main () =
     else if Sys.file_exists fname_htm then ("html", fname_htm)
     else ("", fname_all)
   in
-  
+
   (* TODO find a way to open base remotely *)
   let base = Hutil.open_base (Filename.concat "." !base_name) in
 
@@ -1161,7 +1164,8 @@ let main () =
   let ic = open_in_bin fname_in in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  Printf.eprintf "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
+  Printf.eprintf
+    "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
     Sutil.version fname_in !base_name fname_out !debug;
   flush stderr;
 

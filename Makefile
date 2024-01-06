@@ -50,9 +50,9 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	cp $(BUILD_DIR)default/bin/mkTweekIndMerge/mkTweekIndMerge.exe $(DISTRIB_DIR)/mkTweekIndMerge$(EXT)
 	cp $(BUILD_DIR)default/bin/mkNewGw/mkNewGw.exe $(DISTRIB_DIR)/mkNewGw$(EXT)
 	cp $(BUILD_DIR)default/bin/mkBook/mkBook.exe $(DISTRIB_DIR)/mkBook$(EXT)
-	cp -R $(ENV_DIR)/etc $(BASES)
 	cp -R $(ENV_DIR)/tex $(BASES)/etc
 	cp -R $(ENV_DIR)/tex $(DISTRIB_DIR)
+	cp -R $(ENV_DIR)/append-annex.sh $(DISTRIB_DIR)
 	cp $(ENV_DIR)/Blank.pdf $(DISTRIB_DIR)
 	# Apple extended attributes
 	# xattr -d com.apple.quarantine $(DISTRIB_DIR)/make-*.sh;

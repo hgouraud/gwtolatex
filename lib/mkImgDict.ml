@@ -17,14 +17,16 @@ type key = { pk_first_name : string; pk_surname : string; pk_occ : int }
 let undo_particle sn =
   let i = try String.index sn '(' with Not_found -> -1 in
   let j = try String.index sn ')' with Not_found -> -1 in
-  let particle = if i <> -1 && j <> -1 then String.sub sn (i + 1)(j - i - 1) else "" in
+  let particle =
+    if i <> -1 && j <> -1 then String.sub sn (i + 1) (j - i - 1) else ""
+  in
   let surname = if i <> -1 && j <> -1 then String.sub sn 0 (i - 1) else sn in
   let apostr =
-      j > 0 && sn.[j] = '\'' ||
-      (j > 3 &&
-       Char.code sn.[j - 3] = 0xE0 &&
-       Char.code sn.[j - 2] = 0x80 &&
-      (Char.code sn.[j - 1] = 0x93 || Char.code sn.[j - 1] = 0x94))
+    (j > 0 && sn.[j] = '\'')
+    || j > 3
+       && Char.code sn.[j - 3] = 0xE0
+       && Char.code sn.[j - 2] = 0x80
+       && (Char.code sn.[j - 1] = 0x93 || Char.code sn.[j - 1] = 0x94)
   in
   if particle = "" then sn
   else Format.sprintf "%s%s%s" particle (if apostr then "" else " ") surname
@@ -156,22 +158,30 @@ let process dict1 ic line =
                   if List.length parts > 1 then List.nth parts 1 else ""
                 in
                 let fn =
-                  if String.length fn > 1 && fn.[0] = ' '
-                  then String.sub fn 1 (String.length fn - 1)
+                  if String.length fn > 1 && fn.[0] = ' ' then
+                    String.sub fn 1 (String.length fn - 1)
                   else fn
                 in
                 let i = try String.index fn '(' with Not_found -> -1 in
                 let j = try String.index fn ')' with Not_found -> -1 in
                 let fn =
-                  if i <> -1 && j <> -1 && String.length fn > i + 2 &&
-                  fn.[i + 1] = 'e' && fn.[i + 2] = 'p' 
-                  then String.sub fn 0 (i - 1) else fn
+                  if
+                    i <> -1 && j <> -1
+                    && String.length fn > i + 2
+                    && fn.[i + 1] = 'e'
+                    && fn.[i + 2] = 'p'
+                  then String.sub fn 0 (i - 1)
+                  else fn
                 in
                 let sn = undo_particle sn in
                 let sn = Sutil.replace ' ' '_' sn in
                 let fn = Sutil.replace ' ' '_' fn in
                 let (key : key) =
-                  {pk_first_name=fn; pk_surname=sn; pk_occ=int_of_string ocn }
+                  {
+                    pk_first_name = fn;
+                    pk_surname = sn;
+                    pk_occ = int_of_string ocn;
+                  }
                 in
                 if sn = "" && fn = "" then loop (input_line ic) index_l
                 else loop (input_line ic) (key :: index_l)
@@ -186,8 +196,7 @@ let process dict1 ic line =
   | End_of_file -> ()
 
 let print_key key =
-  Printf.eprintf "(%s) (%s) (%d)\n"
-    key.pk_surname key.pk_first_name key.pk_occ
+  Printf.eprintf "(%s) (%s) (%d)\n" key.pk_surname key.pk_first_name key.pk_occ
 
 (** dict1 image_id, (annex_page, description, file_name, person_list)
     dict2 person_key, images_id list
@@ -200,32 +209,37 @@ let create_images_dicts img_file =
   let ic = open_in img_file in
   let rec loop line =
     match line with
-    | Some line -> process dict1 ic line; loop (Sutil.read_line ic)
+    | Some line ->
+        process dict1 ic line;
+        loop (Sutil.read_line ic)
     | None -> close_in ic
   in
   loop (Sutil.read_line ic);
 
   (* dict1 has been built, now we build the inverse indexes *)
-  Hashtbl.iter (fun image_id (_anx_page, _desc, fname, index_l) ->
-    Hashtbl.add dict3 fname image_id;
-    let rec loop index_l =
-      match index_l with
-      | [] -> ()
-      | key :: index_l ->
-          if !verbose then print_key key;
-          match Hashtbl.find_opt dict2 key with
-          | Some x -> Hashtbl.replace dict2 key (image_id :: x)
-          | None -> Hashtbl.add dict2 key [image_id];
-          loop index_l;
-    in 
-    loop index_l) !dict1;
+  Hashtbl.iter
+    (fun image_id (_anx_page, _desc, fname, index_l) ->
+      Hashtbl.add dict3 fname image_id;
+      let rec loop index_l =
+        match index_l with
+        | [] -> ()
+        | key :: index_l -> (
+            if !verbose then print_key key;
+            match Hashtbl.find_opt dict2 key with
+            | Some x -> Hashtbl.replace dict2 key (image_id :: x)
+            | None ->
+                Hashtbl.add dict2 key [ image_id ];
+                loop index_l)
+      in
+      loop index_l)
+    !dict1;
   let img_name_l =
     Hashtbl.fold (fun name id acc -> (name, id) :: acc) dict3 []
   in
   let img_name_l = List.sort_uniq compare img_name_l in
   let img_name_l =
-    List.sort_uniq (fun (_name1, id1) (_name2, id2) ->
-      (int_of_string id1) - (int_of_string id2)) img_name_l
+    List.sort_uniq
+      (fun (_name1, id1) (_name2, id2) -> int_of_string id1 - int_of_string id2)
+      img_name_l
   in
   (!dict1, dict2, img_name_l)
-

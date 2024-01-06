@@ -123,11 +123,11 @@ let copy_row row lr side =
       ( w,
         s,
         (if side = "bar" then match ty with "Te" | "It" -> "Hv2" | _ -> ty
-         else ty),
+        else ty),
         (if side = "bar" then ""
-         else match ty with "Te" -> get_part lr side te | _ -> te),
+        else match ty with "Te" -> get_part lr side te | _ -> te),
         (if side = "bar" then ""
-         else match ty with "It" -> get_part lr side it | _ -> it),
+        else match ty with "It" -> get_part lr side it | _ -> it),
         if side = "bar" then ""
         else match ty with "Im" -> get_part lr side im | _ -> im ))
     row
@@ -394,7 +394,7 @@ let print_tree base_name tree mode textwidth textheight _margin debug fontsize
     in
     let cell_wid =
       ((if sideways then textheight *. if twopages then 2.0 else 1.0
-        else textwidth)
+       else textwidth)
       -. 4.0)
       /. Float.of_int non_empty_col_nbr
     in
@@ -503,7 +503,8 @@ let print_tree base_name tree mode textwidth textheight _margin debug fontsize
                           {|\\begin{center}
                           \\includegraphics[width=%1.2fcm]{%s}
                           \\end{center}|}
-                          imgwidth (get_img_name base_name im)
+                          imgwidth
+                          (get_img_name base_name im)
                     | _ -> "??")
                   ^ Format.sprintf "%s%s" minipage_e colspan_e
                   (* end of cell *)

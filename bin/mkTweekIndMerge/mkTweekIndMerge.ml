@@ -143,11 +143,10 @@ let main () =
   let in_file =
     String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".ind" ]
   in
-  let out_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; "temp" ]
-  in
+  let out_file = String.concat Filename.dir_sep [ "."; "tmp"; "temp" ] in
 
-  Printf.eprintf "This is \027[32mmkTweekIndMerge\027[0m version %s on %s to %s (%d)\n"
+  Printf.eprintf
+    "This is \027[32mmkTweekIndMerge\027[0m version %s on %s to %s (%d)\n"
     Sutil.version in_file out_file !debug;
   flush stderr;
 

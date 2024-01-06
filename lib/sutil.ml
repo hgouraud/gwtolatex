@@ -65,8 +65,8 @@ let convert_html str =
           let new_char = match char with "&#38;" -> "&" | _ -> char in
           loop
             (if k < String.length str1 then
-               String.sub str1 (k + 1) (String.length str1 - k - 1)
-             else "")
+             String.sub str1 (k + 1) (String.length str1 - k - 1)
+            else "")
             (String.sub str1 0 j ^ str2 ^ new_char)
   in
   loop str ""

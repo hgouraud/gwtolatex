@@ -68,9 +68,7 @@ let strip_all_trailing_spaces s =
     let rec loop i =
       if i < 0 then 0
       else
-        match s.[i] with
-          ' ' | '\t' | '\r' | '\n' -> loop (i - 1)
-        | _ -> i + 1
+        match s.[i] with ' ' | '\t' | '\r' | '\n' -> loop (i - 1) | _ -> i + 1
     in
     loop (String.length s - 1)
   in
@@ -78,18 +76,22 @@ let strip_all_trailing_spaces s =
     if i = len then Buffer.contents b
     else
       match s.[i] with
-        '\r' -> loop (i + 1)
+      | '\r' -> loop (i + 1)
       | ' ' | '\t' ->
           let rec loop0 j =
             if j = len then Buffer.contents b
             else
               match s.[j] with
-                ' ' | '\t' | '\r' -> loop0 (j + 1)
+              | ' ' | '\t' | '\r' -> loop0 (j + 1)
               | '\n' -> loop j
-              | _ -> Buffer.add_char b s.[i]; loop (i + 1)
+              | _ ->
+                  Buffer.add_char b s.[i];
+                  loop (i + 1)
           in
           loop0 (i + 1)
-      | c -> Buffer.add_char b c; loop (i + 1)
+      | c ->
+          Buffer.add_char b c;
+          loop (i + 1)
   in
   loop 0
 
@@ -148,8 +150,7 @@ let input_a_line ic =
   else line
 
 (** Read a line. If line is empty or only contains a comment (#), then read next line  *)
-let input_real_line ic =
-  input_line ic
+let input_real_line ic = input_line ic
 
 let read_line ic =
   try
@@ -170,9 +171,7 @@ let read_notes ic =
   strip_all_trailing_spaces notes
 
 let get_name str l =
-  match l with
-  | surname :: l -> surname, l
-  | _ -> failwith str
+  match l with surname :: l -> (surname, l) | _ -> failwith str
 
 let get_fst_name str l =
   match l with
@@ -223,8 +222,7 @@ let read_family ic = function
 (** Read and return a block of .gw file. If [!no_fail] is disabled raises
     [Failure] exception. *)
 let read_family_1 ic line =
-  if !no_fail then
-    try read_family ic line with Failure str -> F_fail str
+  if !no_fail then try read_family ic line with Failure str -> F_fail str
   else read_family ic line
 
 let output_string_nl oc str =
@@ -239,9 +237,9 @@ let notes_header oc (key : MkImgDict.key) =
   let fn = Sutil.replace ' ' '_' key.pk_first_name in
   if sn = "Guerin" || fn = "Guérin" then
     Printf.eprintf "notes for %s %s\n" fn sn;
-  output_string oc 
+  output_string oc
     (Format.sprintf "notes %s %s%sbeg\n" sn fn
-      (if key.pk_occ <> 0 then Format.sprintf ".%d\n" key.pk_occ else "\n"))
+       (if key.pk_occ <> 0 then Format.sprintf ".%d\n" key.pk_occ else "\n"))
 
 (** prints the list of images on which person appears
     images x.y.z.w on page ppp, or image in annex page n
@@ -253,19 +251,24 @@ let notes_header oc (key : MkImgDict.key) =
 *)
 
 let print_img_list oc images_l dict1 =
-  output_string oc ((Format.sprintf {|
+  output_string oc
+    ((Format.sprintf
+        {|
 <span style="display:none" mode="tex">
 \medskip
 \textit[Présent(e) aussi sur %s |})
-(if List.length images_l = 1 then "la photo" else "les photos"));
+       (if List.length images_l = 1 then "la photo" else "les photos"));
   let img_l =
-    List.fold_left ( fun acc image_id ->
-      let (anx_page, desc, _fname, _index_l) = Hashtbl.find dict1 image_id in
-      (Format.sprintf {|"%s" (%s)|}
-        desc
-        (if anx_page <> "0" then Format.sprintf "page %s en annexe" anx_page
-         else Format.sprintf "\\ref[img_ref_%s] page \\pageref[img_ref_%s]" image_id image_id) :: acc)
-    ) [] images_l
+    List.fold_left
+      (fun acc image_id ->
+        let anx_page, desc, _fname, _index_l = Hashtbl.find dict1 image_id in
+        Format.sprintf {|"%s" (%s)|} desc
+          (if anx_page <> "0" then Format.sprintf "page %s en annexe" anx_page
+          else
+            Format.sprintf "\\ref[img_ref_%s] page \\pageref[img_ref_%s]"
+              image_id image_id)
+        :: acc)
+      [] images_l
   in
   output_string oc (String.concat ",\n" img_l);
   output_string oc "]</span>\n"
@@ -274,8 +277,9 @@ let print_img_list oc images_l dict1 =
 let print_notes oc key notes dict1 dict2 cnt =
   notes_header oc key;
   output_string_nl oc notes;
-  let key_str = Format.sprintf "%s.%d+%s"
-    key.pk_first_name key.pk_occ key.pk_surname in
+  let key_str =
+    Format.sprintf "%s.%d+%s" key.pk_first_name key.pk_occ key.pk_surname
+  in
   if Hashtbl.mem dict2 key then (
     incr cnt;
     print_img_list oc (Hashtbl.find dict2 key) dict1;
@@ -287,47 +291,50 @@ let print_notes oc key notes dict1 dict2 cnt =
 let create_new_notes oc has_notes dict1 dict2 =
   let cnt1 = ref 0 in
   let cnt2 = ref 0 in
-  Hashtbl.iter (fun (key : MkImgDict.key) _val ->
-    let key_str = Format.sprintf "%s.%d+%s"
-      key.pk_first_name key.pk_occ key.pk_surname
-    in
-    if not (List.mem key_str has_notes) && key.pk_occ <> -1 then (
-      incr cnt1;
-      notes_header oc key;
-      print_img_list oc (Hashtbl.find dict2 key) dict1;
-      output_string oc "end notes\n\n")
-    else if key.pk_occ = -1 then incr cnt2 ) dict2;
-  if !verbose then Printf.eprintf "%d new notes created (%d ignored)\n" !cnt1 !cnt2
+  Hashtbl.iter
+    (fun (key : MkImgDict.key) _val ->
+      let key_str =
+        Format.sprintf "%s.%d+%s" key.pk_first_name key.pk_occ key.pk_surname
+      in
+      if (not (List.mem key_str has_notes)) && key.pk_occ <> -1 then (
+        incr cnt1;
+        notes_header oc key;
+        print_img_list oc (Hashtbl.find dict2 key) dict1;
+        output_string oc "end notes\n\n")
+      else if key.pk_occ = -1 then incr cnt2)
+    dict2;
+  if !verbose then
+    Printf.eprintf "%d new notes created (%d ignored)\n" !cnt1 !cnt2
 
 let comp_families ic oc in_file out_file dict1 dict2 =
   has_notes := [];
   line_cnt := 0;
   let cnt = ref 0 in
   (try
-    let rec loop line =
-      match read_family_1 ic line with
-      | F_notes (key, notes) ->
-          print_notes oc key notes dict1 dict2 cnt; loop (read_line ic)
-      | F_other (str, _) ->
-          output_string_nl oc str; loop (read_line ic)
-      | F_none -> ()
-      | F_fail str ->
+     let rec loop line =
+       match read_family_1 ic line with
+       | F_notes (key, notes) ->
+           print_notes oc key notes dict1 dict2 cnt;
+           loop (read_line ic)
+       | F_other (str, _) ->
+           output_string_nl oc str;
+           loop (read_line ic)
+       | F_none -> ()
+       | F_fail str ->
            Printf.printf "File \"%s\", line %d:\n" in_file !line_cnt;
            Printf.printf "Error: %s\n" str;
            flush stdout;
            loop (read_line ic)
-    in
-    loop (read_line ic);
-    if !verbose then
-      Printf.eprintf "%d notes updated\n" !cnt;
-    close_in ic;
-    create_new_notes oc !has_notes dict1 dict2
-  with e ->
-    close_out oc;
-    Mutil.rm out_file;
-    raise e);
+     in
+     loop (read_line ic);
+     if !verbose then Printf.eprintf "%d notes updated\n" !cnt;
+     close_in ic;
+     create_new_notes oc !has_notes dict1 dict2
+   with e ->
+     close_out oc;
+     Mutil.rm out_file;
+     raise e);
   close_out oc
-
 
 let main () =
   let usage =
@@ -362,11 +369,12 @@ let main () =
   let anonfun s = base := s in
   Arg.parse speclist anonfun usage;
 
-  Printf.eprintf "This is \027[32mmakeNewGw\027[0m version %s for base %s (%d)\n" Sutil.version
-    !base !debug;
+  Printf.eprintf
+    "This is \027[32mmakeNewGw\027[0m version %s for base %s (%d)\n"
+    Sutil.version !base !debug;
   flush stderr;
 
-  let in_file = Filename.concat "." (!base ^ ".gw")  in
+  let in_file = Filename.concat "." (!base ^ ".gw") in
   let out_file = Filename.concat "." (!base ^ "-new.gw") in
 
   let ic = open_in in_file in
@@ -380,7 +388,7 @@ let main () =
   in
 
   (* build images dictionnaries *)
-  let (dict1, dict2, _dict3) = MkImgDict.create_images_dicts img_file in
+  let dict1, dict2, _dict3 = MkImgDict.create_images_dicts img_file in
   (* Printf.eprintf "Done creating images dictionaries (%d images, %d persons)\n"
       (Hashtbl.length dict1) (Hashtbl.length dict2) ;*)
   comp_families ic oc in_file out_file dict1 dict2;

@@ -1,8 +1,8 @@
 (* Copyright (c) 2024 H.Gouraud *)
 
 (* execution context *)
-let dist_dir = ref "../gw2l_dist"
-let base = ref "chausey"
+let dist_dir = ref "./gw2l_dist"
+let base = ref ""
 let family = ref ""
 let out_file = ref ""
 let debug = ref 0
@@ -12,11 +12,11 @@ let second = ref false
 let index = ref 0
 let verbose = ref false
 
-(* Assumes we are running in bases folder GeneWeb security constraint *)
+(* Assumes we are running in bases folder because of GeneWeb security constraint *)
 let livres = ref "../livres"
 let bases = ref "."
 let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
-let gw2l_dir = ref "../gw2l_dist"
+let gw2l_dir = ref "./gw2l_dist"
 let test = ref false
 let test_nb = ref 0
 let version = "1.0"
@@ -53,7 +53,9 @@ let show_process_time start =
 
 let main () =
   let usage =
-    "Usage: " ^ Filename.basename Sys.argv.(0) ^ " [gw2l_options] where gw2l_options are:"
+    "Usage: "
+    ^ Filename.basename Sys.argv.(0)
+    ^ " [gw2l_options] where gw2l_options are:"
   in
   let speclist =
     [
@@ -91,7 +93,8 @@ let main () =
   Arg.parse speclist anonfun usage;
 
   let base_new = !base ^ "-new" in
-  Printf.eprintf "\nThis is \027[32mmkBook\027[0m version %s on base %s for family %s (%d)\n"
+  Printf.eprintf
+    "\nThis is \027[32mmkBook\027[0m version %s on base %s for family %s (%d)\n"
     version !base !family !debug;
   flush stderr;
 
@@ -136,22 +139,25 @@ let main () =
   if !verbose then Printf.eprintf "Create temp dir\n";
   let tmp = String.concat Filename.dir_sep [ "."; "tmp" ] in
   (if not (Sys.file_exists tmp) then
-     try
-       let _ = Sys.command (Format.sprintf "mkdir %s 755" tmp) in
-       ()
-     with Sys_error _ -> Printf.eprintf "Failed to create tmp dir\n");
+   try
+     let _ = Sys.command (Format.sprintf "mkdir %s" tmp) in
+     ()
+   with Sys_error _ -> Printf.eprintf "Failed to create tmp dir\n");
   flush stderr;
 
   (* collect options *)
   let gw2l_options = [] in
-  let gw2l_options = if !livres <> "" then
-    (Format.sprintf "-livres %s" !livres) :: gw2l_options else gw2l_options
+  let gw2l_options =
+    if !livres <> "" then Format.sprintf "-livres %s" !livres :: gw2l_options
+    else gw2l_options
   in
-  let gw2l_options = if !family <> "" then
-    (Format.sprintf "-family %s" !family) :: gw2l_options else gw2l_options
+  let gw2l_options =
+    if !family <> "" then Format.sprintf "-family %s" !family :: gw2l_options
+    else gw2l_options
   in
-  let gw2l_options = if !base <> "" then
-    (Format.sprintf "-base %s" !base) :: gw2l_options else gw2l_options
+  let gw2l_options =
+    if !base <> "" then Format.sprintf "-base %s" !base :: gw2l_options
+    else gw2l_options
   in
   let gw2l_options = if !verbose then "-v" :: gw2l_options else gw2l_options in
   let gw2l_options = String.concat " " gw2l_options in
@@ -169,7 +175,6 @@ let main () =
     exit 0);
   flush stderr;
 
-
   (* make new .gw file *)
   if !verbose then Printf.eprintf "Make new %s-new.gw file\n" !base;
   let make_new_gw = Filename.concat !dist_dir "mkNewGw" in
@@ -183,7 +188,8 @@ let main () =
   flush stderr;
 
   (* make new base from base-new.gw *)
-  if !verbose then Printf.eprintf "Make new base: %s-new.gw\n" !base; flush stderr;
+  if !verbose then Printf.eprintf "Make new base: %s-new.gw\n" !base;
+  flush stderr;
   let gwc = Filename.concat !gw_dir "gwc" in
   let in_file = String.concat Filename.dir_sep [ "."; base_new ^ ".gw" ] in
   let log_file = String.concat Filename.dir_sep [ "."; "tmp"; "gwc.log" ] in
@@ -194,24 +200,29 @@ let main () =
   flush stderr;
   let error = Sys.command make_new_base in
   if error > 0 then (
-    Printf.eprintf "Error while creating new base (%d)\n\n" error;
+    Printf.eprintf
+      {|Error while creating new base (%d)
+Inspect %s/tmp/gwc.log for possible errors.|}
+      error !bases;
     exit 0);
   flush stderr;
 
   (* run mkTex *)
   (* output and aux files are in ./tmp  (mkdir ./tmp if needed) *)
-  if !verbose then Printf.eprintf "Run MkTeX\n"; flush stderr;
+  if !verbose then Printf.eprintf "Run MkTeX\n";
+  flush stderr;
   let mkTex_exe =
     if !dev then "../_build/default/bin/mkTex/mkTex.exe"
     else Filename.concat !gw2l_dir "mkTex"
   in
   let gw2l_options =
     Str.global_replace
-      (Str.regexp ("-base " ^ !base)) ("-base " ^ !base ^ "-new")
+      (Str.regexp ("-base " ^ !base))
+      ("-base " ^ !base ^ "-new")
       gw2l_options
   in
   let out_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^".tex"]
+    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".tex" ]
   in
   let make_tex_file =
     Format.sprintf "%s -o %s %s" mkTex_exe out_file gw2l_options
@@ -325,6 +336,28 @@ let main () =
     Printf.eprintf "Error during second pdflatex run (%d)\n\n" error;
     exit 0);
   flush stderr;
+
+  (* insert annexe *)
+  let annex_file =
+    String.concat Filename.dir_sep [ !livres; !family ^ "-annex.pdf" ]
+  in
+  if Sys.file_exists annex_file then (
+    if !verbose then Printf.eprintf "Append annex\n";
+    let _ =
+      Sys.command
+        (Format.sprintf "cp %s %s" annex_file (Filename.concat "." "tmp"))
+    in
+    let annex_cmd =
+      Format.sprintf "%s %s"
+        (Filename.concat !gw2l_dir "append-annex.sh")
+        !family
+    in
+    flush stderr;
+    let error = Sys.command annex_cmd in
+    if error > 0 then (
+      Printf.eprintf "Error while appending annex (%d)\n\n" error;
+      exit 0);
+    flush stderr);
 
   (* move pdf to livres *)
   if !verbose then Printf.eprintf "Move .pdf file to Livres\n";
