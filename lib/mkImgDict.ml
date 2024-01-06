@@ -136,9 +136,9 @@ let process dict1 ic line =
         Printf.eprintf "Duplicate image definition %s, %s\n" image_id desc
       else
         let line = Sutil.input_real_line ic in
-        let index_l =
-          let rec loop line index_l =
-            if line = "" then index_l
+        let key_l =
+          let rec loop line key_l =
+            if line = "" then key_l
             else if Sutil.start_with "\\index" 0 line then
               let i = try String.index line '{' with Not_found -> -1 in
               let j = try String.index line '}' with Not_found -> -1 in
@@ -183,14 +183,14 @@ let process dict1 ic line =
                     pk_occ = int_of_string ocn;
                   }
                 in
-                if sn = "" && fn = "" then loop (input_line ic) index_l
-                else loop (input_line ic) (key :: index_l)
-              else index_l
-            else index_l
+                if sn = "" && fn = "" then loop (input_line ic) key_l
+                else loop (input_line ic) (key :: key_l)
+              else key_l
+            else key_l
           in
           loop line []
         in
-        Hashtbl.add !dict1 image_id (anx_page, desc, fname, index_l)
+        Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l)
   with
   | Failure _ -> Printf.eprintf "Bad image definition %s\n" line
   | End_of_file -> ()
@@ -218,20 +218,20 @@ let create_images_dicts img_file =
 
   (* dict1 has been built, now we build the inverse indexes *)
   Hashtbl.iter
-    (fun image_id (_anx_page, _desc, fname, index_l) ->
+    (fun image_id (_anx_page, _desc, fname, key_l) ->
       Hashtbl.add dict3 fname image_id;
-      let rec loop index_l =
-        match index_l with
+      let rec loop key_l =
+        match key_l with
         | [] -> ()
-        | key :: index_l -> (
+        | key :: key_l -> (
             if !verbose then print_key key;
             match Hashtbl.find_opt dict2 key with
             | Some x -> Hashtbl.replace dict2 key (image_id :: x)
             | None ->
                 Hashtbl.add dict2 key [ image_id ];
-                loop index_l)
+                loop key_l)
       in
-      loop index_l)
+      loop key_l)
     !dict1;
   let img_name_l =
     Hashtbl.fold (fun name id acc -> (name, id) :: acc) dict3 []

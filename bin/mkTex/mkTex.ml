@@ -58,6 +58,8 @@ let dev = ref false
 let second = ref false
 let index = ref 0
 let verbose = ref false
+let dict1 = ref (Hashtbl.create 100)
+let dict2 = ref (Hashtbl.create 100)
 let img_name_list = ref []
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
@@ -989,8 +991,6 @@ let print_images och images_list =
       match im_type with
       | Imagek | Portrait | Vignette -> ()
       | Images ->
-          (* pass one collects chapter, section, nbr data for each image *)
-          (* pass two uses the data to create appropriate labels *)
           let name1 = Sutil.replace_str name "\\_{}" "_" in
           let name = Filename.remove_extension name in
           let images_dir =
@@ -1002,7 +1002,7 @@ let print_images och images_list =
             | Some id -> id
             | None -> ""
           in
-          let img_name =
+          let img_number =
             match !image_label with
             | 1 -> Format.sprintf "\n\\hglabxsa{%d}{%d}{%d}" ch sec nbr
             | 3 -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
@@ -1013,16 +1013,35 @@ let print_images och images_list =
             if image_id <> "" then Format.sprintf "\\label{img_ref_%s}" image_id
             else ""
           in
+          (* list of persons present on this image *)
+          (* TODO les personnes /z ont été éliminées!! *)
+          let index_list =
+            let anx_page, _desc, fname, key_l = Hashtbl.find !dict1 image_id in
+            let index_l =
+              List.fold_left
+                (fun acc (key : MkImgDict.key) ->
+                  Format.sprintf "\\index{%s, %s%s, présent sur photo %s}"
+                    key.pk_surname key.pk_first_name
+                    (if key.pk_occ <> 0 then Format.sprintf ".%d" key.pk_occ
+                    else "")
+                    (if anx_page <> "0" then
+                     Format.sprintf "%s en annexe page %s" image_id anx_page
+                    else image_id)
+                  :: acc)
+                [] key_l
+            in
+            String.concat ", " index_l
+          in
           output_string och
             (Format.sprintf
-               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\\\%s%s}\n"
+               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\\\%s%s%s}\n"
                width width images_dir Filename.dir_sep
                (Sutil.replace_str name "\\_{}" "_")
-               img_name img_label))
+               img_number img_label index_list))
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
-let process_one_line base och line =
+let process_one_line base dict1 dict2 och line =
   let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
   let line = Sutil.replace_str line "%%%BASE%%%" !base_name in
   match line.[0] with
@@ -1143,7 +1162,9 @@ let main () =
 
   (* build images dictionnaries *)
   if !verbose then Printf.printf "Build images dicts\n";
-  let _dict1, _dict2, img_name_l = MkImgDict.create_images_dicts img_file in
+  let dict1_t, dict2_t, img_name_l = MkImgDict.create_images_dicts img_file in
+  dict1 := dict1_t;
+  dict2 := dict2_t;
   img_name_list := img_name_l;
 
   let fname_txt, family_out =
@@ -1184,7 +1205,7 @@ let main () =
       try
         while true do
           let line = input_line ic in
-          process_one_line base och line
+          process_one_line base dict1 dict2 och line
         done
       with End_of_file ->
         close_in ic;
