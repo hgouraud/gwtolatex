@@ -337,6 +337,16 @@ Inspect %s/tmp/gwc.log for possible errors.|}
     exit 0);
   flush stderr;
 
+  (* run pdflatex third time
+     if !verbose then Printf.eprintf "Run pdflatex third time\n";
+     flush stderr;
+     let error = Sys.command make_pdf_file in
+     if error > 0 then (
+       Printf.eprintf "Error during third pdflatex run (%d)\n\n" error;
+       exit 0);
+     flush stderr;
+  *)
+
   (* insert annexe *)
   let annex_file =
     String.concat Filename.dir_sep [ !livres; !family ^ "-annex.pdf" ]

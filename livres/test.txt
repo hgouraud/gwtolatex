@@ -6,7 +6,7 @@
 \tracingoutput=1
 \makeindex
 
-<x Input ../gw2l_env/Gw2LaTeX-env.tex>
+<x Input ./gw2l_env/Gw2LaTeX-env.tex>
 
 \begin{titlepage}
 \title{Test}
@@ -61,10 +61,10 @@
 <y Run Make-Genea du : \date \time
 \par
 GeneWeb commit : 
-<x Input ../gw2l_dist/gw_version.txt>
+<x Input ./gw2l_dist/gw_version.txt>
 \par
 GwTo\LaTeX{} version : 
-<x Input ../gw2l_dist/version.txt>
+<x Input ./gw2l_dist/version.txt>
 \par
 <y \hgbaseversion{}
 \par

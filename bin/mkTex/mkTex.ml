@@ -69,6 +69,7 @@ let follow = ref false
 let test_nb = ref 0
 
 (* current values *)
+let passe = ref 0
 let current_level = ref 0
 let images_in_page = ref []
 let chapter = ref 0
@@ -988,36 +989,36 @@ let print_images och images_list =
       match im_type with
       | Imagek | Portrait | Vignette -> ()
       | Images ->
+          (* pass one collects chapter, section, nbr data for each image *)
+          (* pass two uses the data to create appropriate labels *)
           let name1 = Sutil.replace_str name "\\_{}" "_" in
           let name = Filename.remove_extension name in
           let images_dir =
             String.concat Filename.dir_sep
               [ !bases; "src"; !base_name; "images" ]
           in
-          let _label =
+          let image_id =
+            match List.assoc_opt name1 !img_name_list with
+            | Some id -> id
+            | None -> ""
+          in
+          let img_name =
             match !image_label with
             | 1 -> Format.sprintf "\n\\hglabxsa{%d}{%d}{%d}" ch sec nbr
             | 3 -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
             | 4 -> Format.sprintf "\n\\hglabxb{%d}{%d}{%d}{%d}" ch sec ssec nbr
             | _ -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
           in
-          let image_id =
-            match List.assoc_opt name1 !img_name_list with
-            | Some id -> id
-            | None -> ""
-          in
-          let label =
-            if image_id <> "" && false then
-              Format.sprintf "\\newcommand{img_ref_%s}{%d.%d.%d.%d}" image_id ch
-                sec ssec nbr
+          let img_label =
+            if image_id <> "" then Format.sprintf "\\label{img_ref_%s}" image_id
             else ""
           in
           output_string och
             (Format.sprintf
-               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\\\%s}\n" width
-               width images_dir Filename.dir_sep
+               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\\\%s%s}\n"
+               width width images_dir Filename.dir_sep
                (Sutil.replace_str name "\\_{}" "_")
-               label))
+               img_name img_label))
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
@@ -1116,6 +1117,9 @@ let main () =
       ("-dev", Arg.Set dev, " Run in the GitHub repo.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
       ("-mode", Arg.Int (fun x -> mode := x), " Print tree mode.");
+      ( "-pass",
+        Arg.Int (fun x -> passe := x),
+        " Pass one or two (collect img references)." );
       ("-v", Arg.Set verbose, " Pdflatex mode (verbose or quiet).");
       ("-follow", Arg.Set follow, " Run Pdflatex.");
       ("-pdf", Arg.Set follow, " Run Pdflatex.");

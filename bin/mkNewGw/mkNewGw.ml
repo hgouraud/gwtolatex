@@ -202,8 +202,6 @@ let read_family ic = function
   | Some (str, "notes" :: l) -> (
       let surname, l = get_name str l in
       let first_name, occ, l = get_fst_name str l in
-      if surname = "Guérin" || surname = "Guerin" then
-        Printf.eprintf "%s, %s %s\n" str surname first_name;
       if l <> [] then failwith "str"
       else
         match read_line ic with
