@@ -1,5 +1,14 @@
-GwToLaTeX is a set of tools to produce a "book" from pages extracted
-from a GeneWeb data base.
+GwToLaTeX is a set of tools to produce a "book" from a succession of pages
+extracted from a GeneWeb data base.
+GwToLaTeX will collect the necessary information to create a comprehensive
+"table of contents" and an index of all the persons mentionned in the
+document. Possible other cross references can be added using laTeX facilities.
+GwToLaTeX incorporates in the LaTeX pages the images references in the
+GeneWeb base in addition to the portraits, and provides an adittional
+(potentially optionnal, wip) machanism to cross reference the appearance
+of persons on those images.
+LaTeX commands (footnotes, cross references, formatting data...) may be
+included into the GeneWeb notes in "invisible" <span> tags.
 
 A typical GeneWeb "page" can expand across several physical book pages.
 Pages can be almost any GeneWeb query.
@@ -60,40 +69,51 @@ The tools include:
 - mkTex -> main tool: produces a .tex file from a family.txt file
 - mkTweekIndSort and mkTweekIndMerge -> manipulate the index files to
     integrate photo references
+    
+The tool mkBook encapsulates calls to the tools above:
 
-The launch parameters are:
- -base (wip, is in fact defined in the <a commands in the input file)
- -bases (wip, for the time being "."; implies gwl is executed in bases)
+Its launch parameters are:
+ -base defines the base to be used
+ -bases (wip, for the time being "."; mkBook is executed in bases)
  -livres location of input file and .pdf result
- -follow process the resulting LaTeX code with pdflatex
- -index n repeat n times the index construction
  -family name of the .txt file to be processed if not in test mode
  -famille idem
- -test n read file gwtolatex-testn.ext
+ -test n read file gwtolatex-testn.ext (wip)
  -o output file. if not specified livres/family.pdf
  -level debug level (for my personnal use!!)
  -debug (wip)
- -dev run from the repo otherwise from the distrib dir
+ -dev run from the gwtolatex repo otherwise from the distrib dir in bases
  -v run pdflatex in verbose mode
  -help as usual
 
-In its current form, GwToLaTeX must run in the folder containing the target base.
+In its current form, mkBook must run in the folder containing the target base
+and GeneWeb must be available through a GW_BIN variable 
 
 Install and test
 - clone the gwtolatex repo
-- dune build
-- dune exec -- mkTex -test n to try gwttolatex-testn.ext
-  where ext is txt or html
-- make install will install the gw2l_dist folder into your BASES folder
+- make distrib or make install
 
-- run ./run-test.sh should create a test document in the ./livres folder
-
-Make distrib will create a folder gw2l_dist containing the necessary components
+Make distrib will create a folder "gw2l_dist" containing the necessary components.
 Copy or move this folder into your bases folder.
-Create a folder Livres containing the input file Xxxx.txt and possible supplemental files
-associated to <x Input file> commands that may appear in Xxxx.txt.
-In those files, the macro %%%LIVRES%%% will be replaced by the value of the -livres
-start parameter, and %%%BASE%%% by the valur of the -base parameter
+Create a folder "livres" containing the main famili description file "Family.txt",
+and a folder Family-inputs containng
+possible supplemental files associated to <x Input file> commands that
+may appear in Family.txt.
+In those files, the macro %%%LIVRES%%% will be replaced by the value of
+the -livres start parameter, and %%%BASE%%% by the valur of the -base parameter.
+
+- in your "bases" folder, run
+./gw2l_dist/mkBook -base "Base" -livres "livres" -family "Family"
+
+One of the first steps of mkBook is to create a new copy of the base with
+additional images reference data obtained from the
+"livres/family-inputs/who_is_where.txt" file.
+Creation of this new base may fail if you introduce naming discrepancies
+in this who_is_where file. Capitals and accents must be strictly observed.
+
+To run a test case
+- run ".setup.sh" to create a temporary test base in the gwtolatex folder
+- run "./run-test.sh" should create a test document in the ./gwtolatex/livres folder
 
 Warning:
 Running pdftolatex is rather tricky and assumes that you have some knowledge
