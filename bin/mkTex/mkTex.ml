@@ -636,7 +636,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
                 match mode with
                 | "tex" ->
                     (* extract TeX command from content *)
-                    if String.length content > 3 then (
+                    if String.length content > 3 then
                       let content = Sutil.replace '[' '{' content in
                       let content = Sutil.replace ']' '}' content in
                       (* TODO in includegraphics replace {width=xxyy} by [width=xxyy] *)
@@ -658,13 +658,11 @@ let rec process_tree_cumul base och cumul tree (row, col) =
                         try String.index_from content 0 '%'
                         with Not_found -> -1
                       in
-                      if Sutil.contains content "orrigan" then
-                        Printf.eprintf "Tex Content: %s, (%d)\n" content i;
                       if i > 0 then
                         String.sub content 0 i
                         ^ String.sub content (i + 1)
                             (String.length content - i - 1)
-                      else content)
+                      else content
                     else content
                 | "highlight" ->
                     (* highlight content *)
@@ -1016,21 +1014,26 @@ let print_images och images_list =
           (* list of persons present on this image *)
           (* TODO les personnes /z ont été éliminées!! *)
           let index_list =
-            let anx_page, _desc, fname, key_l = Hashtbl.find !dict1 image_id in
-            let index_l =
-              List.fold_left
-                (fun acc (key : MkImgDict.key) ->
-                  Format.sprintf "\\index{%s, %s%s, présent sur photo %s}"
-                    key.pk_surname key.pk_first_name
-                    (if key.pk_occ <> 0 then Format.sprintf ".%d" key.pk_occ
-                    else "")
-                    (if anx_page <> "0" then
-                     Format.sprintf "%s en annexe page %s" image_id anx_page
-                    else image_id)
-                  :: acc)
-                [] key_l
-            in
-            String.concat ", " index_l
+            match Hashtbl.find_opt !dict1 image_id with
+            | Some (anx_page, _desc, fname, key_l) when image_id <> "" ->
+                let index_l =
+                  List.fold_left
+                    (fun acc (key : MkImgDict.key) ->
+                      let sn = Sutil.replace '_' ' ' key.pk_surname in
+                      let sn = Sutil.particles sn in
+                      let fn = Sutil.replace '_' ' ' key.pk_first_name in
+                      Format.sprintf "\\index{%s, %s%s, présent sur photo %s}"
+                        sn fn
+                        (if key.pk_occ <> 0 then Format.sprintf ".%d" key.pk_occ
+                        else "")
+                        (if anx_page <> "0" then
+                         Format.sprintf "%s en annexe page %s" image_id anx_page
+                        else image_id)
+                      :: acc)
+                    [] key_l
+                in
+                String.concat "" index_l
+            | _ -> ""
           in
           output_string och
             (Format.sprintf
