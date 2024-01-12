@@ -1,0 +1,196 @@
+<!--  Arbre 3 generations vertical avec photos -->
+
+%if;has_parents;
+<begintable>
+<!-- grand parents -->
+%if;(max_anc_level>2)
+	%if;father.has_parents;
+        <cell>
+        <cellitem>
+        %if;father.father.has_image;
+            <image 2cm %father.father.access;>
+        %end;
+        %apply;short_display_person_hg ("father.father")
+        </cellitem>
+        </cell>
+        <cell><emptycell></cell>
+        <cell>
+        <cellitem>
+        %if;father.mother.has_image;
+            <image 2cm %father.mother.access;>
+        %end;
+        %apply;short_display_person_hg ("father.mother")
+		</cellitem>
+        </cell>
+    %else;
+        <cell><emptycell></cell>
+        <cell><emptycell></cell>
+        <cell><emptycell></cell>
+    %end;
+    <cell><emptycell></cell>
+    %if;mother.has_parents;
+        <cell>
+        <cellitem>
+        %if;mother.father.has_image;
+            <image 2cm %mother.father.access;>
+        %end;
+        %apply;short_display_person_hg ("mother.father")
+		</cellitem>
+        </cell>
+        <cell><emptycell></cell>
+        <cell>
+		<cellitem>
+        %if;mother.mother.has_image;
+            <image 2cm %mother.mother.access;>
+        %end;
+        %apply;short_display_person_hg ("mother.mother")
+		</cellitem>
+        </cell>
+    %else;
+        <cell><emptycell></cell>
+        <cell><emptycell></cell>
+        <cell><emptycell></cell>
+    %end;
+    <newline>
+
+<!-- bares verticales -->
+    %if;father.has_parents;
+        <cell><vbar></cell>
+        <cell><emptycell></cell>
+        <cell><vbar></cell>
+    %else;
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    %end;
+    <cell><emptycell></cell>
+    %if;mother.has_parents;
+		<cell><vbar></cell>
+    	<cell><emptycell></cell>
+        <cell><vbar></cell>
+    %else;
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    %end;
+    <newline>
+
+<!-- regles horizontales -->
+    %if;father.has_parents;
+        <cell><rule-right></cell>
+        <cell><rule-fullcell></cell>
+        <cell><rule-left></cell>
+    %else;
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    %end;
+        <cell><emptycell></cell>
+    %if;mother.has_parents;
+        <cell><rule-right></cell>
+        <cell><rule-fullcell></cell>
+        <cell><rule-left></cell>
+    %else;
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    %end;
+    <newline>
+            
+<!-- bares verticales centrées -->            
+    %if;father.has_parents;
+		<cell><emptycell></cell>
+		<cell><vbar></cell>
+		<cell><emptycell></cell>
+    %else;
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    %end;
+    <cell><emptycell></cell>
+    %if;mother.has_parents;
+		<cell><emptycell></cell>
+		<cell><vbar></cell>
+		<cell><emptycell></cell>
+    %else;
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    	<cell><emptycell></cell>
+    %end;
+	<newline>
+%end; <!-- ma_anc_level>2 -->
+          
+<!-- Parents -->
+<cell>
+<multicolumnbegin 3>
+<cellitem>
+%if;father.has_image;
+    <image 2cm %father.access;>
+ %end;
+ %apply;short_display_person_hg ("father")
+</cellitem>
+<multicolumnend>
+</cell>
+<cell><emptycell></cell>
+<cell>
+<multicolumnbegin 3>
+<cellitem>
+%if;mother.has_image;
+    <image  2cm %mother.access;>
+%end;
+%apply;short_display_person_hg ("mother")
+</cellitem>
+<multicolumnend>
+</cell>
+<newline>
+
+<!-- bares verticales centrées -->
+<cell><emptycell></cell>
+<cell><vbar></cell>
+<cell><emptycell></cell>
+<cell><emptycell></cell>
+<cell><emptycell></cell>
+<cell><vbar></cell>
+<cell><emptycell></cell>
+<newline>
+          
+<!-- regles horizontale, 1 vide, ...-->
+<cell><emptycell></cell>
+<cell><rule-right></cell>
+<cell><rule-fullcell></cell>
+<cell><rule-fullcell></cell>
+<cell><rule-fullcell></cell>
+<cell><rule-left></cell>
+<cell><emptycell></cell>
+<newline>
+          
+<!-- bare verticale centrée, 3 vide, ...-->
+<cell><emptycell></cell>
+<cell><emptycell></cell>
+<cell>
+<multicolumnbegin 3>
+<vbar>
+<multicolumnend>
+</cell>
+<cell><emptycell></cell>
+<cell><emptycell></cell>
+<newline>
+          
+<!-- personne, 3 vides, ... -->
+<cell><emptycell></cell>
+<cell><emptycell></cell>
+<cell>
+<multicolumnbegin 3>
+<cellitem>
+%if;self.has_image;
+    <image  2cm %self.access;>
+%end;
+%apply;short_display_person_hg ("self")
+</cellitem>
+<multicolumnend>
+</cell>
+<cell><emptycell></cell>
+<cell><emptycell></cell>
+<newline>
+<endtable>
+%end; <!-- has_parents -->

@@ -1,0 +1,25 @@
+#
+# Uniquement photos où apparaissent plusieurs personnes (au moins 2)
+# n;texte descriptif;nom-de-fichier.jpg n = numero de page de l'annexe,
+# sinon 0 pour les photos dans le corps du document
+# #voir nom, prénom/clé de la fiche personne où cette photo apparait
+# clé devrait être fname.occ.lname!!
+# #voir plusieurs personnes possible
+#
+#\index{X, Y}/z  ;z indique N° d'occurrence, "z" si ??
+#
+#
+1;1;trois marins;image-test-1.jpg
+\index{Marin, Emile}/z
+\index{Dupont, Lucien}
+\index{Dupont, Georges}
+
+2;0;Léon, Lucien et Georges;image-test-1.jpg
+\index{Dupont, Léon}
+\index{Dupont, Lucien}
+\index{Dupont, Georges}
+
+3;0;Léon et Marie;image-test-2.jpg
+\index{Dupont, Léon}
+\index{Durand, Marie}
+

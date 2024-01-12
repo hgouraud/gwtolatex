@@ -1,0 +1,18 @@
+\documentclass[a4paper]{book}
+
+\tracingcommands=1
+\tracingparagraphs=1 
+\tracingmacros=1
+\tracingoutput=1
+\makeindex
+
+\input{./Gw2LaTeX-env.tex}
+
+\begin{document}
+\WarningsOff*
+
+<x Ep Off>
+<x Chapter Listes de descendants>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=francois;n=bahurel;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Bahurel</a>Bahurel (Famille)<br>
+
+\end{document}

@@ -1,0 +1,28 @@
+%doctype;
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<!-- $Id: /gwtolatex/tex/dag.txt,v TeX.1 2023-10-15 hg Exp $ -->
+<!-- Copyright (c) 1998-2007 HG -->
+
+<body>
+<bigtree>
+%foreach;dag_line;
+  %foreach;dag_cell;
+    <cell align="%dag_cell.align;" colspan="%dag_cell.colspan;">
+    %if;dag_cell.is_nothing;<emptycell/>
+    %elseif;dag_cell.is_bar;<vbar/>
+    %elseif;(dag_cell.item != "")<cellitem>%dag_cell.item;</cellitem>
+    %elseif;(dag_cell.text != "")<celltext>%dag_cell.text;</celltext>
+    %else;
+      %if;dag_cell.is_hr_left;<rule-left/>
+      %elseif;dag_cell.is_hr_right;<rule-right/>
+      %else;<rule-fullcell/>
+      %end;
+    %end;
+    </cell>
+  %end;
+  <newline/>
+%end;
+</bigtree>
+</body>
+</html>

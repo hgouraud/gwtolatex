@@ -1,0 +1,367 @@
+
+\section{Utilisation de GwToLaTeX}
+
+Dans le cadre de mon travail sur la abse généalogique chausiaise, j'ai développé,
+au fil des ans, un outil en Python me permettant d'éditer périodiquement une
+version papier d'un extrait de cette base.
+
+J'ai récemment (2024) décidé de reprendre ce travail pour en faire un outil
+"partageable", en m'efforçant de rendre aussi générique que possible ce que j'avais
+décidé de faire pour mon besoin personnel.
+
+La suite de ce document explique comment utiliser cet outil.
+
+\subsection{Principe général}
+
+GwToLaTeX est un outil qui complémente GeneWeb, et présuppose l'existence d'une
+base généalogique GeneWeb accessible via le réseau (l'accès en local a amplement
+été etsté. l'accès en réseau devrait être possible).
+GwToLaTeX fonctionne en effectuant une succession d'appels vers une base GeneWeb,
+et en agglomérant en un seul document PDF (appelè "livre") les pages résultant
+de ces appels. Attention aux paramètres de votre base GeneWeb qui pourrraient
+conduire GeneWeb à considérer GwToLaTeX comme un robot!!
+(TODO mettre une temporisation de 1/2 sec dans GwToLaTeX)
+Tous les appels vers GeneWeb ne sont pas nécessairement accessibles, en
+particulier certains arbres et les tableaux, mais ces restrictions sont
+susceptibles d'évoluer.
+
+Les pages actuellement testées sont les pages personnelles
+(p=prénom\&n=patronyme\&occ=occ), les listes de descendances (limitées à
+une profondeur de 4; m=D\&v=4), les listes par titres (m=TT).
+
+La mise en page de l'ensemble (structuration en chapitres, sections, ...,
+numérotation diverses, table des matières, index, références croisées)
+est réalisée par l'outil LaTeX.
+
+La liste des pages constituant le "livre" sont définies dans un document source
+nommé "famille.txt" et conservé dans un répertoire "livres".
+Le document famille.txt peut être agrémenté par des commandes directes au
+logiciel LaTeX, et par l'inclusion de fichiers annexes. Ces fichiers annexes
+sont conservés dans un sous-répertoire famille-inputs du répertoire livres.
+
+Ainsi, le document que vous lisez a la structure suivante :
+
+\begin{verbatim}
+\documentclass[a4paper]{book}
+
+\tracingcommands=1
+\tracingparagraphs=1 
+\tracingmacros=1
+\tracingoutput=1
+\makeindex
+
+<x Input ./gw2l_env/Gw2LaTeX-env.tex>
+
+% Edit your own title page data
+\begin{titlepage}
+\title{Manuel d'utilisation \\
+de GwToLaTeX}
+\author{Henri Gouraud \\
+\texttt{Henri.Gouraud@LaPoste.net} \\
+\copyright 2024}
+\end{titlepage}
+
+% Beginning of document
+\begin{document}
+
+...
+Liste de pages et de commandes GwToLaTex
+....
+
+% Standard tail of document
+\printindex
+\newpage
+{\huge {\bf Notes}}
+\par
+Run mkBook du : {\ddmmyyyydate\today} at \currenttime
+
+GeneWeb commit : 
+<x Input ./gw2l_dist/gw_version.txt>
+\par
+GwTo\LaTeX{} version : 
+<x Input ./gw2l_dist/version.txt>
+\par
+<y \hgbaseversion{}
+\par
+\pdftexbanner{}
+\newpage
+{\huge {\bf Notes}}
+% You may add additional notes pages as needed 
+\end{document}
+\end{verbatim}
+
+\subsection{Liste des commandes GwToLaTex}
+
+les commandes GwToLaTeX présentes dans le document famille.txt ont la forme
+<c Commande paramètres>
+Les valeurs de "c" peuvent être:
+\begin{description}[style=nextline]
+\item[x] Exécute Commande avec paramètre (voir ci-dessous)
+\item[y] Ignore la ligne
+\item[a] Traite la ligne comme une URL vers GeneWeb. 
+Chaque commande "<a" provoque l'ouverture d'une section ou sous-section selon
+la valeur du paramètre "BumpSub" ci-dessous. La partie de la ligne comprise entre
+">" et "</a>" correspond au titre de la section ou sous-section.
+On émet ensuite une commande LaTeX \verb|\index{texte}| avec le texte du titre s'il
+n'y a rien après le "</a>", ou le texte entre le "</a>" et la fin de ligne
+dans le cas contraire (TODO restaurer ce comportement!!)
+Le texte :
+\begin{verbatim}
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;
+    templ=tex;w=%%%PASSWD%%%">Dupont, Léon</a>
+\end{verbatim}
+donne la page \pageref{section1} et correspond au premier cas, alors que 
+\begin{verbatim}
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien;n=dupont;oc=0;
+    templ=tex;w=%%%PASSWD%%%">Dupont, Lucien</a>Dupont, Lucien dit Le Frère
+\end{verbatim}
+correspond au second.
+\end{description}
+
+\begin{description}[style=nextline]
+\item[Chapter/Section/SubSection/SubSubSection"] Nouveau chapitre/section/...
+GwToLatex a besoin de connaitre la numérotation des chapitres et sections afin 
+de numéroter correctement les images. Il ne faut donc pas utiliser directement
+les commandes LaTeX équivalentes (\verb|\chapter|, \verb|\section|, ...). 
+\item["BumpSub"] "on/off". if off, do not increment subsection level.
+
+\item["Input"] Inclure dans le livre le fichier désigné. Dans ce fichier,
+remplacer les occurrences de \verb|%%%LIVRES%%%| et \verb|%%%BASE%%%| par
+leur valeur telles que définies au lancement du programme 
+\item["LaTeX"] Insérer dans le livre une commande LaTeX
+\item["Newpage"] Passer à la page suivante
+\item["Print"] Imprimer la valeur du paramètre
+
+\item["BumpSub"] "on/off". if off, do not increment subsection level.
+usefull is a section has been manually inserted and
+is followed by automatic <a ...> (sub)sections
+\item["HighLight"] Surligner le nom de la personne (Patronyme prénom (occ))
+\item["Hrule"] Ajouter une ligne horizontale de la largeur du teste.
+
+\item["CollectImages"] "on/off", Rassembler les images citées dans les notes
+d'une personne pour les imprimer à la fin de la page personnelle.
+\item["ImageLabel"] Précise le nombre d'éléments pris en compte dans 
+la numérotation des images (ch, sec, ssec, img-nbr)
+\item["Sideways"] Imprime la page en mode paysage (utile pour les arbres
+qui peuvent être larges).\label{sideways}
+\item["Unit"] Définit l'unité (cm, mm, pt)
+\item["VignWidth"] Définit la largeur des vignettes (float)
+\item["Wide"] "on/off"
+\item["ImageWidth"] Définit la largeur des photos (chaine: "textwidth", "5.1cm")
+\item["WideImage"] Force la largeur des photos à textwidth
+\item["Width"] Définit la largeur des images (float)
+\item["NbImgPerLine"] Définit le nombre d'images par ligne (defaut 3) et en
+déduit la largeur
+
+\item["Arbres"/"Trees"] "on/off"
+\item["FontSize"] Définit la taille de la police de caractères\label{fontsize}
+(small, tiny, off returns to default)
+\item["TwoPages"] Eclate un arbre sur desu pages (WIP)
+\item["TreeMode"] 0 imprime l'arbre comme une liste de liste de cellules (debug),
+ 1 imprime l'arbre
+
+\item["Version"] Imprime la version du logiciel
+\end{description}
+
+\subsection{Les pages GeneWeb}
+
+GeneWeb produit ses résultats à partir de fichiers templates qui peuvent être
+adaptés aux besoins des utilisateurs.
+GwToLaTeX utilise un jeu de templates conservés dans le dossier tex qui
+produisent un mélange de code LaTeX et de pseudo-code.
+Les pages GeneWeb qui ont été testées abondamment sont les suivantes :
+
+\begin{description}[style=nextline]
+\item[Liste de descendance] Affiche la liste de descendance jusqu'à 4
+générations au maximum. Pour faciliter la lecture des descendances plus riches,
+la fonction HighLight ci-dessus permet de surligner les personnes
+qui font l'objet d'un arbre détaillé (le traditionnel "qui suit" des généalogies).
+Les lignes :
+\begin{verbatim}
+<x Chapter Listes de descendants>
+\label{descendance}
+<x HighLight Dupont, Léon>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+françois;n=dupont;v=4;t=L;
+   spouses=on;parents=on;templ=tex;w=hg:%%%PASSWD%%%">Famille Dupont</a>Dupont (Famille)
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon;n=dupont;v=4;t=L;
+   spouses=on;parents=on;templ=tex;w=hg:%%%PASSWD%%%">Famille Léon Dupont</a>Dupont, Léon (Famille)
+<x HighLight off>
+\end{verbatim}
+donnent le résultat de la page \pageref{descendance}.
+
+\item[Page perso] Affiche les prénoms complets et alias, puis
+un portrait si disponible, juxtaposé avec les
+données d'état-civil, naissance/baptême/décès/inhumation et profession
+et le couple de parents si connus.
+
+Ces deux pavés sont suivis par la ou les familles avec la liste des enfants.
+Dans ces listes, l'utilisation des puces indiquent la présence ($\bullet$)
+ou l'absence ($\circ$) de descendance (ou d'ascendance pour les parents).
+A noter que ces descendances ou ascendances sont celles mémorisées dans la base
+et ne reflètent pas strictement la réalité (les parents par exemple ont toujours
+une ascendance dans la réalité!!).
+
+Vient ensuite la note éventuelle apportant des commentaires sur la personne,
+complétée par une liste des photos sur laquelle la personne apparaît. 
+On reviendra plus loin (page \pageref{images}) sur cette fonctionnalité.
+Le dernier pavé cite les sources d'information pour les données collectées
+
+
+\item[Liste par titre] Obtenues avec la commande
+\verb|m=TT;sm=S;t=titre;p=lieu;|
+
+\item[Arbres] Obtenues avec les commandes \verb|m=A;t=T| et \verb|m=D;t=T|.
+La mise en page automatique de ces arbres est un problème difficile et
+nécessite des tâtonnements an ajustant la profondeur, l'orientation "portrait"
+ou "paysage" de la page (commande "Sideways" page \pageref{sideways}) et la
+taille de la police de caractères (commande "FontSize" page \pageref{fontsize})
+
+\item[Autres pages] GwToLaTeX interprète les balises HTML et s'efforce de
+les traduire dans un équivalent Dans la mesure où HTML et LaTeX n'ont pas
+les mêmes conventions et modèle de mise en page, une traduction littérale
+n'est pas possible, et échoue dans les cas un peu complexe, les tableaux 
+en particulier.
+
+\end{description}
+
+\subsection{Index}
+
+L'utilisation d'un outil automatique permet de construire systématiquement
+l'index des personnes citées à un titre ou à un autre dans le livre.
+GwToLaTex collecte toutes les références aux personnes
+détectées dans les url vers ces personnes. Pour les femmes mariées
+GwToLaTex produit deux entrées supplémentaires :
+\begin{verbatim}
+\index{Non de jeune fille, prénon (ep patronyme du mari)}
+\index{Patronyme du mari, prénon (née Non de jeune fille)}
+\end{verbatim}
+et ajoute aussi les lignes :
+\begin{verbatim}
+\index{Alias, voir Patronyme, Prénom}
+\end{verbatim}
+si un alias est défini dans la base.
+
+Au delà de cette collecte GwToLaTex permet d'insérer dans le corps des notes
+des commandes LaTeX qui produiront une entrée dans l'index sans perturber
+l'affichage sur le Web :
+\begin{verbatim}
+<span style="display:none mode="tex">\index[Aaaa, Bbbb]</span>
+\end{verbatim}
+permettant d'ajouter dans l'index des personnes citées dans les notes
+sans qu'elles soient présentes dans la base.
+Le contenu du <span> peut être n'importe quelle commande LaTeX de votre choix.
+ATTENTION : pour une raison obscure, il est nécessaire d'encadrer le
+contenu de la commande index par des [ ] plutôt que les { } attendus.
+
+\subsection{Images et index des personnes dans les images}
+
+L'une des forces de GeneWeb est de permettre l'insertion d'images ou de 
+liens vers des images dans le corps des notes. La version papier d'une base
+se doit de reproduire ces images et le fait en rassemblant à la fin de chaque
+page personnelle les images qui y ont été appelées.
+
+Sans avoir recours à la reconnaissance des visages, GwToLaTex se propose de
+rajouter dans l'index la référence des photos où les personnes référencées
+dans l'index apparaissent. Pour ce faire, GwToLaTex s'appuie sur le fichier
+"famille-inputs/who-is-where.txt" que l'utilisateur aura préparé.
+La structure de ce fichier est la suivante :
+
+\begin{verbatim}
+#
+Image-id;Page;Description;Nom-de-fichier.jpg
+\index{Wicart, Monseigneur}/z
+\index{Gardais, Abbé}/1
+\index{Marie, Alain}
+
+#Image suivante
+\end{verbatim}
+\begin{description}[style=nextline]
+\item[Image-id] Identifiant unique de l'image
+\item[Page] 0 si l'image apparait dans les notes de la base, n si elle apparait
+dans l'annexe (voir section \ref{sec:annexe} page \pageref{annexe}) 
+\item[Description] Description de l'image
+\item[Nom-de-fichier] Nom du fichier dans le répertoire des images de la base
+(\tt{bases/mabase/src/images})
+\end{description}
+
+L'index de ce document page \pageref{index} donne un exemple de ce traitement.
+
+\subsection{Annexe}
+Quand il n'est pas possible d'incorporer toutes els images souhaitées dans les
+notes d'une base, il reste la possibilité d'adjoindre au document produit par 
+GwToLaTex une annexe qui sera automatiquement ajoutée au fichier .PDF produit.
+Cette annexe a sa propre numérotation de pages.
+
+\subsection{La totalité du fichier test.txt}
+
+See \verb|gwtolatex/livres/test.txt|
+
+\subsection{Améliorations}
+
+Idées d'améliorations :
+\begin{description}
+\item Simplifier, clarifier homogénéiser les commandes
+\item Ajouter les images du carrousel
+\end{description}
+
+\subsection{Installation, test et exécution}
+
+GwToLaTex est installé à partir de son répertoire GitHub :
+\verb|git clone https://github.com/hgouraud/gwtolatex|
+suivi par
+\verb|make distrib| or \verb|make install|
+
+Ces deux dernières commandes construisent un répertoire \verb|gw2l_dist| qui
+contient tous les éléments nécessaires au fonctionnement de GwToLatex.
+
+\verb|./setup-test.sh| organise les données de la configuration de test et
+lance l'exécution du test (\verb|./run-test.sh|) qui construit le présent
+fichier (dans \verb|gwtolatex/livres|). Cette dernière commande est
+suffisante si vous souhaitez relancer le test après une modification
+dans les données de test.
+
+A noter que \verb|./setup-test.sh| fait l'hypothèse que le répertoire
+\verb|gwtolatex| est "à côté" du répertoire \verb|geneweb| et relance
+l'exécution de \verb|gwd| avec les paramètres appropriés.
+
+GwToLaTeX doit être exécuté à partir du répertoire des bases de
+GeneWeb\footnote{Cette contrainte, est liée à la sécurité de Geneweb}.
+Il convient donc de recopier le dossier \verb|gw2l_dist| dans le
+dossier contenant vos bases. Une fois cette copie faite, l'exécution se
+fait avec :
+\begin{verbatim}
+cd dossier_des_bases
+./gw2l_dist/mkBook -base ma_base -livres dossier_livres -family famille
+\end{verbatim}
+
+Le répertoire \verb|dossier_livres| contient le fichier \verb|famille.txt|
+le fichier (optionnel) \verb|famille-annex.pdf| et un dossier
+\verb|famille-input| contenant \verb|who-is-where.txt| (optionnel)
+et les fichiers éventuels appelés avec la commande \verb|<x Input fichier>|.
+Dans ces fichiers, les chaines de caractères \verb|%%%LIVRES%%%|,
+\verb|%%%BASE%%%| et \verb|%%%PASSWD%%%| seront remplacées par les valeurs
+des paramètres \verb|-livres|, \verb|-base| et \verb|-passwd|.
+
+ATTENTION : la première étape du processus de fabrication du "livre" construit une 
+nouvelle version de la base utilisée dans laquelle les données de référence
+croisées des images ont été ajoutées à l'aide du fichier \verb|who-is-where.txt|.
+Cette création échouera si des divergences de noms (majuscules, accents) existent
+entre la base d'origine et ce fichier.
+
+\subsubsection{Paramètres de lancement}
+
+Le logiciel \verb|mkBook| est lancé avec les paramètres suivants :
+\begin{description}
+\item[-base] nom de la base utilisée
+\item[-bases] "."; mkBook est exécuté dans le dossier bases (WIP)
+\item[-passwd] mot de passe magicien (user:pwd) si nécessaire
+\item[-livres] dossier des "livres"
+\item[-family] nom du "livre"
+\item[-famille] idem
+\item[-o] nom du fichier résultat. Par défaut \verb|livres/family.pdf|
+\item[-debug] mode debug
+\item[-level] niveau des messages de debug
+\item[-v] exécuter pdflatex en mode verbose
+\item[-help] liste des paraètres
+\end{description}
+

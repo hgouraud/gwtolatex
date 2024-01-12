@@ -1,0 +1,237 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <!-- $Id: tex/deslist.txt,v hg.1 2023/10/16  hg Exp $ -->
+  <!-- copyright (c) INRIA, HG -->
+</head>
+
+%define;hgref(which, snxx, fnxx, ocxx, alxx)
+  <span mode="a_ref" gw2w="which" gw2sn="snxx" gw2fn="fnxx" gw2oc="ocxx" gw2al="alxx">%nn;
+    %if;("which"="name")
+      {\bf snxx fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end;}%nn;
+    %elseif;("which"="name2")
+      {\bf fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end; snxx}%nn;
+    %elseif;("which"="first_name")
+      {\bf fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end;}%nn;
+    %elseif;("which"="surname")
+      {\bf snxx}%nn;
+    %elseif;("which"="alias")
+      {\bf alxx}%nn;
+    %end;
+  </span>%nn;
+%end;
+
+%( hgname performs \bf or \highlight %)
+%define;hgfull_name(snxx, fnxx, ocxx)
+  <span mode="highlight">snxx fnxx%if;(ocxx != "0") (ocxx)%end;</span>%nn;
+%end;
+
+\hghead{
+  %apply;a_of_b_gr_eq_lev%with;
+    [*descendants]%nn;
+  %and;
+    %if;(public_name != "")%public_name;%else;%first_name;%end;
+    %if;(qualifier != "") {\it %qualifier;}%end;
+    %sp;%surname;
+    %apply;hgref("name", surname, first_name, occ, "")
+    %if;(alias != "") {\it (%alias;)}%end;
+  %end;
+}
+
+%define;tothegen(xx)
+  [*to the %s generation:::xx]%nn;
+%end;
+
+%define;togen(xx)
+  %if;(xx = 0)[*specify::generation/generations]0%nn;
+  %elseif;(xx = 1)[*to the children]%nn;
+  %elseif;(xx = 2)[*to the grandchildren]%nn;
+  %elseif;(xx = 3)[*to the great-grandchildren]%nn;
+  %else;
+    %apply;tothegen%with;
+      %apply;nth([nth (generation)], xx)
+    %end;
+  %end;
+%end;
+
+%define;link(xx)
+  %xx;%xx.title;%xx.dates;
+%end;
+
+%define;link2(xx,yy)
+  %yy;
+%end;
+
+%define;info2(xx)
+  %if;(xx.title!="")%xx.title;%end;%if;(xx.dates!="")%xx.dates;%end;%nn;
+%end;
+
+%define;somebody_spouse_parent1(xx)
+  %apply;hgref("name", spouse.xx.surname, spouse.xx.first_name, spouse.xx.occ, "")%nn;
+  %apply;info2("spouse.xx")%nn;
+%end;
+
+%define;somebody_spouse_parent()
+    %if;(evar.parents = "on" and spouse.has_parents)
+    \\ %nl;...
+      {\footnotesize
+      %apply;a_of_b%with;
+        %if;(spouse.is_male)[son/daughter/child]0
+        %else;[son/daughter/child]1%end;
+      %and;
+        %apply;somebody_spouse_parent1("father")~[and]~%nn;
+        %apply;somebody_spouse_parent1("mother")%nn;
+      %end;}%nn;
+    %end;%nn;
+    %if;are_divorced;\\ %nl;... [divorced]0%divorce_date;.%nl;
+    %elseif;are_separated;\\ %nl;... [separated]0.%nl;
+    %end;%nn;
+%end;
+
+
+%define;somebody_long_info(xx)
+  %if;xx.has_nobility_titles;
+    {\it%nn;
+    %sp;%foreach;xx.nobility_title;, %nobility_title;%end;
+    }%nn;
+  %end;%nn;
+  %if;(xx.has_birth_date or xx.has_birth_place)
+    , %if;xx.is_male;[born]0%elseif;xx.is_female;[born]1%else;[born]2%end;
+    %if;xx.has_birth_date; %xx.on_birth_date;%end;
+    %if;xx.has_birth_place;, à %xx.birth_place;%end;
+  %end;%nn;
+  %if;(xx.has_baptism_date or xx.has_baptism_place)
+    , %if;xx.is_male;[baptized]0%elseif;xx.is_female;[baptized]1%nn;
+    %else;[baptized]2%end;
+    %if;xx.has_baptism_date; %xx.on_baptism_date;%end;
+    %if;xx.has_baptism_place;, à %xx.baptism_place;%end;
+  %end;%nn;
+  %if;xx.is_dead;, %xx.died;
+    %if;(xx.has_death_date) %xx.on_death_date;%end;
+    %if;(xx.has_death_place), à %xx.death_place;%end;
+  %end;%nn;
+  %if;xx.is_buried;,
+    %if;xx.is_male;[buried]0%else;[buried]1%end;
+    %if;xx.has_burial_date; %xx.on_burial_date;%end;
+    %if;xx.has_burial_place;, à %xx.burial_place;%end;%nl;
+  %end;%nn;
+  %if;xx.is_cremated;,
+    %if;xx.is_male;[cremated]0%else;[cremated]1%end;
+    %if;xx.has_cremation_date; %xx.on_cremation_date;%end;
+    %if;xx.has_cremation_place;, à %xx.cremation_place;%end;%nl;
+  %end;%nn;
+  %if;xx.computable_death_age;%sp;
+    ([age at death:] %xx.death_age;)%nn;
+  %end;%nn;
+  %if;xx.has_occupation;, %xx.occupation;%end;%nn;
+  %if;(evar.rel = "on" and xx.has_relations)
+    %foreach;xx.relation;%nl;
+      (%relation_type;:
+      %if;has_relation_him;%apply;link(relation_him.var)%end;%nl;
+      %if;has_relation_her;%apply;link(relation_her.var)%end;)%nn;
+    %end;%nn;
+    %foreach;xx.related;%nl;
+      (%related_type;: %apply;link(related.var))%nn;
+    %end;%nn;
+  %end;%nn;
+%end;
+
+%define;married_to(date_place)
+  %if;(is_male)
+    %if;are_married;[married%t to:::date_place]0%nn;
+    %elseif;are_not_married;[relationship%t to:::date_place]0%nn;
+    %elseif;are_engaged;[engaged%t to:::date_place]0%nn;
+    %elseif;are_pacs;[pacsed%t to:::date_place]0%nn;
+    %elseif;is_no_sexes_check;[relationship%t to:::date_place]0%nn;
+    %elseif;is_no_mention;date_place [with]%nn;
+    %end;%nn;
+  %else;
+    %if;are_married;[married%t to:::date_place]1%nn;
+    %elseif;are_not_married;[relationship%t to:::date_place]1%nn;
+    %elseif;are_engaged;[engaged%t to:::date_place]1%nn;
+    %elseif;are_pacs;[pacsed%t to:::date_place]1%nn;
+    %elseif;is_no_sexes_check;[relationship%t to:::date_place]1%nn;
+    %elseif;is_no_mention;date_place [with]%nn;
+    %end;%nn;
+  %end;%nn;
+%end;
+
+%define;descendants_by_list(xx, yy, curlev, maxlev, famlev)
+  %if;(curlev = 0) %nl;\hspace*{-0.2cm}%end;
+  %apply;hgref("name", xx.surname, xx.first_name, xx.occ, "")%nn;
+  %apply;somebody_long_info("xx").
+  %incr_count;
+  %foreach;xx.family;
+    %( begin marriage bloc %)
+    %if;(family_cnt=1)\\%else;\par%end;%nn;
+    %apply;capitalize%with;\hspace*{-0.2cm}- %apply;married_to%with;
+        %if;(on_marriage_date != "") %on_marriage_date;%end;%nn;
+        %if;(marriage_place != ""), à %marriage_place;,%end;%nn;
+      %end;%nn;
+    %end;
+    %sp;%apply;hgref("name", spouse.surname, spouse.first_name, spouse.occ, "")%nn;
+    %apply;somebody_long_info("spouse")%nn;
+    %if;spouse.has_parents;
+      %if;(spouse.father.first_name != "Famille")
+        %apply;somebody_spouse_parent()%nn;
+      %end;%nn;
+    %end;%nn;
+    %if;(evar.witn = "on" and has_witnesses)%nl;([witness/witnesses]1:
+      %foreach;witness;
+        %if;(not is_first),%nl;%end;
+        %apply;link(witness.var)
+      %end;)%nn;
+    %end;%nn;
+    %if;(evar.comm = "on" and has_comment)%nl;(%comment;)%end;%nn;
+    %if;(curlev < maxlev)
+      %if;(curlev = 0 or
+           evar.t = "M" and xx.is_male or
+           evar.t = "F" and xx.is_female or
+           evar.t = "L")
+        %if;(family.desc_level < famlev)
+          {\it , [see further]}.
+          %apply;lazy_print%with;\\ %nl;%end;
+        %elseif;(family.desc_level > famlev)
+          {\it , [see above]}.
+          %apply;lazy_print%with;\\ %nl;%end;
+        %elseif;has_children;, {\it dont :}%nn;
+        %(end marriage bloc %)
+            %family.set_infinite_desc_level;
+            \begin{hgitemize}
+            %foreach;child;
+              \item
+              %if;(evar.alwsurn = "yes")
+                %apply;descendants_by_list("child", "child", curlev+1, maxlev, famlev+1)%nn;
+              %else;
+                %apply;descendants_by_list("child", "child_name", curlev+1, maxlev, famlev+1)%nn;
+              %end;%nn;
+              %( end item %)
+            %end;%nn;
+            \end{hgitemize}
+            %if;(curlev = 0)%nl;\par%nl;
+            %end;
+        %end;
+      %end; %( curlev=0 %)
+    %else;%nl;
+      %apply;lazy_print%with; %nl;%end;
+    %end;%nn;
+    %( curlev < maxlev%)
+  %end;%nn; %( foreach family %)
+%end;
+
+%define;by_list(xx)
+  %apply;togen(xx).
+  \leavevmode \\ \\%nl;
+  %reset_count;
+  %apply;descendants_by_list("self", "self", 0, xx, 0)%nl;
+  [*total]: %expr(count-1) [[person/persons]1@(c)]%sp;
+  ([spouses not included]).
+%end;
+
+%apply;by_list%with;
+  %if;(bvar.max_desc_level = "")%apply;min(evar.v, max_desc_level, 12)
+  %else;%apply;min(evar.v, max_desc_level, bvar.max_desc_level)%end;
+%end;
+
+</body>
+</html>

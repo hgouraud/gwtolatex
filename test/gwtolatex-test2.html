@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<!-- $Id: perso.txt v7.1 19/08/2023 02:16:52 $ -->
+<!-- Copyright (c) 1998--2007 INRIA -->
+<title>Anciens Propriétaires Chausey</title>
+<meta name="robots" content="none">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="shortcut icon" href="images/favicon_gwd.png">
+<link rel="apple-touch-icon" href="images/favicon_gwd.png">
+<!-- $Id: css.txt v7.1 28/03/2023 03:32:53 $ -->
+<style>/* Put here only properties that uses variables */
+li.folder { list-style-type: disc; list-style-image: url('images/folder.png'); }
+li.file { list-style-type: circle; list-style-image: url('images/file.png'); }
+li.parent { list-style-type: disc; list-style-image: url('images/left.png'); }
+/* Ascendance par liste m=A;t=L */
+li.male { list-style-type: square; list-style-image: url('images/male.png'); }
+li.female { list-style-type: circle; list-style-image: url('images/female.png'); }
+</style>
+<link rel="stylesheet" href="css/css.css">
+</head>
+<body background="gwd?m=IM;v=/gwback-chausey.jpg">
+<meta name="format-detection" content="telephone=no" />
+<a href="#content" class="sr-only sr-only-focusable">Skip navigation menu</a>
+<div class="container">
+<!-- $Id: perso_utils v7.1 13/08/2023 16:55:48 $ -->
+<!-- $Id: menubar.txt v7.1 17/01/2023 14:11:53 $ -->
+<nav class="navbar sticky-top bg-white justify-content-center navbar-expand-md pt-0">
+<div class="btn-toolbar bg-white" role="toolbar">
+<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+<span class="navbar-toggler-icon"></span>
+</button>
+<div class="collapse navbar-collapse" id="navbarSupportedContent">
+<ul class="nav nav-tabs">
+<li class="nav-item dropdown">
+<a id="load_once_p_mod" class="nav-link dropdown-toggle text-secondary dropdown-toggle-split" data-toggle="dropdown"
+href="#" role="button" aria-haspopup="true" aria-expanded="false" title="Modules"><span class="fas fa-address-card fa-fw mr-1" aria-hidden="true"></span><span class="sr-only">Modules</span></a>
+<div class="dropdown-menu">
+<div class="d-inline-flex justify-content-around mx-1">
+<form class="form-group mx-1" name="upd_url" method="get" action="%%%BASE%%%">
+<div class="invisible" id="img_prfx">images/modules</div>
+<div class="d-flex justify-content-start mx-2">
+<div class="input-group">
+<input type="text" pattern="^((?:([a-z][0-9]){1,15})|zz)" name="p_mod" id="p_mod" class="form-control"
+value="i1p2u3r1n1s1"
+placeholder="i1p2u3r1n1s1(Chausey.gwf)"
+maxlength="30">
+<div class="input-group-append">
+<button type="submit" class="btn btn-outline-success" title="Valider"><i class="fa fa-check fa-lg"></i></button>
+<button type="button" class="btn btn-outline-danger" id="p_mod_clear" title="Supprimer"><i class="fa fa-times fa-lg mx-1"></i></button>
+</div>
+</div>
+<input type="hidden" name="p" value="anciens proprietaires">
+<input type="hidden" name="n" value="chausey">
+<button type="button" class="btn btn-outline-danger ml-2" id="p_mod_rm" title="Retirer le dernier module ajouté" value="i1p2u3r1n1s1"><i class="fa fa-backward"></i></button>
+<button type="submit" class="btn btn-outline-secondary ml-2" id="p_mod_bvar" title="Restaurer p_mod=i1p2u3r1n1s1 (Chausey.gwf)" value="i1p2u3r1n1s1"><i class="fa fa-plus"></i></button>
+<button type="submit" class="btn btn-outline-secondary ml-2 mr-1" id='zz'
+title="Default template" data-toggle="popover" data-trigger="hover"
+data-html="true" data-content="<img class='w-100' src='images/modules/zz_1.jpg'>"><i class="fa fa-undo"></i></button>
+</div>
+<div class="d-flex justify-content-between">
+<div class="mx-2 mt-2">
+Sélectionnez les modules en cliquant sur le bouton correspondant (max 15).
+
+</div>
+<a role="button" class="btn btn-outline-primary my-3" href="%%%BASE%%%?&p=anciens+proprietaires&n=chausey&templ=tex&templ=tex&wide=on;" title="Affichage pleine largeur"><i class="fa fa-desktop fa-fw" aria-hidden="true"></i><span class="sr-only">Affichage pleine largeur</span></a>
+</div>
+<div id="p_mod_table"></div>
+</form>
+<div class="form-group d-none d-md-block mx-1">
+<img src="images/modules/menubar_1.jpg" alt="menubar for p_mod_builder" aria-hidden="true">
+<div id="p_mod_builder"></div>
+</div>
+</div>
+</div>
+</li>
+<li class="nav-item">
+<a class="nav-link active" id="self"
+href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey" title="Anciens Propriétaires Chausey">
+<span class="fa fa-user-alt fa-fw male" aria-hidden="true"></span>
+<span class="sr-only">Anciens Propriétaires Chausey</span>
+</a>
+</li>
+<li class="nav-item">
+<a class="nav-link " id="mod_ind" href="%%%BASE%%%?templ=tex&m=MOD_IND&i=1086" title="Modifier personne Anciens Propriétaires Chausey (P)" accesskey="P"><span class="fa fa-user-edit fa-fw male" aria-hidden="true"></span><span class="sr-only">Modifier personne (P)</span></a>
+</li>
+<li class="nav-item dropdown">
+<a id="load_once_copylink" class="nav-link dropdown-toggle text-secondary "
+data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="true" title="Outils personne"><span class="fa fa-user-cog" aria-hidden="true"></span><span class="sr-only">Outils personne</span></a>
+<div class="dropdown-menu">
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&pz=anciens+proprietaires&nz=chausey&p=anciens+proprietaires&n=chausey"
+title="Naviguer avec Anciens Propriétaires Chausey comme Sosa racine" accesskey="S"><i class="far fa-dot-circle fa-fw male mr-1"></i> Modifier Sosa 1</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&templ=tex&cgl=on" target="_blank"><i class="fa fa-unlink fa-fw mr-2" title="Masquer les liens"></i>Masquer les liens</a><div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&m=CHG_EVT_IND_ORD&i=1086" title="Changement de l’ordre des événements individu"><span class="fa fa-sort fa-fw mr-2"></span>Permuter événements</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&m=SND_IMAGE&i=1086">
+<i class="far fa-file-image fa-fw mr-2"></i>Ajouter portrait</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&m=MRG&i=1086" title="Fusionner Anciens Propriétaires.0 Chausey avec…"><span class="fa fa-compress fa-fw text-danger mr-2"></span>Fusionner personnes</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=DEL_IND&i=1086" title="Supprimer Anciens Propriétaires Chausey"><span class="fa fa-trash-alt fa-fw text-danger mr-2"></span>Supprimer personne</a>
+<a href="%%%BASE%%%?templ=tex&p=bateaux&n=chausey" id="next_sibling" class="d-none"></a>
+<div class="dropdown-divider"></div>
+<div class="btn-group pr-4" role="group">
+<button class="dropdown-item permalink-copy mr-1 pr-0" type="button"
+title="Copier le lien visiteur dans le presse-papier
+" data-wikilink="Chausey?p=anciens+proprietaires&n=chausey&templ=tex&templ=tex"><i class="fas fa-link fa-fw mr-2"></i>Copier le permalien visiteur</button>
+<button class="disabled dropdown-item mx-0 px-0">/</button>
+<button class="mx-1 px-0 dropdown-item permalink-friend-copy" type="button"
+title="Copier le lien ami dans le presse-papier
+">ami</button>
+<button class="disabled dropdown-item mx-0 px-0">/</button>
+<button class="ml-1 px-0 dropdown-item permalink-wizard-copy" type="button"
+title="Copier le lien magicien dans le presse-papier
+">magicien</button>
+</div>
+<div class="dropdown-divider"></div>
+<button class="dropdown-item simple-copy" type="button" title="Copier le lien wiki dans le presse-papier"
+data-wikilink="[[Anciens Propriétaires/Chausey]]"><i class="far fa-clipboard fa-fw mr-2"></i>[[Anciens Propriétaires/Chausey]]</button>
+<button class="dropdown-item full-copy" type="button" title="Copier le lien wikitext dans le presse-papier"  
+data-wikilink="[[Anciens Propriétaires/Chausey/0/Anciens Propriétaires Chausey]]"><i class="far fa-clipboard fa-fw mr-2"></i>[[Anciens Propriétaires/Chausey/0/Anciens Propriétaires Chausey]]</button>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" role="button" title="Rechercher Anciens Propriétaires Chausey sur Geneanet
+" 
+href="https://www.geneanet.org/fonds/individus/?sourcename=&size=50&sexe=&nom=Chausey&ignore_each_patronyme=&with_variantes_nom=1&prenom=Anciens Propriétaires&prenom_operateur=or&ignore_each_prenom=&profession=&ignore_each_profession=&nom_conjoint=&ignore_each_patronyme_conjoint=&prenom_conjoint=&prenom_conjoint_operateur=or&ignore_each_prenom_conjoint=&place__0__=&zonegeo__0__=&country__0__=&region__0__=&subregion__0__=&place__1__=&zonegeo__1__=&country__1__=&region__1__=&subregion__1__=&place__2__=&zonegeo__2__=&country__2__=&region__2__=&subregion__2__=&place__3__=&zonegeo__3__=&country__3__=&region__3__=&subregion__3__=&place__4__=&zonegeo__4__=&country__4__=&region__4__=&subregion__4__=&type_periode=between&from=&to=&exact_day=&exact_month=&exact_year=&nom_pere=&ignore_each_patronyme_pere=&prenom_pere=&prenom_pere_operateur=or&ignore_each_prenom_pere=&nom_mere=&ignore_each_patronyme_mere=&with_variantes_nom_mere=1&prenom_mere=&prenom_mere_operateur=or&ignore_each_prenom_mere=&with_parents=0&go=1" target="_blank" rel="noreferrer, noopener"><i class="fa fa-search fa-fw mr-2"></i>Rechercher  sur Geneanet</a>
+</div>
+</li>
+<li class="nav-item">
+<a class="nav-link " id="mod_fam_1" href="%%%BASE%%%?templ=tex&m=MOD_FAM&i=637&ip=1086"
+title="Modifier famille avec ? ? (F)"
+accesskey="F"><span class="fa fa-user-edit male" aria-hidden="true"></span><span class="fa fa-user female" aria-hidden="true"></span><span class="sr-only"> Modifier famille avec ? ? (F)</span>
+</a>
+</li>
+<li class="nav-item dropdown">
+<a class="nav-link dropdown-toggle text-secondary 
+"
+data-toggle="dropdown" role="button" href="#" aria-haspopup="true" aria-expanded="false"
+title="Outils famille"><span class="fa fa-user-plus" aria-hidden="true"></span><span class="fa fa-user-cog" aria-hidden="true"></span><span class="sr-only">Outils famille</span></a>
+<div class="dropdown-menu">
+<a class="dropdown-item" id="add_fam" href="%%%BASE%%%?templ=tex&m=ADD_FAM&ip=1086" title="Ajouter famille (A)" accesskey="A"><span class="fa fa-plus fa-fw mr-2"></span>Ajouter famille</a>
+<div class="dropdown-divider"></div>
+<span class="dropdown-header">Union avec ? ?</span>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&m=CHG_EVT_FAM_ORD&i=637&ip=1086" title="Changement de l’ordre des événements familiaux"><span class="fa fa-sort fa-fw mr-2"></span>Permuter événements</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&m=DEL_FAM&i=637&ip=1086"><span class="fa fa-trash fa-fw text-danger mr-2"></span>Supprimer famille</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&m=CHG_CHN&ip=1086"><span class="fa fa-child fa-fw mr-1"></span> Modifier le patronyme des enfants</a>
+</div>
+</li>
+<li class="nav-item dropdown">
+<a class="nav-link dropdown-toggle text-secondary" data-toggle="dropdown" role="button" href="#" aria-haspopup="true" aria-expanded="false"><span class="fa fa-code-fork fa-fw" title="Ascendants"></span></a>
+<div class="dropdown-menu">
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=A"><span class="fa fa-cog fa-fw mr-2"></span>Ascendants</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" id="anc_tree" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=A&t=T&v=5" title="Arbre (Y)" accesskey="Y"><span class="fa fa-code-fork fa-fw mr-2"></span>Arbre d’ascendance</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=A&t=H&v=5" title="Arborescence ascendante"><span class="fa fa-timeline fa-rotate-90 fa-fw mr-2"></span>Arborescence ascendante</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=A&t=Z&v=7&maxv=1&num=on&birth=on&birth_place=on&marr=on&marr_date=on&marr_place=on&child=on&death=on&death_place=on&age=on&occu=on&repeat=on&gen=1&ns=1&hl=1"><span class="fa fa-table fa-fw mr-2"></span>Tableau ascendants</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=A&t=G&v=3&maxv=1&siblings=on&alias=on&parents=on&rel=on&witn=on&notes=on&src=on&hide=on"><span class="fa fa-newspaper fa-fw mr-2"></span>Affichage complet</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&i=1086&m=A&t=F&tf1=sb&v=1&maxv=1"><span class="fa fa-align-justify fa-fw mr-2"></span>Branches patronymiques</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=A&t=T&t1=CT&hi=H&v=5&scale=100&fs=17&sosa=on" title="Arbre compact avec Anciens Propriétaires Chausey"><span class="fa fa-th fa-fw mr-2"></span>Arbre compact</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=A&t=T&t1=h7&wide=on" title="[Arbre 7 gen]"><span class="fa fa-border-none fa-fw mr-2"></span>7 générations</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=A&t=T&t1=m" title="[Arbre 9 gen]"><span class="fa fa-chess-board fa-fw mr-2"></span>9 générations</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=A&t=FC&v=5"><span class="fa fa-chart-pie fa-fw mr-2"></span>Arbre en éventail</a>
+</div>
+</li>
+<li class="nav-item dropdown">
+<a class="nav-link dropdown-toggle text-secondary" data-toggle="dropdown" role="button" href="#" aria-haspopup="true" aria-expanded="false"><span class="fa fa-sitemap fa-fw" title="Descendants"></span></a>
+<div class="dropdown-menu">
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=D"><span class="fa fa-cog fa-fw mr-2"></span>Descendants</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=D&t=V&v=3"><span class="fa fa-sitemap fa-fw mr-2"></span>Arbre de descendance</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=D&t=TV&v=3"><span class="fa fa-sitemap fa-fw mr-2"></span>Arbre de descendance compact</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=D&t=D&v=3"><span class="fa fa-code-branch fa-rotate-90 fa-fw mr-2"></span>Arborescence descendante</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=D&t=I&v=8&num=on&birth=on&birth_place=on&marr=on&marr_date=on&marr_place=on&child=on&death=on&death_place=on&age=on&occu=on&gen=1&ns=1&hl=1"><span class="fa fa-table fa-fw mr-2"></span>Tableau descendants</a>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=D&t=L&v=3&maxv=8&siblings=on&alias=on&parents=on&rel=on&witn=on&notes=on&src=on&hide=on"><span class="fa fa-newspaper fa-fw mr-2"></span>Affichage complet</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=D&t=A&num=on&v=8"><span class="fa fa-code-branch fa-flip-vertical fa-fw mr-2"></span>D’Aboville</a>
+</div>
+</li>
+<li class="nav-item dropdown">
+<a class="nav-link dropdown-toggle text-secondary" data-toggle="dropdown" role="button" href="#" aria-haspopup="true" aria-expanded="false" title="Parenté"><span class="fa fa-user-friends"></span></a>
+<div class="dropdown-menu">
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=R" title="Calcul de parenté (R)" accesskey="R"><span class="fa fa-cog fa-fw mr-2"></span>Calcul de parenté</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&m=C&p=anciens+proprietaires&n=chausey&v=3"
+title="Lien de parenté avec un parent proche"><span class="fa fa-elevator fa-fw mr-2"></span>Parenté</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&m=F&p=anciens+proprietaires&n=chausey" title="Famille">
+<span class="fa fa-users fa-fw mr-2"></span>Famille
+</a>
+<div class="dropdown-divider"></div>
+<a class="dropdown-item" href="%%%BASE%%%?templ=tex&p=anciens+proprietaires&n=chausey&m=C&t=AN"><span class="fa fa-birthday-cake fa-fw mr-2"></span>Anniversaires des proches</a>
+</div>
+</li>
+<li class="nav-item">
+<a class="nav-link text-secondary" href="%%%BASE%%%?templ=tex&m=SND_IMAGE_C&i=1086" title="Ajouter/supprimer images (I)" accesskey="I">
+<span class="fa fa-image fa-fw" aria-hidden="true"></span><span class="sr-only">Ajouter/supprimer images</span></a>
+</li>
+</ul>
+</div></div>
+</nav>
+<!-- $Id: home.txt v7.1 07/09/2023 00:49:55 $ -->
+<div class="d-flex flex-column fixed_top_btn">
+<a role="button" class="btn btn-sm btn-link p-0 border-0" href="%%%BASE%%%?templ=tex&" title="Accueil"><i class="fa fa-home fa-fw fa-sm" aria-hidden="true"></i><i class="sr-only">Accueil</i></a>
+<a role="button" class="btn btn-sm btn-link text-primary p-0 border-0" data-toggle="modal" data-target="#searchmodal"
+accesskey="S" title="Rechercher"><i class="fa fa-search fa-fw fa-sm" aria-hidden="true"></i><span class="sr-only">Rechercher</span></a>
+<div class="p-0 border-0" title="" id="q_time_d"><i class="fa fa-hourglass-half fa-fw fa-xs p-0"></i></div>
+<div class="p-0 border-0 d-none" title="" id="nb_errors_d"><i class="fa fa-bug fa-fw fa-xs p-0"></i></div>
+</div>
+<div class="modal" id="searchmodal" role="dialog" aria-labelledby="searchpopup" aria-hidden="true">
+<div class="modal-dialog modal-lg" role="document">
+<div class="modal-content">
+<div class="modal-body" id="ModalSearch">
+<form id="collapse_search" method="get" action="%%%BASE%%%?templ=tex&">
+<input type="hidden" name="templ" value="tex">
+<input type="hidden" name="m" value="S">
+<div class="d-flex justify-content-center">
+<h5 class="rounded modal-title my-2 text-center w-50 align-self-center" id="searchpopup">Rechercher personne</h5>
+<div class="col-8">
+<label class="sr-only" for="n">Search public name</label>
+<input type="search" id="n" class="form-control form-control-lg" name="n" placeholder="Patronyme, nom public, alias"
+autofocus>
+<label class="sr-only" for="p">Search firstname</label>
+<input type="search" id="p" class="form-control form-control-lg mt-2" name="p" placeholder="Prénom">
+</div>
+<button class="btn btn-outline-primary" type="submit" title="Rechercher"><i class="fa fa-search fa-lg mx-2"></i> Rechercher</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+<div id="content" tabindex="-1">
+<div class="mt-2">
+<!-- individu chausey -->
+< <a href="%%%BASE%%%?templ=tex&p=bateaux&n=chausey" class="highlight"> ></a>
+<h1 class=" ">
+<a href="%%%BASE%%%?templ=tex&m=P;v=anciens+proprietaires">Anciens Propriétaires</a>
+<a href="%%%BASE%%%?templ=tex&m=N;v=chausey">Chausey</a>
+<span class="text-muted small mb-1"></span>
+</h1>
+<div class="mt-2 mb-1 ml-2">
+</div>
+<ul>
+</ul>
+<!-- Parents simple chausey -->
+<h3 class="highlight">Rattaché(e) à</h3>
+<ul>
+<li style="vertical-align: middle;list-style-type: circle"> <a  href="%%%BASE%%%?templ=tex&p=iles&n=chausey" class="male-underline">Îles Chausey</a>
+<span title=""
+class="text-nowrap"></span> </li>
+</ul>
+<!--  Union simple Chausey-->
+<ul>
+ <li style="vertical-align: middle;list-style-type: circle"><a href="%%%BASE%%%?templ=tex&m=MOD_FAM;i=637;ip=1086">
+<img src="images/picto_molette.png" width="13" height="13" alt="modifier" title="modifier famille"></a>
+<ul>
+<li style="vertical-align: middle;list-style-type: square;"><a href="%%%BASE%%%?templ=tex&p=jacques&n=goyon+de+matignon">Jacques Goyon de Matignon</a>
+ <bdo dir="ltr">1525-1598</bdo></li>
+<li style="vertical-align: middle;list-style-type: square;"><a href="%%%BASE%%%?templ=tex&p=richard&n=pimor">Richard Pimor</a>
+ <bdo dir="ltr">1630-1690</bdo></li>
+<li style="vertical-align: middle;list-style-type: square;"><a href="%%%BASE%%%?templ=tex&p=famille&n=nolin">Famille Nolin</a>
+</li>
+<li style="vertical-align: middle;list-style-type: square;"><a href="%%%BASE%%%?templ=tex&p=pierre+joseph&n=regnier">Pierre Joseph Régnier</a>
+ <bdo dir="ltr">ca 1704-1772</bdo></li>
+<li style="vertical-align: middle;list-style-type: circle;"><a href="%%%BASE%%%?templ=tex&p=sci&n=.">SCI .</a>
+</li>
+</ul>
+</li>
+</ul>
+<!-- $Id: modules/relations.txt v7.1 16/08/2023 14:41:19 $ -->
+<!-- notes -->
+<div id ="link_pages">
+</div>
+<h3 class="highlight">Notes</h3>
+<dl><dd>
+<p>
+Extraits généalogiques du Gibon sur l’histoire des îles Chausey jusqu’à la création de la SCI. Voici les listes des personnes ayant été
+<a href="%%%BASE%%%?templ=tex&#38;m=TT;sm=S;t=Gouverneur;p=de+Chausey">gouverneur</a>
+<a href="%%%BASE%%%?templ=tex&#38;m=TT;sm=S;t=Concessionnaire;p=de+Chausey">concessionnaire</a>
+ou <a href="%%%BASE%%%?templ=tex&#38;m=TT;sm=S;t=Proprietaire;p=de+Chausey">propriétaire de Chausey</a>
+<span style="display:none">tex (page \pageref{ListPro})tex</span>.
+</p>
+<p>
+</p><h3>Bref historique de la propriété des îles Chausey</h3>
+<i>(note de <a id="p_1" href="%%%BASE%%%?templ=tex&#38;p=marin&#38;n=durand+couppel+de+st+front">Marin Marie</a> communiquée à <a id="p_2" href="%%%BASE%%%?templ=tex&#38;p=alain&#38;n=monod">Alain Monod</a> en août 1985)</i>
+<p>
+Depuis 1022, date à laquelle le duc de Normandie,
+<a href="http://roglo.eu/roglo?lang=fr;p=richard;n=de%20normandie;oc=2">Richard II</a> leur donne
+les îles, jusqu’en 1737 où le roi de France,
+<a href="http://roglo.eu/roglo_f?lang=fr;p=louis;n=de%20bourbon;oc=16">Louis XV</a> déclare Chausey
+propriété royale, les abbés du Mont-Saint-Michel ont été les uniques
+propriétaires de l’archipel.
+</p>
+<p>
+Ils y réglementaient l’extraction du granit, la chasse, les droits
+d’occupation… Mais au fil des siècles, leur intérêt pour Chausey
+diminue, d’autant plus que les Anglais profitent de leur raids vers
+Granville, ou Saint-Malo, pour razzier au passage les habitations et
+les troupeaux qui s’y trouvent. C’est pour défendre le littoral qu’en
+1559, un <a id="p_3" href="%%%BASE%%%?templ=tex&#38;p=le&#38;n=vieux+fort">fort</a> est édifié sur la Grande-Île, et une garnison y est
+installée pour défendre, sans beaucoup de succès, ce point avancé
+du territoire.
+</p>
+<p>
+C’est cette désaffection croissante des moines du Mont-Saint-Michel,
+et la présence permanente des troupes des
+<a href="%%%BASE%%%?templ=tex&#38;m=TT;sm=S;t=Gouverneur;p=de+Chausey">gouverneur de Chausey</a>
+qui expliquent la déclaration de possession du roi de France.
+</p>
+<p>
+La couronne ne garde Chausey que pendant trente-cinq ans, puisqu’en
+1772, elle en donne la concession à l’abbé <a id="p_4" href="%%%BASE%%%?templ=tex&#38;p=jean+michel&#38;n=nolin">Nolin</a>, dont les héritiers
+vendront la propriété en 1775 à <a id="p_5" href="%%%BASE%%%?templ=tex&#38;p=jean+louis+christophe&#38;n=regnier">Régnier</a> qui la cèdera à son tour à
+<a id="p_6" href="%%%BASE%%%?templ=tex&#38;p=jacques&#38;n=pimor">Pimor</a> en 1786.
+</p>
+<p>
+Pimor, juge-consul de Granville et armateur, est le premier d’une
+<a href="%%%BASE%%%?templ=tex&#38;;m=RL;p=jacques;n=pimor;l1=0;p1=jacques;n1=pimor;l2=4;p2=leonie;n2=hedouin">lignée</a> de propriétaires des îles Chausey qui durera, par le jeu
+des successions, jusqu’en 1918, date à laquelle les demoiselles
+<a id="p_7" href="%%%BASE%%%?templ=tex&#38;p=adolphe+louis&#38;n=hedouin">Hédouin</a> lègueront leur propriété à la
+<a id="p_8" href="%%%BASE%%%?templ=tex&#38;p=sci&#38;n=.">Société Civile Immobilière (SCI) des îles Chausey</a> l’actuel propriétaire.
+</p>
+<p>
+Mais la propriété ainsi léguée n’était pas la même que celle
+qu’avait acquise Pimor, puisque l’État français avait entre temps
+exproprié près de 8 hectares pour les besoins de la navigation et de
+la défense (1846 <a id="p_9" href="%%%BASE%%%?templ=tex&#38;p=le&#38;n=phare">le Phare</a>, 1866 <a id="p_10" href="%%%BASE%%%?templ=tex&#38;p=le&#38;n=fort">le Fort</a>, 1867 <a id="p_11" href="%%%BASE%%%?templ=tex&#38;p=le&#38;n=semaphore">le Sémaphore</a>).
+</p>
+<p>
+</p><h3>Les origines de la propriété privée de Chausey</h3>
+<p></p>
+<p>
+<i>(site www.ileschausey.com)</i>
+</p><p>
+L’origine de la propriété actuelle de Chausey remonte loin. Il faut en effet revenir trois siècles en arrière,
+au 28 juillet 1772 très exactement, date à laquelle le roi Louis XV en fait concession à
+l’<a id="p_12" href="%%%BASE%%%?templ=tex&#38;p=jean+michel&#38;n=nolin">abbé Nolin</a>. Pourquoi ce geste ? D’abord en reconnaissance de ses
+services rendus, lui qui n’a pas ménagé ses efforts pour mettre les îles en culture. Ensuite
+parce qu’il a contribué à faire cesser les bruits de neutralité que les Anglais faisaient courir sur Chausey !
+</p>
+<p>
+Il est vrai qu’à ce moment-là, l’île est délaissée depuis près d’un demi-siècle : plus de
+garnison depuis la prise de Chausey par l’amiral Howe (1756), plus de carriers ou presque,
+quelques rares pêcheurs saisonniers, une sorte d’auberge installée dans les ruines du vieux
+château, tenue par <a id="p_13" href="%%%BASE%%%?templ=tex&#38;p=pierre+joseph&#38;n=regnier">J.B. Régnier</a>.
+</p>
+<p>
+Un an après avoir reçu cette concession, l’abbé Nolin meurt. Ses héritiers, un frère et une
+sœur, vendent l’île le 15 juillet 1775 à
+<a id="p_14" href="%%%BASE%%%?templ=tex&#38;p=jean+louis+christophe&#38;n=regnier">Louis-Jean-Christophe Régnier</a>, fils de l’aubergiste.
+</p>
+<p>
+Régnier va jouer un rôle important — et réveiller l’activité dans les îles. Outre
+l’implantation de cultures et la construction de la ferme, d’une étable, d’une boulangerie
+et d’une chapelle, il développe l’industrie de la soude (les « barilleurs » fauchent le goémon,
+puis le font cuire, la soude ainsi extraite étant ensuite envoyée sur le continent pour être
+utilisée par les artisans verriers normands), et favorise la reprise de l’exploitation du granit,
+depuis près d’un siècle abandonnée.
+</p>
+<p>
+En 1780, la population de Chausey se compose de 72 personnes : 40 soudiers, 12 carriers et les proches de la famille Régnier. La ferme, elle, compte 4 chevaux, 22 bêtes à cornes et près de 150 moutons.
+Malheureusement, Régnier disperse trop ses efforts et finit par se ruiner, ce qui l’amène à
+se séparer des îles.
+</p>
+<p>
+Le 12 juillet 1786, Chausey est ainsi vendu à <a id="p_15" href="%%%BASE%%%?templ=tex&#38;p=jacques&#38;n=pimor">Jacques Pimor</a>, un des principaux négociants
+de Granville, qui poursuit l’œuvre entreprise.
+La Révolution marque un temps d’arrêt dans le développement industriel de Chausey. Il fallut
+attendre la Restauration pour que reprenne la fabrication de la soude grâce à l’exploitation du varech.
+</p>
+<p>
+Après le décès de Jacques Pimor, sa succession est partagée entre ses deux fils et sa fille,
+et réunie peu après en une seule main, celle de monsieur <a id="p_16" href="%%%BASE%%%?templ=tex&#38;p=augustin+philippe&#38;n=harasse">Harasse</a>, gendre de son fils aîné — et bientôt seul héritier des Pimor.
+Celui-ci œuvre beaucoup pour Chausey : vers 1825, il fait venir des gens de Blainville-sur-Mer
+(les fameux Blainvillais) pour développer l’industrie de la soude et emploie des carriers de
+Bretagne qui atteignent bientôt le chiffre de 400 ! À cette époque, 37 îlots sur 53 sont
+habités — et les derniers gros bâtiments sont érigés : phare, fort Vauban, presbytère,
+chapelle, grande cale et sémaphore.
+</p>
+<p>
+En 1860, demande est faite par l’État d’occuper la partie sud-est de l’île pour y construire
+le nouveau fort Vauban. Faute d’accord financier avec les propriétaires de l’époque, survient
+l’expropriation de cette parcelle située en haut de la pointe de la Tour.
+</p>
+<p>
+À partir de la fin du XIX<sup>e</sup> siècle, les activités ne cessent de décroître. Des nouveaux
+procédés de fabrication de la soude font disparaître les soudiers, et l’amélioration des
+moyens de transport par terre fait partir les carriers. Une à une, les îles sont abandonnées
+et rendues à leur silence.
+</p>
+<p>
+En 1891, la propriété des îles change, sinon de famille, au moins de titulaire. Monsieur et
+Madame Harasse ont eu une fille, qui épouse monsieur Hédouin, armateur à Granville.
+Le domaine entier de l’archipel se trouve ainsi réuni entre leurs mains par l’acquisition
+du dernier quart possédé par les Daguenet-Hugon.
+</p>
+<p>
+Madame Hédouin, qui a longtemps survécu à son mari, laisse comme héritières deux filles,
+<a id="p_17" href="%%%BASE%%%?templ=tex&#38;p=marie&#38;n=hedouin">Marie</a> et <a id="p_18" href="%%%BASE%%%?templ=tex&#38;p=leonie&#38;n=hedouin">Léonie Hédouin</a>, à qui incombe la tâche difficile
+d’administrer un tel domaine.
+Le 10 mai 1919, Léonie Hédouin, dernière « reine des îles », s’éteint. Six mois auparavant,
+elle a vendu Chausey à une société civile immobilière composée de trois familles,
+les Durand de Saint-Front, les Fortin et les Gélin.
+</p>
+<p>
+-----
+</p>
+<p>
+Quelques commentaires sur l’histoire de Chausey en relation avec l’extraction du granite, sur la page des <a id="p_19" href="%%%BASE%%%?templ=tex&#38;p=carriers&#38;n=chausey">carriers à Chausey</a>
+<span style="display:none">tex (Voir page \pageref{page_carriers})tex</span>.
+</p>
+<p>
+-----
+</p>
+<p>
+<span style="display:none">tex On trouvera page \pageref{ListPro} un arbre situant les propriétaires successifs les uns par rapport aux autres. tex</span>
+</p></dd></dl>
+<p style="clear:both"></p>
+ <!-- sources chausey -->
+<h3 class="highlight">Sources</h3>
+<p>
+- personne: <i>Les Iles Chausey</i>, Comte de Gibon, site www.ileschausey.com<br/>
+</p>
+</div>
+
+    <span style="display:none">Query treated in <span id="q_time_c">0.062</span> s
+      (<span id="nb_errors_c">0</span> errors).</span>
+    <script>
+      var q_time = document.getElementById('q_time_c').innerHTML;
+      var nb_errors = document.getElementById('nb_errors_c').innerHTML;
+      var home_time = document.getElementById('q_time_d');
+      var home_errors = document.getElementById('nb_errors_d');
+      home_time.title = q_time + " s";
+      home_errors.title = nb_errors + " errors!";
+      if (nb_errors > 0 ) {
+        home_errors.classList.remove("d-none");
+      }
+      if (q_time < 3) {
+        home_time.classList.add("text-success");
+      } else if (q_time < 8) {
+        home_time.classList.add("text-warning");
+      } else {
+        home_time.classList.add("text-danger");
+      }
+    </script>
+      <!-- Trailer Base v1.1 -->
+<script language="javascript"> 
+<!-- 
+function mailpage() 
+{ 
+chaine_mail = "mailto:Henri.Gouraud@LaPoste.net"
+chaine_mail += "?subject=" + document.title; 
+chaine_mail += "&body=Version du 2015-02-08 10:16,%0AVos corrections et/ou commentaires :"
+location.href = chaine_mail; 
+} 
+--> 
+</script>
+<table border="1" width="100%">
+<tr>
+<td width="100%" align="center">
+<small>
+<font face="Garamond">
+<strong>
+On ne choisit pas de devenir chausiais. C’est Chausey qui sélectionne ceux qui resteront un jour, une semaine, ou un siècle.
+</strong>
+</font>
+</small>
+</td>
+</tr>
+</table>
+<table width="100%">
+<tr>
+<td align="bottom">
+<em>
+<small>
+(<a href="%%%BASE%%%?templ=tex&m=SRC;v=version-test">.</a>) Base Chausey version du : 2015-02-08 10:16, Copyright &copy; 2002-2013,
+Faites corrections et remarques sur le 
+<a href="%%%BASE%%%?templ=tex&m=FORUM">forum</a>,
+ou par mail à
+<a href="javascript:mailpage()">Henri Gouraud</a>.
+</small>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</table><!-- $Id: copyr.txt v7.1 15/08/2023 17:58:58 $ -->
+<div class="d-flex ml-auto  justify-content-end m-2" id="copyr">
+<div class="d-flex flex-column align-self-center align-items-center ml-2 small">
+<a href="%%%BASE%%%?templ=tex&m=CONN_WIZ">1 magicien
+<span class="sr-only">switch to templm</span></a><span>1 connexion
+</span>
+</div>
+<div class="d-inline-flex flex-column justify-content-end align-self-center ml-3">
+<div class="ml-auto">
+<a role="button" class="mr-1"
+href="%%%BASE%%%?templ=templm&p=anciens+proprietaires&n=chausey"
+title="templm"><i class="fab fa-markdown" aria-hidden="true"></i><span class="sr-only">switch to templm</span></a>-n <a href="https://github.com/geneweb/geneweb/commit/
+0b8b7b6b2"
+-n   title="Compilé le 2023-09-30 à partir du commit 
+-n 0b8b7b6b2 (2023-09-30)">
+GeneWeb v. 7.1-beta</a>
+</div>
+<div class="btn-group">
+<span>&copy; <a href="https://www.inria.fr" target="_blank" rel="noreferrer, noopener">INRIA</a> 1998-2007</span>
+<a href="https://geneweb.tuxfamily.org/wiki/GeneWeb/fr" class="ml-1"
+target="_blank" rel="noreferrer, noopener" title="Documentation GeneWeb"><i class="fab fa-wikipedia-w"></i></a>
+<a href="https://github.com/geneweb/geneweb" class="ml-1"
+target="_blank" rel="noreferrer, noopener" title="GeneWeb on Github"><i class="fab fa-github"></i></a>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- $Id: js.txt v7.1 26/09/2023 02:44:26 $ -->
+</body>
+</html>
+www

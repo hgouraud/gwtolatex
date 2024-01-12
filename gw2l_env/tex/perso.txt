@@ -1,0 +1,503 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+<!-- $Id:tex/perso.txt,v hg.1 2023/10/16  hg Exp $ -->
+  <!-- copyright (c) INRIA, HG -->
+  <title>
+    %if;has_public_name;
+      %if;has_qualifiers;%public_name; %qualifier;
+      %else;%public_name; %surname;%end;
+    %else;
+      %if;has_qualifiers;%first_name; %qualifier;
+      %else;%first_name; %surname;%end;
+    %end;
+  </title>
+</head>
+
+%define;hgref(which, snxx, fnxx, ocxx, alxx)
+  <span mode="a_ref" gw2w="which" gw2sn="snxx" gw2fn="fnxx" gw2oc="ocxx" gw2al="alxx">%nn;
+    %if;("which"="name")
+      {\bf snxx fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end;}%nn;
+    %elseif;("which"="name2")
+      {\bf fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end; snxx}%nn;
+    %elseif;("which"="first_name")
+      {\bf fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end;}%nn;
+    %elseif;("which"="surname")
+      {\bf snxx}%nn;
+    %elseif;("which"="alias")
+      {\bf alxx}%nn;
+    %end;
+  </span>%nn;
+%end;
+
+%define;married_to(date_place)
+  %if;is_male;
+    %if;are_married;[*married%t to:::date_place]0
+    %elseif;are_not_married;[*relationship%t to:::date_place]0
+    %elseif;are_engaged;[*engaged%t to:::date_place]0
+    %end;
+  %else;
+    %if;are_married;[*married%t to:::date_place]1
+    %elseif;are_not_married;[*relationship%t to:::date_place]1
+    %elseif;are_engaged;[*engaged%t to:::date_place]1
+    %end;
+  %end;
+%end;
+
+%define;married_to_with_place(place)
+  %apply;married_to("\it{, à place,}")
+%end;
+
+%define;married_to_with_date(ondate)
+  %apply;married_to("\it{ ondate}")
+%end;
+
+%define;married_to_with_date_and_place(ondate,place)
+  %apply;married_to("\it{ ondate, à place,}")
+%end;
+
+\hghead{
+%if;has_public_name;
+  %if;has_qualifiers;%public_name; {\it %qualifier;}
+  %else;%public_name; %surname;%end;
+%else;
+  %if;has_qualifiers;%first_name; {\it %qualifier;}
+  %else;
+    %apply;hgref("name", surname, first_name, occ, "")
+  %end;
+%end;
+\par
+}
+
+%if;(has_sosa or has_qualifiers or has_aliases or has_nobility_titles or
+     has_public_name or has_surnames_aliases or has_first_names_aliases)
+  %if;has_sosa;
+    {\it [*Sosa]:%sosa;}%nl;
+  %end;
+  %foreach;qualifier;
+    %if;not is_first;
+      %if;has_public_name;%public_name; %qualifier;
+      %else;%first_name; %qualifier;%end;\%nl;
+    %end;
+  %end;
+  %foreach;alias;
+    %apply;hgref("alias", surname, first_name, occ, alias)\\%nl;
+  %end;
+  %if;has_nobility_titles;
+    {\it
+    %foreach;nobility_title;
+      %if;not is_first;,%end;
+      %sp;%nobility_title;
+    %end;
+    }%nl;
+  %end;
+  %if;(has_public_name or has_qualifiers)
+    {\it (%first_name; %surname;)}%nl;
+  %end;
+  %foreach;surname_alias;
+    {\it (%first_name; %surname_alias;)}%nl;
+  %end;
+  %foreach;first_name_alias;
+    {\it (%first_name_alias; %surname;)}%nl;
+  %end;
+\par
+%end;
+
+%(apply;hgref("name", surname, first_name, occ, ""%)
+
+%if;has_image;
+  \begin{tabular}{ @{}p{5.1cm} @{}p{0.8cm} @{}p{9.4cm} }
+   \parbox{5cm}{
+   <a href="%image_html_url;"> 
+   <img src="%image_url;"%image_size; border=0 alt="[image/images]0"></a>
+   }& &
+%end;
+%if;has_image;\begin{minipage}{9.4cm}%end;
+%if;(has_occupation or has_birth_date or has_birth_place or
+     has_baptism_date or has_baptism_place or is_dead or is_buried or
+     is_cremated or has_consanguinity)
+  \begin{hgitemize}  
+  %if;has_occupation;
+    \item %apply;capitalize%with;%occupation;%end;%nl;
+  %end;
+  %if;has_linked_page.OCCU;
+    \item %apply;capitalize(linked_page.OCCU)%nl;
+  %end;
+  %if;has_birth_date;
+    %if;(has_father and (surname = "X" or
+         (father.has_father and father.father.first_name="Maisons")))
+        \item %apply;capitalize(nth([built],sex)) %on_birth_date.year;
+    %else
+      \item %apply;capitalize(nth([born],sex)) %on_birth_date;
+    %end;
+    %if;has_birth_note; (%birth_note;)%end;%nn;
+    %if;has_birth_place;, à %birth_place;%end;%nl;
+  %else;
+    %if;has_birth_note; (%birth_note;)%end;%nn;
+    %if;has_birth_place;
+    \item %apply;capitalize(nth([born],sex)) à %birth_place;%nl;
+    %end;
+  %end;
+  %if;has_baptism_date;
+    \item %apply;capitalize(nth([baptized],sex)) %on_baptism_date;
+    %if;has_baptism_note; (%baptism_note;)%end;%nn;
+    %if;has_baptism_place;, à %baptism_place;%end;%nl;
+  %else;
+    %if;has_baptism_note; (%baptism_note;)%end;%nn;
+    %if;has_baptism_place;
+    \item %apply;capitalize(nth([baptized],sex)) à %baptism_place;%nl;
+    %end;
+  %end;
+  %if;is_dead;
+    \item %apply;capitalize(died)
+    %if;has_death_date; %on_death_date;%end;
+    %if;has_death_note; (%death_note;)%end;%nn;
+    %if;has_death_place;, à %death_place;%end;
+    %if;has_linked_page.DEATH; %linked_page.DEATH;%end;%nl;
+  %end;
+  %if;computable_age;
+    \item [*age] %age;%nl;
+  %end;
+  %if;computable_death_age;
+    \item [*age at death:] %death_age;%nl;
+  %end;
+  %if;is_buried;
+    \item %apply;capitalize(nth([buried],sex))
+    %if;has_burial_date; %on_burial_date;%end;
+    %if;has_burial_note; (%burial_note;)%end;%nn;
+    %if;has_burial_place;, à %burial_place;%end;%nl;
+  %end;
+  %if;is_cremated;
+    \item %apply;capitalize(nth([cremated],sex))
+    %if;has_cremation_date; %on_cremation_date;%end;
+    %if;has_burial_note; (%burial_note;)%end;%nn;
+    %if;has_cremation_place;, à %cremation_place;%end;%nl;
+  %end;
+  %if;(has_consanguinity and (bvar.show_consang != "no" or manitou))
+    \item [*consanguinity][:] %consanguinity;%nl;
+  %end;
+  \end{hgitemize}%nl;
+%end;
+
+%if;has_parents;
+  %if;(father.first_name = "Famille" or
+       father.first_name = "Anciens Propriétaires" or
+       father.first_name = "Carriers" or
+       father.first_name = "Divers")
+  %elseif;(
+           first_name = "Pêcheurs" or
+           first_name = "Carriers" or
+           first_name = "SCI" or
+           first_name = "Phare" or
+           first_name = "Maisons" or
+           first_name = "Ruines" or
+           first_name = "Bateaux" or 
+           first_name = "Anciens Propriétaires" or
+           first_name = "Divers" or
+           first_name = "Iles" or
+           father.first_name = "Pêcheurs" or
+           father.first_name = "Carriers" or
+           father.first_name = "SCI" or
+           father.first_name = "Phare" or
+           father.first_name = "Maisons" or
+           father.first_name = "Grande île, côté Public" or
+           father.first_name = "Grande île, côté SCI" or
+           father.first_name = "Île d'Aneret" or
+           father.first_name = "Bateaux" or 
+           father.first_name = "Bisquines" or 
+           father.first_name = "Canots mixtes" or 
+           father.first_name = "Canots à moteur a" or 
+           father.first_name = "Canots à moteur b" or 
+           father.first_name = "Canots en plastique" or 
+           father.first_name = "Canots Chausiais" or 
+           father.first_name = "Canots à Voile" or 
+           father.first_name = "Caravelles et Dériveurs" or 
+           father.first_name = "Doris" or 
+           father.first_name = "Plaisance" or 
+           father.first_name = "Vedettes" or 
+           father.first_name = "Vedettes passagers" or 
+           father.first_name = "Vedettes passagers anciennes" or 
+           father.first_name = "Bateaux divers" or 
+           father.first_name = "Anciens Propriétaires" or
+           father.first_name = "Divers" or
+           father.first_name = "Îles"
+       )
+    \hghp{[attached]}
+    \begin{hgitemize}
+    %if;(father.surname = ".")
+      \item %father.first_name;%nl;
+    %else;
+      \item %father;%nl;
+    %end;
+    \end{hgitemize}
+  %else;
+    \hghp{[*parents]}
+    \begin{hgitemize}
+    \item %[$%if;father.has_parents;\bullet %else;\circ%end;$%] %sp;
+    %apply;hgref("name", father.surname, father.first_name, father.occ, "")%nn;
+    %father.title;~%father.dates;%nl;
+    \item %[$%if;mother.has_parents;\bullet %else;\circ%end;$%] %sp;
+    %apply;hgref("name", mother.surname, mother.first_name, mother.occ, "")%nn;
+    %mother.title;~%mother.dates;%nl;
+    \end{hgitemize}
+  %end;
+%end;
+
+%if;has_image;
+  \end{minipage}%nl;
+  \end{tabular}%nl;
+  \par
+%end;
+
+%if;has_families;
+  %if;(
+         first_name = "Pêcheurs" or
+         first_name = "Carriers" or
+         first_name = "SCI" or
+         first_name = "Phare" or
+         first_name = "Maisons" or
+         first_name = "Ruines" or
+         first_name = "Grande île, côté Public" or
+         first_name = "Grande île, côté SCI" or
+         first_name = "Ile d'Aneret" or
+         first_name = "Bateaux" or 
+         first_name = "Bisquines" or 
+         first_name = "Canots mixtes" or 
+         first_name = "Canots à moteur a" or 
+         first_name = "Canots à moteur b" or 
+         first_name = "Canots en plastique" or 
+         first_name = "Canots Chausiais" or 
+         first_name = "Canots à Voile" or 
+         first_name = "Caravelles et Dériveurs" or 
+         first_name = "Doris" or 
+         first_name = "Plaisance" or 
+         first_name = "Vedettes" or 
+         first_name = "Vedettes passagers" or 
+         first_name = "Vedettes passagers anciennes" or 
+         first_name = "Divers" or 
+         first_name = "Anciens Propriétaires" or
+         first_name = "Divers" or
+         first_name = "Iles"
+       )
+    \hghm{[*list]}
+  %else;
+    \hghm{[*marriage/marriages]1 [and::child/children]1}
+  %end;
+  \begin{hgitemize}
+  %foreach;family;
+    \item
+    %if;(
+         first_name = "Pêcheurs" or
+         first_name = "Carriers" or
+         first_name = "SCI" or
+         first_name = "Phare" or
+         first_name = "Maisons" or
+         first_name = "Ruines" or
+         first_name = "Grande île, côté Public" or
+         first_name = "Grande île, côté SCI" or
+         first_name = "Ile d'Aneret" or
+         first_name = "Bateaux" or 
+         first_name = "Bisquines" or 
+         first_name = "Canots mixtes" or 
+         first_name = "Canots à moteur a" or 
+         first_name = "Canots à moteur b" or 
+         first_name = "Canots en plastique" or 
+         first_name = "Canots Chausiais" or 
+         first_name = "Canots à Voile" or 
+         first_name = "Caravelles et Dériveurs" or 
+         first_name = "Doris" or 
+         first_name = "Plaisance" or 
+         first_name = "Vedettes" or 
+         first_name = "Vedettes passagers" or 
+         first_name = "Vedettes passagers anciennes" or 
+         first_name = "Divers" or 
+         first_name = "Anciens Propriétaires" or
+         first_name = "Divers" or
+         first_name = "Iles"
+         )
+      %if;(first_name = "Carriers" or first_name = "Anciens Propriétaires")
+        %if;has_children;
+          \begin{hgitemize}
+          %foreach;child;
+            \item %[$%if;child.has_families;\bullet %else;\circ%end;$%] %sp;
+            %apply;hgref("name2", child.surname, child.first_name, child.occ, "")%nn;
+            %child.dates;
+          %end;
+          \end{hgitemize}
+        %end;
+      %else;
+        %if;has_children;
+          \begin{hgitemize}
+          %foreach;child;
+            \item %[$%if;child.has_families;\bullet %else;\circ%end;$%] %sp;
+            %apply;hgref("first_name", child.surname, child.first_name, child.occ, "")%nn;
+            %child.dates;
+          %end;
+          \end{hgitemize}
+        %end;
+      %end;
+      %if;(evar_opt = "from" and wizard);{\it (%origin_file;)} %end;
+    %else;
+      %[$%if;spouse.has_parents;\bullet %else;\circ%end;$%] %sp; 
+      %if;(marriage_place = "")
+        %if;(on_marriage_date = "")%apply;married_to("")
+        %else;%apply;married_to_with_date(on_marriage_date)%nn;
+        %end;%nn;
+      %else;
+        %if;(on_marriage_date = "")%apply;married_to_with_place(marriage_place)%nn;
+        %else;
+          %apply;married_to_with_date_and_place(on_marriage_date, marriage_place)%nn;
+        %end;%nn;
+      %end;%nn;
+      %apply;hgref("name", spouse.surname, spouse.first_name, spouse.occ, "")%nn;
+      %spouse.title;~%spouse.dates;
+      %if;has_witnesses;
+        %sp;([witness/witnesses]w[:]
+        %foreach;witness;
+          %if;not is_first;, %end;
+          %apply;hgref("name", witness.surname, witness.first_name, witness.occ, "")%nn;
+          %witness.title;~%witness.dates;
+        %end;)%nn;
+      %end;
+      %if;are_divorced;, [divorced]0%divorce_date;%end;
+      %if;are_separated;, [separated]0%end;
+      %if;has_children;
+        , dont[:]%()[having as children]0%)
+        \begin{hgitemize}
+          %foreach;child;
+            \item %[$%if;child.has_families;\bullet %else;\circ%end;$%] %sp;
+          %apply;hgref("first_name", child.surname, child.first_name, child.occ, "")%nn;
+          %child.dates;
+          %end;
+        \end{hgitemize}
+      %end;
+      %if;(evar_opt = "from" and wizard);{\it  (%origin_file;)} %end;
+    %end;
+  %end;
+  \end{hgitemize}
+%end;
+
+
+%if;has_relations;
+  \hghx{[*relation/relations]1}
+    \begin{hgitemize}
+    %foreach;relation;
+       \item
+       [$\bullet$]%relation_type;[:]
+       %if;(has_relation_him and has_relation_her)
+        %(%[$%if;relation_him.has_families;\bullet %else;\circ%end;$%] %sp;%)
+          %apply;hgref("name", relation_him.surname, relation_him.first_name, relation_him.occ, "")%nn;
+          %relation_him.title;~%relation_him.dates;
+        %(%[$%if;relation_her.has_families;\bullet %else;\circ%end;$%] %sp;%)
+          %apply;hgref("name", relation_her.surname, relation_her.first_name, relation_her.occ, "")%nn;
+          %relation_her.title;~%relation_her.dates;
+       %elseif;has_relation_him;
+        %(%[$%if;relation_him.has_families;\bullet %else;\circ%end;$%] %sp;%)
+          %apply;hgref("name", relation_him.surname, relation_him.first_name, relation_him.occ, "")%nn;
+          %relation_him.title;~%relation_him.dates;
+       %elseif;has_relation_her;
+        %(%[$%if;relation_her.has_families;\bullet %else;\circ%end;$%] %sp;%)
+          %apply;hgref("name", relation_her.surname, relation_her.first_name, relation_her.occ, "")%nn;
+          %relation_her.title;~%relation_her.dates;
+       %end;
+    %end;
+    %foreach;related;
+      \item %[$%if;related.has_families;\bullet %else;\circ%end;$%] %sp;%related_type;[:]
+      %apply;hgref("name", related.surname, related.first_name, related.occ, "")
+      %related.title;~%related.dates;
+    %end;
+    
+    %foreach;event_witness_relation;
+      \item %[$\bullet$%]
+        %apply;capitalize(event_witness_relation_kind)[:]
+        %if;(event_witness_relation.event.date.year != "")
+          {\it (%event_witness_relation.event.date.year;)}%end;
+        %sp;%event_witness_relation.event.name;,%sp;
+        %apply;hgref("name", event_witness_relation.person.surname,
+          event_witness_relation.person.first_name, event_witness_relation.person.occ, "")
+        %if;(event_witness_relation.event.spouse != "")
+          %sp;[and]
+          %apply;hgref("name", event_witness_relation.event.spouse.surname,
+            event_witness_relation.event.spouse.first_name, event_witness_relation.event.spouse.occ, "")
+        %end;
+    %end;
+    \end{hgitemize}
+%end;
+
+%if;has_notes;
+  \hghx{[*note/notes]1}
+  \begin{hgitemize}
+  \item %notes;
+  \end{hgitemize}
+%end;
+
+%reset_count;
+%if;has_families;
+  %foreach;family;
+    %if;has_fnotes;
+      %incr_count;
+    %end;
+  %end;
+%end
+
+%if;(has_families and count > 0)
+  %( On remet les compteurs à zéro et on commence à compter à 1 %)
+  %reset_count; %incr_count;
+  %if;(nb_families > 1)
+    \hghx{[*marriage notes/marriages notes]0}
+  %else;
+    \hghx{[*marriage notes/marriages notes]1}
+  %end;
+  \begin{hgitemize}
+  %foreach;family;
+    \item [*marriage with] %apply;hgref("name", spouse.surname, spouse.first_name, spouse.occ, "")[:]
+    %comment;
+    %incr_count;
+  %end;
+  \end{hgitemize}
+%end;
+
+%if;has_sources;
+  {\small {\it  [*source/sources]1 -
+  %reset_count;
+  %foreach;source;
+    %if;(count > 0); %end;
+    %if;has_parents;
+      %if (father.first_name = "Îles" )
+        %source_type;[:] %source;
+      %elseif (
+        father.first_name = "Grande île, côté Public" or
+        father.first_name = "Grande île, côté SCI" or
+        father.first_name = "Île d'Aneret" )
+        maison[:] %source;    
+      %elseif (
+        father.first_name = "Bateaux" or 
+        father.first_name = "Bisquines" or 
+        father.first_name = "Canots mixtes" or 
+        father.first_name = "Canots à moteur a" or 
+        father.first_name = "Canots à moteur b" or 
+        father.first_name = "Canots en plastique" or 
+        father.first_name = "Canots Chausiais" or 
+        father.first_name = "Canots à Voile" or 
+        father.first_name = "Caravelles et Dériveurs" or 
+        father.first_name = "Doris" or 
+        father.first_name = "Plaisance" or 
+        father.first_name = "Vedettes" or 
+        father.first_name = "Vedettes passagers" or 
+        father.first_name = "Vedettes passagers anciennes" or 
+        father.first_name = "Bateaux divers" )
+        bateau[:] %source;
+      %else;
+        %source_type;[:] %source;
+      %end;
+    %else;
+      %source_type;[:] %source;
+    %end;
+    %incr_count;
+  %end;
+  }} \par
+%end;
+
+%if;(evar_opt = "misc")%misc_names;%end;
+</html>
+

@@ -1,0 +1,11 @@
+(executable
+ (public_name mkBook)
+ (name mkBook)
+ (libraries
+  gwtolatex
+  ezcurl
+  markup
+  unidecode
+  geneweb.gwdb-legacy
+  geneweb.sosa_zarith
+  geneweb))

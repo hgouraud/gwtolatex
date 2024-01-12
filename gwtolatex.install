@@ -1,0 +1,45 @@
+lib: [
+  "_build/install/default/lib/gwtolatex/META"
+  "_build/install/default/lib/gwtolatex/dune-package"
+  "_build/install/default/lib/gwtolatex/gwtolatex.a"
+  "_build/install/default/lib/gwtolatex/gwtolatex.cma"
+  "_build/install/default/lib/gwtolatex/gwtolatex.cmi"
+  "_build/install/default/lib/gwtolatex/gwtolatex.cmt"
+  "_build/install/default/lib/gwtolatex/gwtolatex.cmx"
+  "_build/install/default/lib/gwtolatex/gwtolatex.cmxa"
+  "_build/install/default/lib/gwtolatex/gwtolatex.ml"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Hutil.cmi"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Hutil.cmt"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Hutil.cmx"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Lutil.cmi"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Lutil.cmt"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Lutil.cmx"
+  "_build/install/default/lib/gwtolatex/gwtolatex__MkImgDict.cmi"
+  "_build/install/default/lib/gwtolatex/gwtolatex__MkImgDict.cmt"
+  "_build/install/default/lib/gwtolatex/gwtolatex__MkImgDict.cmx"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Sutil.cmi"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Sutil.cmt"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Sutil.cmx"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Trees.cmi"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Trees.cmt"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Trees.cmx"
+  "_build/install/default/lib/gwtolatex/hutil.ml"
+  "_build/install/default/lib/gwtolatex/lutil.ml"
+  "_build/install/default/lib/gwtolatex/mkImgDict.ml"
+  "_build/install/default/lib/gwtolatex/opam"
+  "_build/install/default/lib/gwtolatex/sutil.ml"
+  "_build/install/default/lib/gwtolatex/trees.ml"
+]
+libexec: [
+  "_build/install/default/lib/gwtolatex/gwtolatex.cmxs"
+]
+bin: [
+  "_build/install/default/bin/minitest"
+  "_build/install/default/bin/mkBook"
+  "_build/install/default/bin/mkNewGw"
+  "_build/install/default/bin/mkTex"
+  "_build/install/default/bin/mkTweekInd"
+]
+doc: [
+  "_build/install/default/doc/gwtolatex/README.txt"
+]

@@ -1,0 +1,32 @@
+\documentclass[a4paper]{book}
+
+\tracingcommands=1
+\tracingparagraphs=1 
+\tracingmacros=1
+\tracingoutput=1
+\makeindex
+
+\input{./Gw2LaTeX-env.tex}
+
+\begin{document}
+\WarningsOff*
+<x CollectImages on>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=maisons;n=chausey;templ=tex;w=%%%PASSWD%%%">La Grande Île</a>La Grande Île<br>
+
+<x Trees on>
+<x Hrule off>
+<y href="http://127.0.0.1:2317/%%%BASE%%%?p=henri&n=gouraud&m=D&t=TV&v=3&templ=tex;w=%%%PASSWD%%%">Arbre descendant d'Henri (t=TV)</a>
+<y href="http://127.0.0.1:2317/%%%BASE%%%?p=henri&n=gouraud&m=D&t=TV&v=3&templ=tex;w=%%%PASSWD%%%;cgl=on">Arbre descendant d'Henri (t=TVcgl=on)</a>
+<y href="http://127.0.0.1:2317/%%%BASE%%%?p=henri&n=gouraud&m=D&t=V&v=3&templ=tex;w=%%%PASSWD%%%">Arbre descendant d'Henri (t=V)</a>
+<y href="http://127.0.0.1:2317/%%%BASE%%%?p=henri&n=gouraud&m=D&t=T&v=3&templ=tex;w=%%%PASSWD%%%">Arbre descendant d'Henri (t=T)</a>
+
+<x Hrule on>
+<x Newpage>
+
+<x Sideways on>
+<y href="http://127.0.0.1:2317/%%%BASE%%%?m=RLM&i1=236&t1=marraine&i2=300&i3=298&t3=filleule&i4=300&i5=300&t5=lui&templ=tex&w=%%%PASSWD%%%">Relation Henri</a>
+<x TwoPages on>
+<y href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex;w=%%%PASSWD%%%;cgl=on">Arbre descendant d'Albert Marie (Toumagi)</a>
+<x TwoPages off>
+
+\end{document}

@@ -1,0 +1,88 @@
+encoding: utf-8
+gwplus
+
+fam Dupont Léon_François 0 + Durand Marie {Marie_Léonie} #src Chambergeot 1843 #bp Donville_(Manche) 1928
+fevt
+#marr 
+end fevt
+beg
+- f Marie_Marguerite #src Chambergeot <1871 0 #dp en_bas_âge
+- f Marie 1872 1945
+- h Léon #occu capitaine_au_long_cours #src Chambergeot,_Alain_Hervé 1874 25/2/1939
+- h Henri 1876 10/1/1969 #dp Granville_(Manche) #ds Tombe,_cimetière_Notre_Dame,_Granville
+- h Lucien #occu capitaine_au_Long_Cours #src Chambergeot,_JMT 1878 1955
+- h Georges 1883 1960
+- h Maurice {Maurice_Pierre} 13/11/1886 #bp Granville_(Manche) #bs AD_p79/301 13/10/1971 #dp Caen_(Calvados) #ds AD_p79/301
+end
+
+fam Dupont Léon + Durand Alice 0
+fevt
+#marr 
+end fevt
+beg
+- h Antoine 0
+end
+
+notes Dupont Léon
+beg
+Note sur la vie de léon.
+
+Sur cette <a href="%sm=IM;s=image-test-1.jpg">photo-1</a>, en compagine de
+[[Geoages/Dupont/Georges]] et [[Lucien/Dupont/Lucien]].
+
+Une autre
+<a href="%sm=IM;s=image-test-2.jpg"><img src="%sm=IM;s=image-test-2-vignette.jpg"></a> avec sa mère [[Marie/Durand]]
+
+Une troisième
+<a href="%sm=IM;s=image-test-3.jpg">photo</a> (souvenir de Tahiti)
+
+Et enfin une dernière du
+<a href="%sm=IM;s=image-test-4.jpg">Diplodocus</a> (années 60, barrage de la baie du Mt St Michel)
+
+Test pour index :
+<span style="display:none" mode="tex">\index[Dupont, Jean, voir Aaa, Bbb, Ccc, Ddd]</span>
+<span style="display:none" mode="tex">\index[Dupont, Jean, photo 1]</span>
+<span style="display:none" mode="tex">\index[Dupont, Jean, photo 2/2]</span>
+fin test
+end notes
+
+pevt Dupont Marie_Marguerite
+#birt <1871
+#deat  #p en_bas_âge
+end pevt
+
+pevt Dupont Marie
+#birt 1872
+#deat 1945
+end pevt
+
+pevt Dupont Léon
+#birt 1874
+#deat 25/2/1939
+end pevt
+
+pevt Dupont Henri
+#birt 1876
+#deat 10/1/1969 #p Granville_(Manche) #s Tombe,_cimetière_Notre_Dame,_Granville
+end pevt
+
+pevt Dupont Lucien
+#birt 1878
+#deat 1955
+note Je lis 1955 sur sa tombe
+end pevt
+
+pevt Dupont Georges
+#birt 1883
+#deat 1960
+end pevt
+
+pevt Dupont Maurice
+#birt 13/11/1886 #p Granville_(Manche) #s AD_p79/301
+#deat 13/10/1971 #p Caen_(Calvados) #s AD_p79/301
+end pevt
+
+pevt Durand Marie
+#birt 1843 #p Donville_(Manche)
+#deat 1928
+end pevt

@@ -1,0 +1,283 @@
+% $Author: Henri $
+% $Date: 2004/04/27 $
+% $State: Exp $
+% $Revision: 1.0 $
+%
+%Environnement specifique Henri
+%\usepackage[latin1]{inputenc}
+\usepackage{ae,lmodern} % ou seulement l'un, ou l'autre, ou times etc.
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+%\usepackage[pdftex, final]{graphicx}
+\usepackage{makeidx}
+\usepackage[figuresright]{rotating}
+%\usepackage[counterclockwise]{rotating}
+\usepackage{vmargin}
+\usepackage{url}
+\usepackage{amssymb}
+\usepackage{tabularx}
+\usepackage{rotating}
+\usepackage{calc}
+\usepackage{fp}
+\usepackage{adjustbox}
+\usepackage{framed}
+\usepackage{color}
+\usepackage{parskip}
+\usepackage{datetime}
+\usepackage{silence}
+\usepackage{afterpage}
+\usepackage{enumitem}
+\usepackage{marvosym} 
+\usepackage{longtable}
+\usepackage{pdflscape}
+\usepackage{ragged2e}
+\usepackage{multicol}
+\usepackage{color}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{verse}
+\usepackage{soul}
+\usepackage{changepage}
+\usepackage{datetime2}
+%\usepackage[textwidth=15.5cm, showframe=true]{geometry}
+\usepackage[textwidth=15.5cm]{geometry}
+
+%\usepackage{cmss}
+\renewcommand{\familydefault}{\sfdefault}
+
+\DeclareUnicodeCharacter{00A0}{~}
+\DeclareUnicodeCharacter{202F}{~} % narrow no break space
+\DeclareUnicodeCharacter{00B0}{\textdegree}
+\DeclareUnicodeCharacter{02B3}{\textsuperscript{r}}
+\DeclareUnicodeCharacter{1D49}{\textsuperscript{e}}
+\DeclareUnicodeCharacter{1D52}{\textsuperscript{o}}
+\DeclareUnicodeCharacter{2514}{\textsuperscript{l}}
+\DeclareUnicodeCharacter{2502}{|}
+
+
+\setpapersize{A4}
+\setmargins%
+{3cm}  %leftmargin
+{1.5cm}  %topmargin
+{15.6cm} %textwidth
+{24.5cm}   %textheight
+{0.6cm}  %headheight
+{0.8cm}  %headsep
+{0.6cm}  %footheight	 
+{0.8cm}  %footskip
+
+% ====  MACROS  ====
+
+\makeatletter
+\renewcommand*\l@section{\@dottedtocline{1}{1.5em}{3em}}
+\renewcommand*\l@subsection{\@dottedtocline{2}{3em}{3em}}
+\renewcommand*\l@subsubsection{\@dottedtocline{3}{6em}{3em}}
+\makeatother
+
+\renewcommand{\Frlabelitemi}{\textbullet}
+%%\renewcommand{\Frlabelitemi}{\textemdash}
+\renewcommand{\Frlabelitemii}{*}
+%%\renewcommand{\Frlabelitemii}{\bfseries\textendash}
+\renewcommand{\Frlabelitemiii}{\textemdash}
+%%\renewcommand{\Frlabelitemiii}{\textbullet}
+\renewcommand{\Frlabelitemiv}{.}
+%%\renewcommand{\Frlabelitemiv}{}
+
+\newcommand{\hgindex}[1]{({\it #1}\index{#1})}
+
+\newcommand{\base}{base}
+\newcommand{\apercu}{aperÁu}
+\newcommand{\gwd}{{\bf Gwd}}
+\newcommand{\serveur}{serveur}
+\newcommand{\navigateur}{navigateur}
+
+% makebox {wid}{hei}{txt}
+\newcommand{\mybox}[4]{\makebox(#1, #2){\parbox{#1cm} {\vspace{0.2cm}#3}}}
+\newcommand{\myboxa}[2]{\parbox{#1cm}{\vspace{0.2cm}#2}}
+\newcommand{\hglaba}   [3]{\raisebox{.6ex}{\small (#1.#2.#3)}}
+\newcommand{\hglabsa}  [3]{\raisebox{.6ex}{\small (#3)}}
+\newcommand{\hglabxa}  [3]{#1.#2.#3\label{f#1#2#3}}
+\newcommand{\hglabxsa} [3]{#3\label{f#1#2#3}}
+\newcommand{\hgrefa}   [3]{#1.#2.#3\label{f#1#2#3}}
+\newcommand{\hgrefsa}  [3]{#3\label{f#1#2#3}}
+\newcommand{\hglabb}   [4]{\raisebox{.6ex}{\small (#1.#2.#3.#4)}}
+\newcommand{\hglabsb}  [4]{\raisebox{.6ex}{\small (#4)}}
+\newcommand{\hglabxb}  [4]{#1.#2.#3.#4\label{f#1#2#3#4}}
+\newcommand{\hglabxsb} [4]{#4\label{f#1#2#3#4}}
+\newcommand{\hgrefb}   [4]{#1.#2.#3.#4\label{f#1#2#3#4}}
+\newcommand{\hgrefsb}  [4]{#4\label{f#1#2#3#4}}
+
+\newcommand{\hgbato}[1]{\vspace{0.4cm}\hspace{-0.5cm}{\bf #1}\hspace{0.5cm}\vspace{0.2cm}}
+\newcommand{\hilight}[1]{\colorbox{yellow}{#1}}
+
+\newcommand{\hgvrule}[1]{\makebox[#1][c]{\rule{1pt}{0.5cm}}}% rule for vertical bar cell
+\newcommand{\hghrule}[3]{% hgrule{5cm}{c}{2}
+\newdimen\wwl\wwl=#1\divide \wwl by #3%
+\makebox[#1][#2]{\rule{\wwl}{1pt}}}
+
+\newcommand{\hgcircle}[1]{o #1}
+\newcommand{\hgdisc}[1]{* #1}
+\newcommand{\hghead}[1]{}
+\newcommand{\hghx}[1]{{\bf #1}}
+\newcommand{\hghp}[1]{\vspace{0.4cm}{\bf #1}\vspace{0.2cm}}
+\newcommand{\hghm}[1]{\vspace{0.4cm}{\bf #1}}
+\newcommand{\hghy}[1]{ #1}
+
+\newlength{\hh}
+
+\newenvironment{xxxhgitemize}
+{
+\begin{itemize}%
+    \setlength{\itemsep}{0 cm}%
+}%
+{\end{itemize}}
+
+%\setlist[enumerate]{topsep=0pt,itemsep=-1ex,partopsep=1ex,parsep=1ex}
+\newlist{hgitemize}{itemize}{5}
+\setlist[hgitemize,1]{label=\textbullet,leftmargin=0.5cm,topsep=0pt,itemsep=0pt,parsep=0pt,partopsep=-3pt}
+\setlist[hgitemize,2]{label=$\circ$,leftmargin=0.5cm,topsep=0pt,itemsep=0pt,parsep=0pt,partopsep=0pt}
+\setlist[hgitemize,3]{label=$\diamond$,leftmargin=0.5cm,topsep=0pt,itemsep=0pt,parsep=0pt,partopsep=0pt}
+\setlist[hgitemize,4]{label=$\rightarrow$,leftmargin=0.5cm,topsep=0pt,itemsep=0pt,parsep=0pt,partopsep=0pt}
+\setlist[hgitemize,5]{label=\textemdash,leftmargin=0.5cm,topsep=0pt,itemsep=0pt ,parsep=0pt,partopsep=0pt}
+\setlist[hgitemize,6]{label=-,leftmargin=0.5cm,topsep=0pt,itemsep=0pt ,parsep=0pt,partopsep=0pt}
+
+
+
+\newenvironment{hgitemize1}%
+{ \begin{list}%
+    {}
+    {\setlength{\itemsep}{0 cm}}}%
+{ \end{list}}
+
+\newenvironment{hgdescription}
+{
+\begin{description}%
+    \setlength{\itemsep}{0 cm}%
+}%
+{\end{description}}
+
+\pagestyle{headings} % hauts de page
+% modification des marges:
+%\addtolength{\textwidth}{1.5cm}
+%\addtolength{\hoffset}{-1.5cm}
+%\addtolength{\voffset}{-1.5cm}
+%\setlength{\footskip}{0cm}
+% ----------------------------------------------------------------------------
+% Macros for inserting a figure
+% Parameters:
+%   1 -- placement of the figure = {h, t, b, H}
+%   2 -- file name
+%   3 -- size of the figure
+%   4 -- legende of the figure
+%   5 -- label name for reference and the figure table
+% InsertFigure ???
+\newcommand{\insertFigure}[5][h]{
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=#3\linewidth]{#2}
+    \caption[#4]{\label{#5} \textsl{#4}}
+\end{figure}
+}
+% ----------------------------------------------------------------------------
+% GeneWeb example
+\newenvironment{hgeneweb}
+{
+\hline
+}
+{\hline}
+% ----------------------------------------------------------------------------
+% Hypothesis list
+\newcounter{hyp}
+\setcounter{hyp}{1}
+\newenvironment{hypothesis}
+{
+\begin{list}
+    {Hyp. \arabic{hyp}\stepcounter{hyp}}
+    {}
+}
+{\end{list}}
+% ----------------------------------------------------------------------------
+% Short list
+\newenvironment{shortlist}
+{
+\begin{list}
+    {$\bullet$}
+    {
+    \setlength{\topsep}{\parskip}
+    \setlength{\itemsep}{\parskip}
+    \setlength{\parsep}{\parskip}
+	%+ \setlength{\labelwidth}{0bp}
+    %+ \setlength{\leftmargin}{0.1\linewidth}
+    %+ \setlength{\itemindent}{0bp}
+    }
+}
+{\end{list}}
+% ----------------------------------------------------------------------------
+% Short enumerate
+\newenvironment{shortenumerate}
+{
+\begin{list}
+    {\arabic{item}.\stepcounter{item}}
+    {
+    \setlength{\topsep}{\parskip}
+    \setlength{\itemsep}{\parskip}
+    \setlength{\parsep}{\parskip}
+	%+ \setlength{\labelwidth}{0bp}
+    \newcounter{item}
+    \setcounter{item}{1}
+    }
+}
+{\end{list}}
+
+\newenvironment{hgphotos}[1]{%
+  \begin{list}{}{%
+    \setlength{\topsep}{0pt}%
+    \setlength{\leftmargin}{#1}%
+    \setlength{\listparindent}{\parindent}%
+    \setlength{\itemindent}{\parindent}%
+    \setlength{\parsep}{\parskip}%
+  }%
+  \item[]}{\end{list}}
+  
+%----------------
+  
+\newcolumntype{P}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+
+\definecolor{female}{rgb}{1.0,0.2,0.2}
+\definecolor{male}  {rgb}{0.2,0.2,1.0}
+
+\newenvironment{hgdesc}{%
+\renewcommand{\labelitemi}{\ding{43}}%
+\begin{itemize}}{\end{itemize}}
+
+
+\newcommand{\hgF}[1]{%
+\begin{hgdesc} [nosep,before=\vspace{-0.80\baselineskip},after=\vspace{-1.1\baselineskip}, leftmargin=1em]%
+\item[\color{female}\Female]%
+{\color{female}\Large\bfseries#1}%
+\end{hgdesc}%
+}
+
+\newcommand{\hgM}[1]{%
+\begin{hgdesc} [nosep,before=\vspace{-0.80\baselineskip},after=\vspace{-1.1\baselineskip}, leftmargin=1em]%
+\item[{\color{male}{\Male}}]%
+{\color{male}{{\Large {\bf #1}}}}%
+\end{hgdesc}%
+}
+
+\newcommand{\hgN}[1]{%
+\begin{hgdesc} [nosep,before=\vspace{-0.80\baselineskip},after=\vspace{-1.1\baselineskip}, leftmargin=1em]%
+\item[]%
+{\\Large {\\bf #1}}%
+\end{hgdesc}%
+}
+
+\def\changemargin#1#2{\list{}{\rightmargin#2\leftmargin#1}\item[]}
+\let\endchangemargin=\endlist
+
+\setlength{\fboxsep}{0pt}
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1}
+

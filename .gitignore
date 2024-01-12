@@ -1,0 +1,10 @@
+_build
+bases
+*.log
+*.gwo
+*.lck
+tmp
+test/*.pdf
+livres/*.pdf
+gw2l_dist
+

@@ -1,0 +1,35 @@
+\documentclass[a4paper]{book}
+
+\tracingcommands=1
+\tracingparagraphs=1 
+\tracingmacros=1
+\tracingoutput=1
+\makeindex
+
+\input{./Gw2LaTeX-env.tex}
+
+\begin{document}
+\WarningsOff*
+
+<x Width \textwidth>
+<x CollectImages off>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES;f=regates-chausey-1979;templ=tex;w=%%%PASSWD%%%">Régates de 1979\index{Régates, 1979}</a><br>
+<x Width 5.1cm>
+\clearpage
+
+
+\newpage
+{\huge {\bf Notes}}
+\par
+<y Run GwToLaTeX du : \date \time>
+\par
+GeneWeb commit : \input{./gw_version.txt}
+GwToLaTeX commit : \input{./version.txt}
+\par
+\par
+<y \hgbaseversion{}
+\par
+\pdftexbanner{}
+\newpage
+{\huge {\bf Notes}}
+\end{document}
