@@ -10,8 +10,9 @@
 
 % Edit your own title page data
 \begin{titlepage}
-\title{Manuel d'utilisation \\
-de GwToLaTeX}
+\title{Manuel d'utilisation de \\
+Gw\kern-0.1em To\LaTeX \\
+{\small Un complément à GeneWeb}}
 \author{Henri Gouraud \\
 \texttt{Henri.Gouraud@LaPoste.net} \\
 \copyright 2024}
@@ -22,6 +23,7 @@ de GwToLaTeX}
 \WarningsOff*
 \maketitle         % genère le titre
 \tableofcontents   % table des matières
+
 
 <x Chapter Avant-propos>
 <x Input %%%LIVRES%%%/test-inputs/Notes.tex>

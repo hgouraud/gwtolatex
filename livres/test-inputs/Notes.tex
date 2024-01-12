@@ -1,9 +1,10 @@
 
 \section{Utilisation de GwToLaTeX}
 
-Dans le cadre de mon travail sur la abse généalogique chausiaise, j'ai développé,
-au fil des ans, un outil en Python me permettant d'éditer périodiquement une
-version papier d'un extrait de cette base.
+Dans le cadre de mon travail sur la base généalogique chausiaise, j'ai développé,
+au fil des ans, un outil en Python me permettant d'éditer périodiquement, et
+à la grande satisfaction des chausiais, une version papier d'un extrait de
+cette base.
 
 J'ai récemment (2024) décidé de reprendre ce travail pour en faire un outil
 "partageable", en m'efforçant de rendre aussi générique que possible ce que j'avais
@@ -92,7 +93,7 @@ GwTo\LaTeX{} version :
 
 \subsection{Liste des commandes GwToLaTex}
 
-les commandes GwToLaTeX présentes dans le document famille.txt ont la forme
+Les commandes GwToLaTeX présentes dans le document famille.txt ont la forme
 <c Commande paramètres>
 Les valeurs de "c" peuvent être:
 \begin{description}[style=nextline]
@@ -123,44 +124,42 @@ correspond au second.
 GwToLatex a besoin de connaitre la numérotation des chapitres et sections afin 
 de numéroter correctement les images. Il ne faut donc pas utiliser directement
 les commandes LaTeX équivalentes (\verb|\chapter|, \verb|\section|, ...). 
-\item["BumpSub"] "on/off". if off, do not increment subsection level.
+\item["BumpSub"] "on/off". If off, do not increment subsection level (TODO clarifier).
 
 \item["Input"] Inclure dans le livre le fichier désigné. Dans ce fichier,
-remplacer les occurrences de \verb|%%%LIVRES%%%| et \verb|%%%BASE%%%| par
-leur valeur telles que définies au lancement du programme 
-\item["LaTeX"] Insérer dans le livre une commande LaTeX
-\item["Newpage"] Passer à la page suivante
-\item["Print"] Imprimer la valeur du paramètre
+remplacer les occurrences de \verb|%%%LIVRES%%%|, \verb|%%%BASE%%%| et
+\verb|%%%PASSWD%%%| par leur valeur telles que définies au lancement du programme .
+\item["LaTeX"] Insérer dans le livre une commande LaTeX.
+\item["Newpage"] Passer à la page suivante.
+\item["Print"] Imprimer la valeur du paramètre.
 
-\item["BumpSub"] "on/off". if off, do not increment subsection level.
-usefull is a section has been manually inserted and
-is followed by automatic <a ...> (sub)sections
-\item["HighLight"] Surligner le nom de la personne (Patronyme prénom (occ))
+\item["HighLight"] Surligner le nom de la personne désignée par "Patronyme prénom (occ)".
+Ommettre " (0)" si l'occurrence est 0.
 \item["Hrule"] Ajouter une ligne horizontale de la largeur du teste.
 
 \item["CollectImages"] "on/off", Rassembler les images citées dans les notes
 d'une personne pour les imprimer à la fin de la page personnelle.
 \item["ImageLabel"] Précise le nombre d'éléments pris en compte dans 
-la numérotation des images (ch, sec, ssec, img-nbr)
+la numérotation des images (ch, sec, ssec, img-nbr).
 \item["Sideways"] Imprime la page en mode paysage (utile pour les arbres
 qui peuvent être larges).\label{sideways}
-\item["Unit"] Définit l'unité (cm, mm, pt)
-\item["VignWidth"] Définit la largeur des vignettes (float)
-\item["Wide"] "on/off"
-\item["ImageWidth"] Définit la largeur des photos (chaine: "textwidth", "5.1cm")
-\item["WideImage"] Force la largeur des photos à textwidth
-\item["Width"] Définit la largeur des images (float)
+\item["Unit"] Définit l'unité (cm, mm, pt).
+\item["VignWidth"] Définit la largeur des vignettes (float).
+\item["Wide"] "on/off".
+\item["ImageWidth"] Définit la largeur des photos (chaine: "textwidth", "5.1cm").
+\item["WideImage"] Force la largeur des photos à textwidth.
+\item["Width"] Définit la largeur des images (float).
 \item["NbImgPerLine"] Définit le nombre d'images par ligne (defaut 3) et en
-déduit la largeur
+déduit la largeur.
 
-\item["Arbres"/"Trees"] "on/off"
+\item["Arbres"/"Trees"] "on/off".
 \item["FontSize"] Définit la taille de la police de caractères\label{fontsize}
-(small, tiny, off returns to default)
-\item["TwoPages"] Eclate un arbre sur desu pages (WIP)
-\item["TreeMode"] 0 imprime l'arbre comme une liste de liste de cellules (debug),
- 1 imprime l'arbre
+(small, tiny, off returns to default).
+\item["TwoPages"] Eclate un arbre sur desu pages (WIP).
+\item["TreeMode"] 0 imprime l'arbre comme une liste de liste de cellules
+(debug, devrait fonctionner pour tous les arbres), 1 imprime l'arbre.
 
-\item["Version"] Imprime la version du logiciel
+\item["Version"] Imprime la version du logiciel.
 \end{description}
 
 \subsection{Les pages GeneWeb}
@@ -235,23 +234,23 @@ GwToLaTex produit deux entrées supplémentaires :
 \index{Non de jeune fille, prénon (ep patronyme du mari)}
 \index{Patronyme du mari, prénon (née Non de jeune fille)}
 \end{verbatim}
-et ajoute aussi les lignes :
+et ajoute aussi pour tout le monde les lignes :
 \begin{verbatim}
 \index{Alias, voir Patronyme, Prénom}
 \end{verbatim}
 si un alias est défini dans la base.
 
-Au delà de cette collecte GwToLaTex permet d'insérer dans le corps des notes
+Au delà de cette collecte, GwToLaTex permet d'insérer dans le corps des notes
 des commandes LaTeX qui produiront une entrée dans l'index sans perturber
 l'affichage sur le Web :
 \begin{verbatim}
-<span style="display:none mode="tex">\index[Aaaa, Bbbb]</span>
+<span style="display:none" mode="tex">\index[Aaaa, Bbbb]</span>
 \end{verbatim}
 permettant d'ajouter dans l'index des personnes citées dans les notes
 sans qu'elles soient présentes dans la base.
-Le contenu du <span> peut être n'importe quelle commande LaTeX de votre choix.
+Le contenu du <span> peut être en fait n'importe quelle commande LaTeX de votre choix.
 ATTENTION : pour une raison obscure, il est nécessaire d'encadrer le
-contenu de la commande index par des [ ] plutôt que les { } attendus.
+contenu de les commandes LaTeX par des [ ] plutôt que les { } attendus.
 
 \subsection{Images et index des personnes dans les images}
 
@@ -278,30 +277,31 @@ Image-id;Page;Description;Nom-de-fichier.jpg
 \begin{description}[style=nextline]
 \item[Image-id] Identifiant unique de l'image
 \item[Page] 0 si l'image apparait dans les notes de la base, n si elle apparait
-dans l'annexe (voir section \ref{sec:annexe} page \pageref{annexe}) 
+dans l'annexe (voir ci-dessous) 
 \item[Description] Description de l'image
 \item[Nom-de-fichier] Nom du fichier dans le répertoire des images de la base
 (\tt{bases/mabase/src/images})
 \end{description}
 
-L'index de ce document page \pageref{index} donne un exemple de ce traitement.
+L'index de ce document page~\pageref{index} donne un exemple de ce traitement.
 
 \subsection{Annexe}
-Quand il n'est pas possible d'incorporer toutes els images souhaitées dans les
+\label{annexe}
+Quand il n'est pas possible d'incorporer toutes les images souhaitées dans les
 notes d'une base, il reste la possibilité d'adjoindre au document produit par 
 GwToLaTex une annexe qui sera automatiquement ajoutée au fichier .PDF produit.
 Cette annexe a sa propre numérotation de pages.
 
 \subsection{La totalité du fichier test.txt}
 
-See \verb|gwtolatex/livres/test.txt|
+Voir \verb|gwtolatex/livres/test.txt|
 
 \subsection{Améliorations}
 
 Idées d'améliorations :
 \begin{description}
-\item Simplifier, clarifier homogénéiser les commandes
-\item Ajouter les images du carrousel
+\item Simplifier, clarifier homogénéiser les commandes.
+\item Ajouter les images du carrousel.
 \end{description}
 
 \subsection{Installation, test et exécution}
@@ -309,10 +309,10 @@ Idées d'améliorations :
 GwToLaTex est installé à partir de son répertoire GitHub :
 \verb|git clone https://github.com/hgouraud/gwtolatex|
 suivi par
-\verb|make distrib| or \verb|make install|
+\verb|ocaml configure.ml|, \verb|make distrib| or \verb|make install|
 
 Ces deux dernières commandes construisent un répertoire \verb|gw2l_dist| qui
-contient tous les éléments nécessaires au fonctionnement de GwToLatex.
+contient tous les éléments nécessaires au fonctionnement de GwToLaTeX.
 
 \verb|./setup-test.sh| organise les données de la configuration de test et
 lance l'exécution du test (\verb|./run-test.sh|) qui construit le présent
@@ -322,7 +322,8 @@ dans les données de test.
 
 A noter que \verb|./setup-test.sh| fait l'hypothèse que le répertoire
 \verb|gwtolatex| est "à côté" du répertoire \verb|geneweb| et relance
-l'exécution de \verb|gwd| avec les paramètres appropriés.
+l'exécution de \verb|gwd| avec les paramètres appropriés. Il est à noter
+aussi qu'il convient d'avoir exécuté \verb|make install| dans le repo de GeneWeb.
 
 GwToLaTeX doit être exécuté à partir du répertoire des bases de
 GeneWeb\footnote{Cette contrainte, est liée à la sécurité de Geneweb}.
