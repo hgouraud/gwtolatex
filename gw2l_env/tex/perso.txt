@@ -151,7 +151,7 @@
   %if;is_dead;
     \item %apply;capitalize(died)
     %if;has_death_date; %on_death_date;%end;
-    %if;has_death_note; (%death_note;)%end;%nn;
+    %if;has_death_note; %death_note;%end;%nn;
     %if;has_death_place;, à %death_place;%end;
     %if;has_linked_page.DEATH; %linked_page.DEATH;%end;%nl;
   %end;

@@ -8,11 +8,13 @@
 
 <x Input ./gw2l_env/Gw2LaTeX-env.tex>
 
+
 % Edit your own title page data
 \begin{titlepage}
-\title{Manuel d'utilisation de \\
-Gw\kern-0.1em To\LaTeX \\
-{\small Un complément à GeneWeb}}
+\title{\Huge{Manuel d'utilisation \\
+de Gw\kern-0.1em To\LaTeX}
+\par
+\large{Un complément à GeneWeb}}
 \author{Henri Gouraud \\
 \texttt{Henri.Gouraud@LaPoste.net} \\
 \copyright 2024}
@@ -21,9 +23,11 @@ Gw\kern-0.1em To\LaTeX \\
 % Beginning of document
 \begin{document}
 \WarningsOff*
-\maketitle         % genère le titre
-\tableofcontents   % table des matières
 
+\maketitle         % genère le titre
+\begin{Large}
+\tableofcontents   % table des matières
+\end{Large}
 
 <x Chapter Avant-propos>
 <x Input %%%LIVRES%%%/test-inputs/Notes.tex>
