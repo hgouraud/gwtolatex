@@ -44,6 +44,8 @@ Test pour index :
 <span style="display:none" mode="tex">\index[Dupont, Jean, photo 1]</span>
 <span style="display:none" mode="tex">\index[Dupont, Jean, photo 2/2]</span>
 fin test
+
+A participé au [[[page-liee-test/projet de barrage]]] de la baie du Mt St Michel
 end notes
 
 pevt Dupont Marie_Marguerite
@@ -86,3 +88,22 @@ pevt Durand Marie
 #birt 1843 #p Donville_(Manche)
 #deat 1928
 end pevt
+
+page-ext page-liee-test
+  TITLE=Page liée test
+    
+  <p align="center"><b>PAGE TEST</b></p>
+  <p>
+  Contenu d'une page test
+  <img SRC="%sm=IM;s=image-test-4.jpg">
+
+  Le Diplodocus.<br>
+  Dans les années 60, l'ingénieur des mines Albert Caquot<span
+  style="display:none" mode="tex">\index[Caquot, Albert]</span>
+  imagine un gigantesque projet de barrage sur l'ensemble de la baie du
+  Mont Saint Michel utilisant l'énergie marée-motrice. Le Diplodocus participe
+  aux travaux de sondage de ce projet.<br>
+  (<small>source photo [[Léon/Dupont]]</small>).
+end page-ext
+
+

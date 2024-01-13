@@ -64,7 +64,7 @@ let dict2 = ref (Hashtbl.create 100)
 let img_name_list = ref []
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
-let gw2l_dist = ref "../gw2l_dist"
+let gw2l_dist = ref "./gw2l_dist"
 let livres = ref "../livres"
 let bases = ref "."
 let test = ref false
@@ -81,6 +81,7 @@ let subsection = ref 0
 let subsubsection = ref 0
 let image_nbr = ref 0
 let image_label = ref 3
+let caption = ref ""
 let collect_images = ref false
 let wide = ref false
 let section_on_a_tag = ref false
@@ -271,6 +272,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
          Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec
            nb
         else "")
+      (* TODO deal with !caption here, possibly \begin{image}...\end{image} *)
   | Vignette ->
       Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !vignwidth
         !unit
@@ -414,6 +416,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
         if not (Sutil.contains file "<!-- mapped image -->") then
           Format.sprintf "{\\it %s}\\footnote{SRC or DOC file}" content
         else
+          (* TODO use lower!! *)
           let i0 = Sutil.contains_index file "<img src=" in
           let i1 = Sutil.contains_index file "<img SRC=" in
           let i = match (i1, i1) with -1, -1 -> -1 | _, _ -> max i0 i1 in
@@ -435,9 +438,9 @@ let rec process_tree_cumul base och cumul tree (row, col) =
 
   (*
   <a href="%sm=SRC;v=grande-ile-aerien">
-  <img SRC="%sm=IM;s=grande-ile-aerien-v.jpg"></a>
   permet de localiser presque toutes les maisons.<br>
-  Pour plus de détails, voir les plans cadastraux (<a href="%sm=SRC;v=plan-pointe-du-phare">Le Phare</a> et
+  Pour plus de détails, voir les plans cadastraux
+  (<a href="%sm=SRC;v=plan-pointe-du-phare">Le Phare</a> et
   <a href="%sm=SRC;v=plan-blainvillais">Blainvillais</a>) ou la
   <a href="%sm=SRC;v=grande-ile">carte de l’île</a>.
   *)
@@ -451,7 +454,6 @@ let rec process_tree_cumul base och cumul tree (row, col) =
     (* which may be an <img src=xxx> *)
     (* TODO m=TT t=xxx p=yyy *)
     (* TODO decode names  p=louis;n=de%20bourbon; *)
-    (* TODO identify vignettes ! -> special width *)
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
     let mode = try List.assoc "mode" attr with Not_found -> "" in
@@ -497,6 +499,9 @@ let rec process_tree_cumul base och cumul tree (row, col) =
       str
   in
 
+  (* <img SRC="%sm=IM;s=grande-ile-aerien-v.jpg"></a> *)
+  (* images called with <img = > are displayed "immediately" *)
+  (* special treatment for vignettes *)
   let tag_img _name attributes _children =
     let attr = get_att_list attributes in
     let href = try List.assoc "src" attr with Not_found -> "" in
@@ -523,8 +528,6 @@ let rec process_tree_cumul base och cumul tree (row, col) =
           (!chapter, !section, !subsection, !subsubsection),
           !image_nbr )
       in
-      if !collect_images && not vignette then
-        images_in_page := image :: !images_in_page;
       print_image image ^ index_s
     in
     str
@@ -587,6 +590,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
             let content = get_child children in
             content
         | "caption" ->
+            (* TODO clarify this <caption> with mode="caption" *)
             let content = get_child children in
             let content = Format.sprintf "\n\\caption{%s}\n" content in
             content
@@ -616,31 +620,31 @@ let rec process_tree_cumul base och cumul tree (row, col) =
             (* look for potential TeX code *)
             (* <span style="display:none" mode="tex">\index{Gelin, Zacharie}</span> *)
             (* or \highlight *)
-            (* <span mode="highlight">sn fn%if;(oc != "0") (oc)%end;</span> *)
+            (* <span style="display:none" mode="highlight">sn fn%if;(oc != "0") (oc)%end;</span> *)
             (* or instruction for display next image *)
-            (* <span mode="wide">Caption</span> applied to the next image *)
+            (* <span style="display:none" mode="caption">Caption</span> applied to the next image *)
             (* children is a single string of TeX *)
             (* % might not be there (old format) *)
+            let content = get_child children in
             let display_none =
               Hutil.test_attr attributes "style" "display:none"
             in
             let mode = Hutil.get_attr attributes "mode" in
+            let old_tex_mode =
+              (* for backward compatibility *)
+              if String.length content > 3 then String.sub content 0 3 = "tex"
+              else false
+            in
+            let mode =
+              match mode with
+              | "tex" -> "tex"
+              | "highlight" -> "highlight"
+              | "wide" -> "wide"
+              | "a_ref" -> "a_ref"
+              | "" -> if old_tex_mode then "tex" else ""
+              | _ -> ""
+            in
             let str =
-              let content = get_child children in
-              let tex_mode_2 =
-                (* for backward compatibility *)
-                if String.length content > 3 then String.sub content 0 3 = "tex"
-                else false
-              in
-              let mode =
-                match mode with
-                | "tex" -> "tex"
-                | "highlight" -> "highlight"
-                | "wide" -> "wide"
-                | "a_ref" -> "a_ref"
-                | "" -> if tex_mode_2 then "tex" else ""
-                | _ -> ""
-              in
               if display_none then
                 match mode with
                 | "tex" ->
@@ -658,7 +662,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
                         else content
                       in
                       let content =
-                        if tex_mode_2 then
+                        if old_tex_mode then
                           String.sub content 4 (String.length content - 7)
                         else content
                       in
@@ -678,9 +682,13 @@ let rec process_tree_cumul base och cumul tree (row, col) =
                     if List.mem content !highlights then
                       Format.sprintf "{\\hl{\\bf %s}}" content
                     else content
+                | "caption" ->
+                    caption := content;
+                    ""
                 | _ -> ""
-                (* <span mode="a_ref" gw2w="which" gw2sn="snxx" *)
-                (*   gw2fn="fnxx" gw2oc="ocxx" gw2al="alxx"> *)
+                (* <span mode="a_ref" gw2w="which" gw2sn="snxx"
+                     gw2fn="fnxx" gw2oc="ocxx" gw2al="alxx">content</span> *)
+                (* this mode allows the template code to pass parameters to mkTex *)
               else if mode = "a_ref" then
                 let hl, str =
                   let _w = Hutil.get_attr attributes "gw2w" in
@@ -1111,7 +1119,7 @@ let process_one_line base _dict1 _dict2 och line =
           in
           if !image_label > !current_level + 1 then image_nbr := 0;
           let index =
-            if String.contains line '\\' then "" (* index manually done *)
+            if Sutil.contains line "\\index" then "" (* index manually done *)
             else Format.sprintf "\\index{%s}" content (* automatic index *)
           in
           output_string och
