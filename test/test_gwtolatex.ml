@@ -222,7 +222,7 @@ let suite =
              test "b" 0 0 3;
              test "c" 1 0 4;
              test "d" 2 3 2 );
-           ( "is_empty_col" >:: fun _ ->
+           ( "is_empty_cell" >:: fun _ ->
              let row =
                [
                  (0, 1, "E", "1", "", "");
@@ -235,7 +235,7 @@ let suite =
                ]
              in
              let test res n =
-               let ccc = Trees.is_empty_col row n in
+               let ccc = Trees.is_empty_cell row n in
                assert (ccc = res)
              in
              test true 1;

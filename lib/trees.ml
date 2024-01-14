@@ -2,75 +2,79 @@
 (* v1  Henri, 2023/10/16 *)
 
 let rule_thickns = "0.5pt"
-let row_width row _n = List.fold_left (fun w (_, s, _, _, _, _) -> w + s) 0 row
+let row_width row = List.fold_left (fun w (_, s, _, _, _, _) -> w + s) 0 row
 
 let test_tree_width tree =
   let rec loop first i w0 tree =
     match tree with
     | [] -> (i, w0, w0, true)
     | row :: tree ->
-        let w = row_width row i in
+        let w = row_width row in
         if first then loop false (i + 1) w tree
-        else if w <> w0 then (i + 1, w, w0, false)
+        else if w <> w0 then (i + 1, w, w0, false) (* unballanced tree *)
         else loop false (i + 1) w0 tree
   in
   loop true 0 0 tree
 
 (* no test on i relative to nb cols! *)
-let is_empty_col row i =
+let is_empty_cell row i =
   let rec loop j row =
     match row with
     | [] -> false
     | (_, s, ty, _, _, _) :: row ->
+        (* loop to column i span by span *)
         if j + s < i then loop (j + s) row
         else
+          (* inch one by one to i within span *)
           let rec loop1 k =
-            if j + k = i then ty = "E" || ty = "Hc" else loop1 (k + 1)
+            if j + k = i then
+              ty = "E" || ty = "Hc" || ty = "Hr --" || ty = "Hr r-"
+              || ty = "Hr -l"
+            else loop1 (k + 1)
           in
           loop1 1
   in
   loop 0 row
 
-(* an empty column is a column with only E and Hc -- *)
-(* scan the whole tree ron by row to determine empty columns *)
+let update_cols old_cols row =
+  let rec loop cols i row =
+    match row with
+    | [] -> List.rev cols
+    | (_, s, ty, _, _, _) :: row ->
+        let cols1 =
+          let rec loop1 cols1 j =
+            let j1 = string_of_int (i + j) in
+            if j = s then cols1
+            else if (List.nth old_cols (i - 1)).[0] <> 'E' then
+              loop1 (("F" ^ j1) :: cols1) (j + 1)
+            else if
+              ty = "E" || ty = "Hc" || ty = "Hr --" || ty = "Hr r-"
+              || ty = "Hr -l"
+            then loop1 (("E" ^ j1) :: cols1) (j + 1)
+            else loop1 (("F" ^ j1) :: cols1) (j + 1)
+          in
+          loop1 [] 0
+        in
+        loop (cols1 @ cols) (i + s) row
+  in
+  loop [] 1 row
+
+(* an empty column is a column with only E, Hc, Hr --, Hr r-, Hr -l *)
+(* scan the whole tree row by row to determine empty columns *)
 let find_empty_columns tree =
   (* i is row number *)
-  let rec loop first i cols tree =
+  let _i, width, _w0, _ok = test_tree_width tree in
+  let cols =
+    (* set all columns to empty *)
+    let rec loop n acc = if n = 0 then acc else loop (n - 1) ("E" :: acc) in
+    loop width []
+  in
+  let rec loop cols tree =
     match tree with
     | [] -> cols
-    | row :: tree ->
-        if first then
-          let cols, _ =
-            List.fold_left
-              (fun (acc, j) (_, s, ty, _, _, _) ->
-                let cells =
-                  (* j is column number, starts at 1 *)
-                  let rec loop1 c_cols k =
-                    let res =
-                      (if ty = "E" || ty = "Hc" then "E" else "F")
-                      ^ Format.sprintf "%d" (j + s - k)
-                      (* k is counting down *)
-                    in
-                    if k = 0 then List.rev c_cols
-                    else loop1 (res :: c_cols) (k - 1)
-                  in
-                  loop1 [] s
-                in
-                (List.rev cells :: acc, j + s))
-              ([], 1) row
-          in
-          loop false (i + 1) (List.flatten cols |> List.rev) tree
-        else
-          let cols =
-            List.mapi
-              (fun i c ->
-                if is_empty_col row (i + 1) then c
-                else "F" ^ Format.sprintf "%d" (i + 1))
-              cols
-          in
-          loop false (i + 1) cols tree
+    | row :: tree -> loop (update_cols cols row) tree
   in
-  loop true 1 [] tree (* start at row 1 for numbering *)
+  loop cols tree
 
 let get_part lr side str =
   let str = Sutil.clean_double_back_slash str in
@@ -317,6 +321,24 @@ let expand_hrl_cells tree =
   in
   List.rev tree
 
+let expand_end_cells row =
+  let row =
+    match row with
+    | (w1, s1, ty1, te1, it1, im1) :: (_, s2, ty2, _, _, _) :: row
+      when ty2 = "E" ->
+        (w1, s1 + s2, ty1, te1, it1, im1) :: row
+    | _ -> row
+  in
+  let row = List.rev row in
+  let row =
+    match row with
+    | (w1, s1, ty1, te1, it1, im1) :: (_, s2, ty2, _, _, _) :: row
+      when ty2 = "E" ->
+        (w1, s1 + s2, ty1, te1, it1, im1) :: row
+    | _ -> row
+  in
+  List.rev row
+
 let expand_cells tree =
   let rec expand row new_row =
     match row with
@@ -326,12 +348,10 @@ let expand_cells tree =
       :: row -> (
         match (ty1, ty2, ty3) with
         | ty1, ty2, ty3
-          when ty1 = "E" && s1 = 1 && ty3 = "E" && s3 = 1 && ty2 <> "E"
-               && (te2 <> "" || it2 <> "" || im2 <> "") ->
+          when ty1 = "E" && s1 = 1 && ty3 = "E" && s3 = 1 && ty2 <> "E" ->
             expand row ([ (w2, s2 + 2, ty2, te2, it2, im2) ] @ new_row)
         | ty1, ty2, ty3
-          when ty1 = "E" && s1 >= 2 && ty3 = "E" && s3 = 1 && ty2 <> "E"
-               && (te2 <> "" || it2 <> "" || im2 <> "") ->
+          when ty1 = "E" && s1 >= 2 && ty3 = "E" && s3 = 1 && ty2 <> "E" ->
             expand row
               ([
                  (w1, s1 - 1, ty1, te1, it1, im1);
@@ -339,14 +359,12 @@ let expand_cells tree =
                ]
               @ new_row)
         | ty1, ty2, ty3
-          when ty1 = "E" && s1 = 1 && ty3 = "E" && s3 >= 2 && ty2 <> "E"
-               && (te2 <> "" || it2 <> "" || im2 <> "") ->
+          when ty1 = "E" && s1 = 1 && ty3 = "E" && s3 >= 2 && ty2 <> "E" ->
             expand
               ([ (w3, s3 - 1, ty3, te3, it3, im3) ] @ row)
               ([ (w2, s2 + 2, ty2, te2, it2, im2) ] @ new_row)
         | ty1, ty2, ty3
-          when ty1 = "E" && s1 >= 2 && ty3 = "E" && s3 >= 2 && ty2 <> "E"
-               && (te2 <> "" || it2 <> "" || im2 <> "") ->
+          when ty1 = "E" && s1 >= 2 && ty3 = "E" && s3 >= 2 && ty2 <> "E" ->
             expand
               ([ (w3, s3 - 1, ty3, te3, it3, im3) ] @ row)
               ([
@@ -365,37 +383,55 @@ let expand_cells tree =
     let rec loop tree new_tree =
       match tree with
       | [] -> new_tree
-      | row :: tree -> loop tree (expand row [] :: new_tree)
+      | row :: tree ->
+          let new_row = expand_end_cells (expand row []) in
+          loop tree (new_row :: new_tree)
     in
     loop tree []
   in
   List.rev tree
 
-let print_tree base_name tree mode textwidth textheight _margin debug fontsize
-    sideways imgwidth twopages =
-  if debug <> 0 then
-    Printf.eprintf "Print Tree g=%d, depth=%d\n" mode (List.length tree);
+let double_each_cell tree =
+  let rec scan_tree new_tree tree =
+    match tree with
+    | [] -> List.rev new_tree
+    | row :: tree ->
+        let new_row =
+          let rec scan_row new_row row =
+            match row with
+            | [] -> List.rev new_row
+            | (a, s, b, c, d, e) :: row ->
+                scan_row ((a, s * 2, b, c, d, e) :: new_row) row
+          in
+          scan_row [] row
+        in
+        scan_tree (new_row :: new_tree) tree
+  in
+  scan_tree [] tree
+
+let print_tree base_name tree treemode textwidth textheight _margin debug
+    fontsize sideways imgwidth twopages =
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
     exit 1);
-  if mode = 1 then
-    let _nb_col = List.length (List.nth tree 0) in
-    let cols = find_empty_columns tree in
+  if treemode = 1 then
     (*let tree = split_rows_with_vbar tree in*)
+    let tree = double_each_cell tree in
     let tree = expand_cells tree in
-    let tree = expand_hrl_cells tree in
+    (*let tree = expand_hrl_cells tree in*)
+    let cols = find_empty_columns tree in
     let non_empty_col_nbr =
       List.fold_left (fun a c -> if c.[0] = 'F' then a + 1 else a) 0 cols
     in
     let tabular_env =
+      (* TODO fond right number of columns *)
       let rec loop s i = if i = 0 then s ^ "c" else loop (s ^ "c") (i - 1) in
-      loop "ccccc" (List.length cols)
+      loop "ccccccccccccccccc" (List.length cols)
     in
     let cell_wid =
-      ((if sideways then textheight *. if twopages then 2.0 else 1.0
-       else textwidth)
-      -. 4.0)
+      (if sideways then textheight *. if twopages then 2.0 else 1.0
+      else textwidth)
       /. Float.of_int non_empty_col_nbr
     in
     let half_cell_wid = cell_wid /. 2.0 in
@@ -518,8 +554,9 @@ let print_tree base_name tree mode textwidth textheight _margin debug fontsize
     ^ tabular_e
   else
     (*let tree = split_rows_with_vbar tree in*)
+    let tree = double_each_cell tree in
     let tree = expand_cells tree in
-    let tree = expand_hrl_cells tree in
+    (*let tree = expand_hrl_cells tree in*)
     let tree, _n =
       List.fold_left
         (fun (acc1, r) row ->

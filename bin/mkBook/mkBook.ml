@@ -9,7 +9,7 @@ let out_file = ref ""
 let debug = ref 0
 let mode = ref 0
 let dev = ref false
-let second = ref false
+let second = ref true
 let index = ref 0
 let verbose = ref false
 
@@ -75,7 +75,7 @@ let main () =
       ( "-index",
         Arg.Int (fun x -> index := x),
         " Number of times makeindex is done." );
-      ("-second", Arg.Set second, " Run Pdflatex a second time.");
+      ("-second", Arg.Clear second, " Do not run Pdflatex a second time.");
       ("-dev", Arg.Set dev, " Run in the GitHub repo.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
       ("-mode", Arg.Int (fun x -> mode := x), " Print tree mode.");
@@ -163,6 +163,14 @@ let main () =
   in
   let gw2l_options =
     if !passwd <> "" then Format.sprintf "-passwd %s" !passwd :: gw2l_options
+    else gw2l_options
+  in
+  let gw2l_options =
+    if !debug <> 0 then Format.sprintf "-debug %d" !debug :: gw2l_options
+    else gw2l_options
+  in
+  let gw2l_options =
+    if !mode <> 0 then Format.sprintf "-mode %d" !mode :: gw2l_options
     else gw2l_options
   in
   let gw2l_options = if !verbose then "-v" :: gw2l_options else gw2l_options in
@@ -290,13 +298,14 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   flush stderr;
 
   (* run pdflatex second time *)
-  if !verbose then Printf.eprintf "Run pdflatex second time\n";
-  flush stderr;
-  let error = Sys.command make_pdf_file in
-  if error > 0 then (
-    Printf.eprintf "Error during second pdflatex run (%d)\n\n" error;
-    exit 0);
-  flush stderr;
+  if !second then (
+    if !verbose then Printf.eprintf "Run pdflatex second time\n";
+    flush stderr;
+    let error = Sys.command make_pdf_file in
+    if error > 0 then (
+      Printf.eprintf "Error during second pdflatex run (%d)\n\n" error;
+      exit 0);
+    flush stderr);
 
   (* insert annexe *)
   let annex_file =

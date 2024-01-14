@@ -58,19 +58,11 @@ de Gw\kern-0.1em To\LaTeX}
 <x Section Arbres généalogiques>
 <x TreeMode 1>
 <y Arbres>
-<x Newpage>
 <y NoEp>
-<x Fiches>
 
-<y split pageheight_left pageheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
-<y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
-<y table is 59 wide>
-
-<x Newpage>
-<x ImgSize 2>
-<x Sideways on>
-<x FontSize tiny>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;image=off;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
+<x Unit cm>
+<x ImgWidth 2.0>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
 \index{Dupont, Léon François}
 <x BumpSub off>
 

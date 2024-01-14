@@ -3,7 +3,7 @@ open Gwtolatex
 
 type name = string * string
 
-(* TODO suppress (pages li√©es) and (modifier) in m=NOTES *)
+(* TODO suppress (pages liées) and (modifier) in m=NOTES *)
 (* TODO suppress "base chausey ..." *)
 type my_tree =
   | Text of string
@@ -54,7 +54,6 @@ let passwd = ref ""
 let family = ref ""
 let out_file = ref ""
 let debug = ref 0
-let mode = ref 0
 let dev = ref false
 let second = ref false
 let index = ref 0
@@ -72,6 +71,7 @@ let follow = ref false
 let test_nb = ref 0
 
 (* current values *)
+let treemode = ref 0
 let passe = ref 0
 let current_level = ref 0
 let images_in_page = ref []
@@ -247,10 +247,20 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       name ch sec ssec sssec nb
   in
   match im_type with
-  | Portrait | Imagek ->
+  | Portrait ->
       (* TODO manage images location *)
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\\\\\n"
         !portraitwidth
+        !unit (* 5 cm in page mode, 1.5 cm in table mode *)
+        (String.concat Filename.dir_sep [ "."; "images"; !base_name ])
+        Filename.dir_sep
+        (* GeneWeb replaces ' ' by '_' in key computations *)
+        (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
+        "jpg"
+  | Imagek ->
+      (* TODO manage images location *)
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\\\\\n"
+        !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "images"; !base_name ])
         Filename.dir_sep
@@ -326,8 +336,8 @@ let dummy_tags_3 =
 
    <begin page>
    <sideways="1">
-   <title="Arbre ascendant d'Eug√©nie Collet">
-   <index="Collet, Eug√©nie (ep Vaillant)">
+   <title="Arbre ascendant d'Eugénie Collet">
+   <index="Collet, Eugénie (ep Vaillant)">
    <href="http://127.0.0.1:2317/Chausey?m=A;p=eugenie (x);n=collet;v=5;siblings=on;notes=on;t=T;after=;before=;dag=on;templ=tex">
    <end>
 *)
@@ -398,7 +408,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
   (* for more complex SRC files, see later!! *)
   (*
   <!-- mapped image -->
-  <h1>La Grande √éle</h1>
+  <h1>La Grande Île</h1>
   <img SRC="%sm=IM;s=grande-ile-aerien.jpg" border="0" usemap="#Grande-Ile-Aerien">
   <map name="Grande-Ile-Aerien">
   *)
@@ -439,10 +449,10 @@ let rec process_tree_cumul base och cumul tree (row, col) =
   (*
   <a href="%sm=SRC;v=grande-ile-aerien">
   permet de localiser presque toutes les maisons.<br>
-  Pour plus de d√©tails, voir les plans cadastraux
+  Pour plus de détails, voir les plans cadastraux
   (<a href="%sm=SRC;v=plan-pointe-du-phare">Le Phare</a> et
   <a href="%sm=SRC;v=plan-blainvillais">Blainvillais</a>) ou la
-  <a href="%sm=SRC;v=grande-ile">carte de l‚Äô√Æle</a>.
+  <a href="%sm=SRC;v=grande-ile">carte de l’île</a>.
   *)
   let tag_a _name attributes children =
     (* if p <> "" or n <> "" we have a person *)
@@ -571,9 +581,9 @@ let rec process_tree_cumul base och cumul tree (row, col) =
         | "h3" ->
             let content = get_child children in
             (* TODO parametrer ce comportement *)
-            (* TODO revoir comportement c√¥t√© LaTeX *)
+            (* TODO revoir comportement côté LaTeX *)
             (* TODO this is language dependant !! *)
-            (* g√©n√©raliser aux autres <hn>  </hn> *)
+            (* généraliser aux autres <hn>  </hn> *)
             let str =
               if Sutil.contains content "Bateaux" then
                 "\n\\par\\hgbato{Bateaux}"
@@ -752,8 +762,9 @@ let rec process_tree_cumul base och cumul tree (row, col) =
             new_row := [];
             let _ = continue "" children in
             if !new_row <> [] then new_tree := List.rev !new_row :: !new_tree;
-            Trees.print_tree !base_name (List.rev !new_tree) !mode !textwidth
-              !textheight !margin !debug !fontsize !sideways !imgwidth !twopages
+            Trees.print_tree !base_name (List.rev !new_tree) !treemode
+              !textwidth !textheight !margin !debug !fontsize !sideways
+              !imgwidth !twopages
         | "cell" ->
             if !c_typ <> "" || !c_txt <> "" || !c_item <> "" || !c_img <> ""
             then
@@ -948,7 +959,7 @@ let one_command och line =
   | "VignWidth" ->
       if param = "off" || param = "Off" then vignwidth := 1.0
       else vignwidth := Float.of_string param
-  | "TreeMode" -> mode := int_of_string param
+  | "TreeMode" -> treemode := int_of_string param
   | "Xoffset" ->
       offset := true;
       xoffset := Float.of_string param
@@ -1040,7 +1051,7 @@ let print_images och images_list =
             else ""
           in
           (* list of persons present on this image *)
-          (* TODO les personnes /z ont √©t√© √©limin√©es!! *)
+          (* TODO les personnes /z ont été éliminées!! *)
           let index_list =
             match Hashtbl.find_opt !dict1 image_id with
             | Some (anx_page, _desc, _fname, key_l) when image_id <> "" ->
@@ -1164,7 +1175,7 @@ let main () =
       ("-second", Arg.Set second, " Run Pdflatex a second time.");
       ("-dev", Arg.Set dev, " Run in the GitHub repo.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
-      ("-mode", Arg.Int (fun x -> mode := x), " Print tree mode.");
+      ("-treemode", Arg.Int (fun x -> treemode := x), " Print tree mode.");
       ( "-pass",
         Arg.Int (fun x -> passe := x),
         " Pass one or two (collect img references)." );
