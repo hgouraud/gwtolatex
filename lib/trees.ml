@@ -4,6 +4,7 @@
 let rule_thickns = "0.5pt"
 let row_width row = List.fold_left (fun w (_, s, _, _, _, _) -> w + s) 0 row
 let row_nb = ref 0
+let nb_rows = ref 0
 
 let test_tree_width tree =
   let rec loop first i w0 tree =
@@ -178,10 +179,18 @@ let split_tree tree =
   let row1 = List.nth tree 0 in
   let row2 = List.nth tree 1 in
   let row3 = List.nth tree 2 in
-  let desc_tree_2 = List.length row1 = 1 && List.length row2 = 1 in
-  let desc_tree_3 =
-    List.length row1 = 1 && List.length row2 = 1 && List.length row3 = 1
+  let desc_tree_1, desc_tree_2, desc_tree_3 =
+    match (List.length row1, List.length row2, List.length row3) with
+    | 1, 1, 1 -> (false, false, true)
+    | 1, 1, _ -> (false, true, false)
+    | 1, _, _ -> (true, false, false)
+    | _ -> (false, false, false)
   in
+  nb_rows :=
+    if desc_tree_1 then 1
+    else if desc_tree_2 then 2
+    else if desc_tree_3 then 3
+    else 0;
   (* define new_tree (without first three lines *)
   let new_tree =
     if desc_tree_2 || desc_tree_3 then
@@ -266,7 +275,6 @@ let split_tree tree =
         ]
     | _ -> assert false
   in
-
   if desc_tree_2 then
     let row1_left = row_left row1 in
     let row2_left = row_left row2 in
@@ -508,8 +516,7 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
      \label{table:1}
      \end{table}
   *)
-  let print_tree_mode_1 tree _page =
-    Printf.eprintf "\n\nPrint tree mode 1\n";
+  let print_tree_mode_1 tree page =
     let tabular_b =
       Format.sprintf "%s\n\\begin{tabular}{%s}\n"
         (if sideways then "\\begin{sideways}" else "")
@@ -525,7 +532,6 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
     ^ List.fold_left
         (fun acc1 row ->
           incr row_nb;
-          print_row row;
           let _, row_str =
             List.fold_left
               (fun (col, acc2) (_, s, ty, te, it, im) ->
@@ -536,9 +542,6 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
                 (* compute new_wid taking into account empty columns *)
                 let nb_full_col = get_nb_full_col_in_span cols col s in
                 let new_wid = cell_wid *. Float.of_int nb_full_col in
-                Printf.eprintf
-                  "New_wid: %1.2f cell_wid: %1.2f col: %d span: %d cols:\n%s\n"
-                  new_wid cell_wid col s (String.concat "," cols);
 
                 (* for testing purposes, add \\fbox{ to minipage_b and } to minipage_e *)
                 let fbox_b = if debug = 1 then "\\fbox{" else "" in
@@ -618,18 +621,17 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
                 (col + s, acc2 ^ cell_str ^ " &\n"))
               (0, "") row
           in
-
-          (* TODO find a way to link the first hrule across both pages )
-             let row_str =
-               if twopages && page = "left" && !row_nb = 3  &&
-               then row_str ^ ". . ."
-               else row_str
-             in
-             let row_str =
-               if twopages && page = "right" && !row_nb = 3 then "" ^ row_str
-               else row_str
-             in
-          *)
+          (* somewhat of a hack to ling the two half trees *)
+          let row_str =
+            if twopages && page = "left" && !row_nb = !nb_rows + 1 then
+              row_str ^ "> >"
+            else row_str
+          in
+          let row_str =
+            if twopages && page = "right" && !row_nb = !nb_rows + 1 then
+              "" ^ row_str
+            else row_str
+          in
           (* Printf.eprintf "Row string: %s\n" row_str;*)
           acc1 ^ row_str ^ "\\\\\n")
         "" tree
