@@ -3,6 +3,7 @@
 
 let rule_thickns = "0.5pt"
 let row_width row = List.fold_left (fun w (_, s, _, _, _, _) -> w + s) 0 row
+let row_nb = ref 0
 
 let test_tree_width tree =
   let rec loop first i w0 tree =
@@ -163,80 +164,27 @@ let get_nb_full_col_in_span cols b s =
   let rec loop i n cols =
     match cols with
     | [] -> n
-    | c :: cols ->
+    | col :: cols ->
         if i < b then loop (i + 1) n cols
         else if i < b + s then
-          if c.[0] = 'F' then loop (i + 1) (n + 1) cols else loop (i + 1) n cols
+          if col.[0] = 'F' then loop (i + 1) (n + 1) cols
+          else loop (i + 1) n cols
         else n
   in
   loop 0 0 cols
-
-let get_item_length str =
-  let len = String.length str in
-  let rec loop i l1 l2 =
-    if i = len then max l1 l2
-    else if i < len - 1 && str.[i] = '\\' && str.[i + 1] = '\\' then
-      loop (i + 2) 0 (max l1 l2)
-    else loop (i + 1) (l1 + 1) l2
-  in
-  loop 0 0 0
-
-(* find the largest item in a given column *)
-let get_col_width _row _c = 1.0
-let carwidth = 0.3
-
-let reset_cell_width cols row textwidth imwidth =
-  let nb_f_col =
-    let rec loop i n cols =
-      match cols with
-      | [] -> n
-      | c :: cols ->
-          if c.[0] = 'F' then loop (i + 1) (n + 1) cols else loop (i + 1) n cols
-    in
-    loop 0 0 cols
-  in
-  let total_width =
-    let rec loop i n cols =
-      match row with
-      | [] -> n
-      | (_, _, ty, te, it, _im) :: row ->
-          if ty = "It" || ty = "Te" || ty = "Im" then
-            loop (i + 1)
-              (n
-              +. max imwidth
-                   ((Float.of_int (get_item_length te) *. carwidth)
-                   +. (Float.of_int (get_item_length it) *. carwidth)))
-              cols
-          else loop (i + 1) n row
-    in
-    loop 0 0. row
-  in
-  let unit_width = textwidth /. Float.of_int nb_f_col in
-  let rec loop new_row c row =
-    match row with
-    | [] -> List.rev new_row
-    | (_w, s, ty, te, it, im) :: row ->
-        let width =
-          (get_nb_full_col_in_span cols c s |> Float.of_int)
-          *. unit_width *. get_col_width row c
-          /. (* TODO ??? *)
-          total_width
-        in
-        loop ((width, s, ty, te, it, im) :: new_row) (c + s) row
-  in
-  loop [] 0 row
 
 (* split trees (Desc) whose first (3) rows are a single cell *)
 let split_tree tree =
   let row1 = List.nth tree 0 in
   let row2 = List.nth tree 1 in
   let row3 = List.nth tree 2 in
-  let desc_tree =
+  let desc_tree_2 = List.length row1 = 1 && List.length row2 = 1 in
+  let desc_tree_3 =
     List.length row1 = 1 && List.length row2 = 1 && List.length row3 = 1
   in
   (* define new_tree (without first three lines *)
   let new_tree =
-    if desc_tree then
+    if desc_tree_2 || desc_tree_3 then
       if List.length tree < 4 then tree
       else
         let rec copy_tree i new_tree tree =
@@ -285,7 +233,7 @@ let split_tree tree =
           if i1 = 0 && i + s > i2 then
             loop (i + s) ((w, i2 - i, ty, te, it, im) :: new_row) row
           else if i1 <> 0 && i < i2 then
-            loop (i + s) ((w, s - i2 + i, ty, te, it, im) :: new_row) row
+            loop (i + s) ((w, i + s - i1, ty, te, it, im) :: new_row) row
           else (
             Printf.eprintf "Assert: i=%d, i1=%d, i2=%d, s=%d\n" i i1 i2 s;
             assert false)
@@ -318,7 +266,16 @@ let split_tree tree =
         ]
     | _ -> assert false
   in
-  if desc_tree then
+
+  if desc_tree_2 then
+    let row1_left = row_left row1 in
+    let row2_left = row_left row2 in
+    let row1_right = row_right row1 in
+    let row2_right = row_right row2 in
+    let tree_left = [ row1_left; row2_left ] @ tree_left in
+    let tree_right = [ row1_right; row2_right ] @ tree_right in
+    (tree_left, tree_right)
+  else if desc_tree_3 then
     let row1_left = row_left row1 in
     let row2_left = row_left row2 in
     let row3_left = row_left row3 in
@@ -525,7 +482,7 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
   (*let tree = expand_hrl_cells tree in*)
   let cols = find_empty_columns tree in
   let non_empty_col_nbr =
-    List.fold_left (fun a c -> if c.[0] = 'F' then a + 1 else a) 0 cols
+    List.fold_left (fun a col -> if col.[0] = 'F' then a + 1 else a) 0 cols
   in
   let tabular_env =
     (* TODO fond right number of columns *)
@@ -551,7 +508,8 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
      \label{table:1}
      \end{table}
   *)
-  let print_tree_mode_1 tree =
+  let print_tree_mode_1 tree _page =
+    Printf.eprintf "\n\nPrint tree mode 1\n";
     let tabular_b =
       Format.sprintf "%s\n\\begin{tabular}{%s}\n"
         (if sideways then "\\begin{sideways}" else "")
@@ -561,20 +519,27 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
       Format.sprintf "\\end{tabular}\n%s"
         (if sideways then "\\end{sideways}\n" else "")
     in
+
+    row_nb := 0;
     tabular_b
     ^ List.fold_left
         (fun acc1 row ->
-          (* print_row row; *)
+          incr row_nb;
+          print_row row;
           let _, row_str =
             List.fold_left
-              (fun (c, acc2) (_, s, ty, te, it, im) ->
+              (fun (col, acc2) (_, s, ty, te, it, im) ->
                 let colspan_b =
                   if s > 1 then Format.sprintf "\\multicolumn{%d}{c}{" s else ""
                 in
                 let colspan_e = if s > 1 then "}" else "" in
                 (* compute new_wid taking into account empty columns *)
-                let nb_full_col = get_nb_full_col_in_span cols c s in
+                let nb_full_col = get_nb_full_col_in_span cols col s in
                 let new_wid = cell_wid *. Float.of_int nb_full_col in
+                Printf.eprintf
+                  "New_wid: %1.2f cell_wid: %1.2f col: %d span: %d cols:\n%s\n"
+                  new_wid cell_wid col s (String.concat "," cols);
+
                 (* for testing purposes, add \\fbox{ to minipage_b and } to minipage_e *)
                 let fbox_b = if debug = 1 then "\\fbox{" else "" in
                 let fbox_e = if debug = 1 then "}" else "" in
@@ -650,9 +615,21 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
                   ^ Format.sprintf "%s%s" minipage_e colspan_e
                   (* end of cell *)
                 in
-                (c + s, acc2 ^ cell_str ^ " &\n"))
+                (col + s, acc2 ^ cell_str ^ " &\n"))
               (0, "") row
           in
+
+          (* TODO find a way to link the first hrule across both pages )
+             let row_str =
+               if twopages && page = "left" && !row_nb = 3  &&
+               then row_str ^ ". . ."
+               else row_str
+             in
+             let row_str =
+               if twopages && page = "right" && !row_nb = 3 then "" ^ row_str
+               else row_str
+             in
+          *)
           (* Printf.eprintf "Row string: %s\n" row_str;*)
           acc1 ^ row_str ^ "\\\\\n")
         "" tree
@@ -697,12 +674,12 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
         ^ "\\newpage\n"
         ^ print_tree_mode_0 tree_right
     | 1 ->
-        print_tree_mode_1 tree_left
+        print_tree_mode_1 tree_left "left"
         ^ "\\newpage\n"
-        ^ print_tree_mode_1 tree_right
+        ^ print_tree_mode_1 tree_right "right"
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n
   else
     match treemode with
     | 0 -> print_tree_mode_0 tree
-    | 1 -> print_tree_mode_1 tree
+    | 1 -> print_tree_mode_1 tree ""
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n
