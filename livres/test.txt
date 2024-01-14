@@ -63,8 +63,11 @@ de Gw\kern-0.1em To\LaTeX}
 <x Unit cm>
 <x ImgWidth 2.0>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
+<x TwoPages on>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
 \index{Dupont, Léon François}
 <x BumpSub off>
+<x TwoPages off>
 
 % Standard tail of document
 \printindex
