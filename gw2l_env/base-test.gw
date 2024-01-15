@@ -23,6 +23,14 @@ beg
 - h Antoine 0
 end
 
+fam Dupont Antoine + Durand Isabelle 0
+fevt
+#marr 
+end fevt
+beg
+- h Alexandre 0
+end
+
 notes Dupont Léon
 beg
 Note sur la vie de léon.

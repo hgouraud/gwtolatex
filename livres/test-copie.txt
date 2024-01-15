@@ -1,0 +1,92 @@
+\documentclass[a4paper]{book}
+
+\tracingcommands=1
+\tracingparagraphs=1 
+\tracingmacros=1
+\tracingoutput=1
+\makeindex
+
+<x Input ./gw2l_dist/Gw2LaTeX-env.tex>
+
+\newcommand{\gwtol}[0]{Gw\kern-0.1em ToLa\kern-0.13em T\kern-0.08em eX}
+
+% Edit your own title page data
+\begin{titlepage}
+\title{\Huge{Manuel d'utilisation \\
+de Gw\kern-0.1em To\LaTeX}
+\par
+\large{Un complément à GeneWeb}}
+\author{Henri Gouraud \\
+\texttt{henri.gouraud@laposte.net} \\
+\copyright 2024}
+\end{titlepage}
+
+% Beginning of document
+\begin{document}
+\WarningsOff*
+
+\maketitle         % genère le titre
+\tableofcontents   % table des matières
+
+<x Chapter Avant-propos>
+<x Input %%%LIVRES%%%/test-inputs/Notes.tex>
+
+<x Chapter Listes de descendants>
+\label{descendance}
+<x HighLight Dupont, Léon>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+françois;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Dupont</a>Dupont (Famille)
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Léon Dupont</a>Dupont, Léon (Famille)
+<x HighLight off>
+
+<x Chapter Fiches individuelles de personnes>
+<x Fiches>
+<x CollectImages on>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Léon\label{leondupont}</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Lucien\index{Dupont, Lucien dit Le Frère}\label{luciendupont}</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=georges;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Georges</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=marie;n=durand;templ=tex;w=%%%PASSWD%%%">Durand, Marie</a>
+
+<x Chapter Pages liées et arbres généalogiques>
+
+<x Section Pages liées>
+<x BumpSub on>
+<x LaTeX \label{pageliee}>
+<x WideImages on>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES&f=page-liee-test;templ=tex;w=%%%PASSWD%%%">Page liée test\label{pageliee}</a>
+<x WideImages off>
+
+<x Section Arbres généalogiques>
+<x TreeMode 0>
+<y Arbres>
+<y NoEp>
+
+<x Unit cm>
+<x ImgWidth 2.0>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
+<x TwoPages on>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont (2 pages)</a>
+\index{Dupont, Léon François}
+<x BumpSub off>
+<x TwoPages off>
+
+% Standard tail of document
+\printindex
+\label{index}
+\newpage
+{\huge {\bf Notes}}
+\par
+Run mkBook du : {\ddmmyyyydate\today} at \currenttime
+
+GeneWeb commit :
+<x Input ./gw2l_dist/gw_version.txt>
+\par
+GwTo\LaTeX{} version :
+<x Input ./gw2l_dist/version.txt>
+\par
+<y \hgbaseversion{}
+\par
+\pdftexbanner{}
+\newpage
+{\huge {\bf Notes}}
+% You may add additional notes pages as needed
+\end{document}

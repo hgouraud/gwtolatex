@@ -12,33 +12,6 @@ type my_tree =
 (* TODO Imagek = Portrait !! *)
 type im_type = Portrait | Imagek | Images | Vignette
 
-type _image = {
-  im_type : im_type;
-  filename : string;
-  where : int * int * int * int; (* ch, sec, ssec, sssec*)
-  image_nbr : int;
-}
-
-(*
-(* width, span, (F O Hr Hc Hl Vc c), item, text, index *)
-type t_cell = {
-  width : float;
-  span : int;
-  typ : string;
-  item : string;
-  txt : string;
-  index : int;
-}
-
-type t_line = t_cell list
-
-type t_table = {
-  row : int;
-  col : int;
-  body: t_line list;
-}
-*)
-
 let new_tree = ref [ [] ]
 let new_row = ref []
 let c_width = ref 0
@@ -107,6 +80,8 @@ let offset = ref false
 let xoffset = ref 0.0
 let yoffset = ref 0.0
 let twopages = ref false
+let split = ref 1
+let double = ref false
 
 let _strip_nl s =
   let b = Buffer.create 10 in
@@ -761,10 +736,10 @@ let rec process_tree_cumul base och cumul tree (row, col) =
             new_tree := [];
             new_row := [];
             let _ = continue "" children in
-            if !new_row <> [] then new_tree := List.rev !new_row :: !new_tree;
+            if !new_row <> [] then new_tree := !new_row :: !new_tree;
             Trees.print_tree !base_name (List.rev !new_tree) !treemode
               !textwidth !textheight !margin !debug !fontsize !sideways
-              !imgwidth !twopages
+              !imgwidth !twopages !split !double
         | "cell" ->
             if !c_typ <> "" || !c_txt <> "" || !c_item <> "" || !c_img <> ""
             then
@@ -798,7 +773,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
             c_typ := "Hc";
             continue "" children
         | "vbar" ->
-            c_typ := "Hv1";
+            c_typ := "Vr1";
             continue "" children
         | "emptycell" ->
             c_typ := "E";
@@ -806,7 +781,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
         | "newline" ->
             new_row :=
               (!c_width, !c_span, !c_typ, !c_txt, !c_item, !c_img) :: !new_row;
-            new_tree := List.rev !new_row :: !new_tree;
+            new_tree := !new_row :: !new_tree;
             new_row := [];
             c_typ := "";
             c_txt := "";
@@ -929,6 +904,8 @@ let one_command och line =
   | "Print" -> output_string och param
   | "Sideways" -> sideways := param = "on" || param = "On"
   | "TwoPages" -> twopages := param = "on" || param = "On"
+  | "Split" -> split := int_of_string param
+  | "DoubleCells" -> double := param = "on" || param = "On"
   | "Section" ->
       if !image_label > 2 then image_nbr := 0;
       out "section" param;
@@ -973,6 +950,7 @@ let one_command och line =
         xoffset := 0.0;
         yoffset := 0.0)
   | "Unit" -> unit := param
+  | "Debug" -> debug := int_of_string param
   | _ -> output_string och (Format.sprintf "%%%s%s\n" cmd remain)
 
 let one_http_call base och line =
@@ -1084,6 +1062,7 @@ let print_images och images_list =
   output_string och (Format.sprintf "\\par\n")
 
 let process_one_line base _dict1 _dict2 och line =
+  (*if !debug = 1 then Printf.eprintf "process_one_line: %s\n" line;*)
   let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
   let line = Sutil.replace_str line "%%%BASE%%%" !base_name in
   let line = Sutil.replace_str line "%%%PASSWD%%%" !passwd in

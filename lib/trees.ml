@@ -6,6 +6,31 @@ let row_width row = List.fold_left (fun w (_, s, _, _, _, _) -> w + s) 0 row
 let row_nb = ref 0
 let nb_rows = ref 0
 
+(* TODO Imagek = Portrait ?? no *)
+type im_type = Portrait | Imagek | Images | Vignette
+
+type image = {
+  im_type : im_type;
+  filename : string;
+  where : int * int * int * int; (* ch, sec, ssec, sssec*)
+  image_nbr : int;
+}
+
+(* width, span, (E O Hr Hc Hl Vc Im), item, text, image *)
+type c_type = E | Hc | Hr | Hl | Vr1 | Vr2 | Te | It | Im
+
+type t_cell = {
+  width : float;
+  span : int;
+  typ : string;
+  item : string;
+  txt : string;
+  img : int;
+}
+
+type t_line = t_cell list
+type t_table = { row : int; col : int; body : t_line list }
+
 let test_tree_width tree =
   let rec loop first i w0 tree =
     match tree with
@@ -128,7 +153,7 @@ let copy_row row lr side =
     (fun (w, s, ty, te, it, im) ->
       ( w,
         s,
-        (if side = "bar" then match ty with "Te" | "It" -> "Hv2" | _ -> ty
+        (if side = "bar" then match ty with "Te" | "It" -> "Vr2" | _ -> ty
         else ty),
         (if side = "bar" then ""
         else match ty with "Te" -> get_part lr side te | _ -> te),
@@ -175,7 +200,7 @@ let get_nb_full_col_in_span cols b s =
   loop 0 0 cols
 
 (* split trees (Desc) whose first (3) rows are a single cell *)
-let split_tree tree =
+let split_tree tree twopages sideways split =
   let row1 = List.nth tree 0 in
   let row2 = List.nth tree 1 in
   let row3 = List.nth tree 2 in
@@ -218,10 +243,12 @@ let split_tree tree =
     find_empty_col (nb_cols / 2)
   in
 
-  let col_middle = nb_cols / 2 in
+  let col_middle =
+    (nb_cols / 2) - split - if sideways && twopages then nb_cols * 10 / 4 else 0
+  in
 
   (* TODO see if better column *)
-  let row_split i1 i2 row =
+  let row_split _c i1 i2 row =
     let rec loop i new_row row =
       match row with
       | [] -> List.rev new_row (* done *)
@@ -231,21 +258,21 @@ let split_tree tree =
       | (_w, s, _ty, _te, _it, _im) :: row when i1 = 0 && i > i2 ->
           (* ignore *)
           loop (i + s) new_row row
+      | (w, s, ty, te, it, im) :: row when i1 = 0 && i + s > i2 ->
+          (* split *)
+          loop (i + s) ((w, i2 - i, ty, te, it, im) :: new_row) row
       | (w, s, ty, te, it, im) :: row when i1 <> 0 && i > i1 ->
           (* right part *)
           loop (i + s) ((w, s, ty, te, it, im) :: new_row) row
-      | (_w, s, _ty, _te, _it, _im) :: row when i1 <> 0 && i < i1 ->
+      | (_w, s, _ty, _te, _it, _im) :: row when i1 <> 0 && i + s <= i1 ->
           (* ignore *)
           loop (i + s) new_row row
-      | (w, s, ty, te, it, im) :: row ->
+      | (w, s, ty, te, it, im) :: row when i1 <> 0 && i + s > i1 ->
           (* split *)
-          if i1 = 0 && i + s > i2 then
-            loop (i + s) ((w, i2 - i, ty, te, it, im) :: new_row) row
-          else if i1 <> 0 && i < i2 then
-            loop (i + s) ((w, i + s - i1, ty, te, it, im) :: new_row) row
-          else (
-            Printf.eprintf "Assert: i=%d, i1=%d, i2=%d, s=%d\n" i i1 i2 s;
-            assert false)
+          loop (i + s) ((w, i + s - i1, ty, te, it, im) :: new_row) row
+      | (_w, s, _ty, _te, _it, _im) :: _row ->
+          Printf.eprintf "Assert: i=%d, i1=%d, i2=%d, s=%d\n" i i1 i2 s;
+          assert false
     in
     loop 0 [] row
   in
@@ -254,7 +281,7 @@ let split_tree tree =
     match tree with
     | [] -> List.rev new_tree
     | row :: tree ->
-        tree_split (i + 1) i1 i2 (row_split i1 i2 row :: new_tree) tree
+        tree_split (i + 1) i1 i2 (row_split i i1 i2 row :: new_tree) tree
   in
 
   let tree_left = tree_split 0 0 col_middle [] new_tree in
@@ -416,24 +443,23 @@ let expand_cells tree =
       :: (w3, s3, ty3, te3, it3, im3)
       :: row -> (
         match (ty1, ty2, ty3) with
-        | ty1, ty2, ty3
-          when ty1 = "E" && s1 = 1 && ty3 = "E" && s3 = 1 && ty2 <> "E" ->
+        | ty1, ty2, ty3 when ty1 = "E" && ty3 = "E" && s1 = 1 && s3 = 1 ->
             expand row ([ (w2, s2 + 2, ty2, te2, it2, im2) ] @ new_row)
-        | ty1, ty2, ty3
-          when ty1 = "E" && s1 >= 2 && ty3 = "E" && s3 = 1 && ty2 <> "E" ->
+        | ty1, ty2, ty3 when ty1 = "E" && ty3 = "E" && s3 = 1 ->
             expand row
               ([
                  (w1, s1 - 1, ty1, te1, it1, im1);
                  (w2, s2 + 2, ty2, te2, it2, im2);
                ]
               @ new_row)
-        | ty1, ty2, ty3
-          when ty1 = "E" && s1 = 1 && ty3 = "E" && s3 >= 2 && ty2 <> "E" ->
-            expand
-              ([ (w3, s3 - 1, ty3, te3, it3, im3) ] @ row)
-              ([ (w2, s2 + 2, ty2, te2, it2, im2) ] @ new_row)
-        | ty1, ty2, ty3
-          when ty1 = "E" && s1 >= 2 && ty3 = "E" && s3 >= 2 && ty2 <> "E" ->
+        | ty1, ty2, ty3 when ty1 = "E" && ty3 = "E" && s1 = 1 ->
+            expand row
+              ([
+                 (w3, s3 - 1, ty3, te3, it3, im3);
+                 (w2, s2 + 2, ty2, te2, it2, im2);
+               ]
+              @ new_row)
+        | ty1, ty2, ty3 when ty1 = "E" && ty3 = "E" ->
             expand
               ([ (w3, s3 - 1, ty3, te3, it3, im3) ] @ row)
               ([
@@ -460,43 +486,87 @@ let expand_cells tree =
   in
   List.rev tree
 
+let merge_cells tree =
+  let merge_cell cell new_row =
+    if List.length new_row > 0 then
+      let first_cell = List.nth new_row 0 in
+      match (cell, first_cell) with
+      | (_, s1, ty1, _, _, _), (_, s2, ty2, _, _, _)
+        when ty1 = ty2 && (ty1 = "E" || ty1 = "Hc") ->
+          (0, s1 + s2, ty1, "", "", "") :: List.tl new_row
+      | _, _ -> cell :: new_row
+    else cell :: new_row
+  in
+  let rec merge row new_row =
+    match row with
+    | [] -> List.rev new_row
+    | cell :: row -> merge row (merge_cell cell new_row)
+  in
+  let rec loop tree new_tree =
+    match tree with
+    | [] -> List.rev new_tree
+    | row :: tree -> loop tree (merge row [] :: new_tree)
+  in
+  loop tree []
+
 let double_each_cell tree =
-  let rec scan_tree new_tree tree =
+  let rec scan_tree tree new_tree =
     match tree with
     | [] -> List.rev new_tree
     | row :: tree ->
         let new_row =
-          let rec scan_row new_row row =
+          let rec scan_row row new_row =
             match row with
             | [] -> List.rev new_row
-            | (a, s, b, c, d, e) :: row ->
-                scan_row ((a, s * 2, b, c, d, e) :: new_row) row
+            | (a, s, typ, c, d, e) :: row when typ = "Hr" ->
+                scan_row row
+                  ((a, s, "Hr", c, d, e) :: (a, s, "E", c, d, e) :: new_row)
+            | (a, s, typ, c, d, e) :: row when typ = "Hl" ->
+                scan_row row
+                  ((a, s, "E", c, d, e) :: (a, s, "Hl", c, d, e) :: new_row)
+            | (a, s, typ, c, d, e) :: row ->
+                scan_row row ((a, s * 2, typ, c, d, e) :: new_row)
           in
-          scan_row [] row
+          scan_row row []
         in
-        scan_tree (new_row :: new_tree) tree
+        scan_tree tree (new_row :: new_tree)
   in
-  scan_tree [] tree
+  scan_tree tree []
+
+let flip_tree_h tree =
+  let rec flip row new_row =
+    match row with [] -> new_row | cell :: row -> flip row (cell :: new_row)
+  in
+  let rec loop tree new_tree =
+    match tree with
+    | [] -> List.rev new_tree
+    | row :: tree -> loop tree (flip row [] :: new_tree)
+  in
+  loop tree []
 
 let print_tree base_name tree treemode textwidth textheight _margin debug
-    fontsize sideways imgwidth twopages =
+    fontsize sideways imgwidth twopages split double =
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
     exit 1);
+  let tree = flip_tree_h tree in (* TODO fix the calling side *)
   (*let tree = split_rows_with_vbar tree in*)
-  let tree = double_each_cell tree in
+  let tree = if double then double_each_cell tree else tree in
   let tree = expand_cells tree in
+  let tree = merge_cells tree in
   (*let tree = expand_hrl_cells tree in*)
   let cols = find_empty_columns tree in
+  Printf.eprintf "Number of columns: %d\n" (List.length cols);
   let non_empty_col_nbr =
     List.fold_left (fun a col -> if col.[0] = 'F' then a + 1 else a) 0 cols
   in
   let tabular_env =
     (* TODO fond right number of columns *)
     let rec loop s i = if i = 0 then s ^ "c" else loop (s ^ "c") (i - 1) in
-    loop "ccccccccccccccccc" (List.length cols)
+    loop "" 255
   in
+  let tabular_env = tabular_env ^ tabular_env in
   let cell_wid =
     (if sideways then textheight *. if twopages then 2.0 else 1.0
     else textwidth *. if twopages then 2.0 else 1.0)
@@ -598,11 +668,11 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
                         Format.sprintf
                           "\\begin{center}\\rule{%1.2fcm}{%s}\\end{center}"
                           new_wid rule_thickns
-                    | "Hv1" ->
+                    | "Vr1" ->
                         Format.sprintf
                           "\\begin{center}\\rule{%s}{%s}\\end{center}"
                           rule_thickns "0.5cm"
-                    | "Hv2" ->
+                    | "Vr2" ->
                         Format.sprintf
                           "\\begin{center}\\rule{%s}{%s}\\end{center}"
                           rule_thickns "0.5cm"
@@ -652,8 +722,8 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
                   | "Hl" -> "Hr " ^ "-l"
                   | "Hr" -> "Hr " ^ "r-"
                   | "Hc" -> "Hr " ^ "--"
-                  | "Hv1" -> "Vr1 " ^ "|"
-                  | "Hv2" -> "Vr2 " ^ "|"
+                  | "Vr1" -> "Vr1 " ^ "|"
+                  | "Vr2" -> "Vr2 " ^ "|"
                   | "E" -> "E" ^ ""
                   | "Im" -> "Im " ^ im
                   | _ -> "x")
@@ -669,7 +739,7 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
     Format.sprintf "Interim print (%d)\\\\\n %s\n" (String.length tree) tree
   in
   if twopages then
-    let tree_left, tree_right = split_tree tree in
+    let tree_left, tree_right = split_tree tree twopages sideways split in
     match treemode with
     | 0 ->
         print_tree_mode_0 tree_left
