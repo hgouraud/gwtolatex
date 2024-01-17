@@ -224,7 +224,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
   match im_type with
   | Portrait ->
       (* TODO manage images location *)
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\\\\\n"
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n"
         !portraitwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "images"; !base_name ])
@@ -234,8 +234,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
         "jpg"
   | Imagek ->
       (* TODO manage images location *)
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\\\\\n"
-        !imgwidth
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n" !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "images"; !base_name ])
         Filename.dir_sep
@@ -248,8 +247,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
         | Some id -> id
         | None -> ""
       in
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\\\\\n"
-        !imgwidth
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\n" !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "src"; !base_name; "images" ])
         Filename.dir_sep name
@@ -536,7 +534,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
             let content = get_child children in
             Lutil.simple_tag_1 t content
         (* TODO check here we are terminating something!! *)
-        | "br" -> "\\leavevmode\\\\\n"
+        | "br" -> "\\newline\n"
         | "sup" ->
             let content = get_child children in
             if content <> "" then Format.sprintf "\\textsuperscript{%s}" content
@@ -1054,7 +1052,7 @@ let print_images och images_list =
           in
           output_string och
             (Format.sprintf
-               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\\\%s%s%s}\n"
+               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\newline%s%s%s}\n"
                width width images_dir Filename.dir_sep
                (Sutil.replace_str name "\\_{}" "_")
                img_number img_label index_list))

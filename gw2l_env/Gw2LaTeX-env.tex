@@ -274,6 +274,13 @@
 \end{hgdesc}%
 }
 
+\newenvironment{nohyphens}{%
+  \tolerance=1
+  \emergencystretch=\maxdimen
+  \hyphenpenalty=10000
+  \hbadness=10000
+}{}
+
 \def\changemargin#1#2{\list{}{\rightmargin#2\leftmargin#1}\item[]}
 \let\endchangemargin=\endlist
 

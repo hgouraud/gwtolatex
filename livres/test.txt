@@ -43,7 +43,7 @@ de Gw\kern-0.1em To\LaTeX}
 \newpage
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=A&p=alexandre&n=dupont&v=3&siblings=on&notes=on&t=T&after=&before=&dag=on&templ=tex&w=%%%PASSWD%%%">Arbre ascendant d'Alexandre Dupont</a>
 \index{dupont, Alexandre}
-<x TreeMode 1>
+<x TreeMode 0>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=A&p=alexandre&n=dupont&v=3&siblings=on&notes=on&t=T&after=&before=&dag=on&templ=tex&w=%%%PASSWD%%%">Arbre ascendant d'Alexandre Dupont</a>
 <x BumpSub off>
 <x TwoPages off>

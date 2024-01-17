@@ -190,10 +190,10 @@
            evar.t = "L")
         %if;(family.desc_level < famlev)
           {\it , [see further]}.
-          %apply;lazy_print%with;\\ %nl;%end;
+          %apply;lazy_print%with;\newline %nl;%end;
         %elseif;(family.desc_level > famlev)
           {\it , [see above]}.
-          %apply;lazy_print%with;\\ %nl;%end;
+          %apply;lazy_print%with;\newline %nl;%end;
         %elseif;has_children;, {\it dont :}%nn;
         %(end marriage bloc %)
             %family.set_infinite_desc_level;
@@ -221,7 +221,7 @@
 
 %define;by_list(xx)
   %apply;togen(xx).
-  \leavevmode \\ \\%nl;
+  \par%nl;
   %reset_count;
   %apply;descendants_by_list("self", "self", 0, xx, 0)%nl;
   [*total]: %expr(count-1) [[person/persons]1@(c)]%sp;

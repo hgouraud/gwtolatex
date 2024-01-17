@@ -88,7 +88,7 @@ let update_cols old_cols row =
 
 (* an empty column is a column with only E, Hc, Hr --, Hr r-, Hr -l *)
 (* scan the whole tree row by row to determine empty columns *)
-let find_empty_columns tree =
+let find_empty_columns tree nb_head_rows =
   (* i is row number *)
   let _i, width, _w0, _ok = test_tree_width tree in
   let cols =
@@ -96,12 +96,14 @@ let find_empty_columns tree =
     let rec loop n acc = if n = 0 then acc else loop (n - 1) ("E" :: acc) in
     loop width []
   in
-  let rec loop cols tree =
+  let rec loop i cols tree =
     match tree with
     | [] -> cols
-    | row :: tree -> loop (update_cols cols row) tree
+    | row :: tree when i > nb_head_rows ->
+        loop (i + 1) (update_cols cols row) tree
+    | _row :: tree -> loop (i + 1) cols tree
   in
-  loop cols tree
+  loop 0 cols tree
 
 let get_part lr side str =
   let str = Sutil.clean_double_back_slash str in
@@ -231,7 +233,7 @@ let split_tree tree twopages sideways split =
         copy_tree 0 [] tree
     else tree
   in
-  let cols = find_empty_columns new_tree in
+  let cols = find_empty_columns new_tree 0 in
   let nb_cols = List.length cols in
 
   (* scan from middle to find first empty col *)
@@ -544,35 +546,85 @@ let flip_tree_h tree =
   in
   loop tree []
 
+let split_hr_cells tree =
+  let rec split row new_row =
+    match row with
+    | [] -> List.rev new_row
+    | (a, s, typ, c, d, e) :: row when typ = "Hr" ->
+        let half_s = s / 2 in
+        if s / 2 = half_s then
+          split row
+            ((a, half_s, "Hc", c, d, e)
+            :: (a, s - half_s, "E", c, d, e)
+            :: new_row)
+        else
+          split row
+            ((a, half_s, "Hc", c, d, e) :: (a, 1, "Hr", c, d, e)
+            :: (a, s - half_s, "E", c, d, e)
+            :: new_row)
+    | (a, s, typ, c, d, e) :: row when typ = "Hl" ->
+        let half_s = s / 2 in
+        if s / 2 = half_s then
+          split row
+            ((a, s - half_s, "E", c, d, e)
+            :: (a, half_s, "Hc", c, d, e) :: new_row)
+        else
+          split row
+            ((a, half_s, "E", c, d, e) :: (a, 1, "Hl", c, d, e)
+            :: (a, s - half_s, "Hc", c, d, e)
+            :: new_row)
+    | cell :: row -> split row (cell :: new_row)
+  in
+  let rec loop tree new_tree =
+    match tree with
+    | [] -> List.rev new_tree
+    | row :: tree -> loop tree (split row [] :: new_tree)
+  in
+  loop tree []
+
+let get_nb_head_rows tree =
+  if List.length tree > 3 then
+    let row1 = List.nth tree 0 in
+    let row2 = List.nth tree 1 in
+    let row3 = List.nth tree 2 in
+    match (List.length row1, List.length row2, List.length row3) with
+    | 1, 1, 1 -> 3
+    | 1, 1, _ -> 2
+    | 1, _, _ -> 1
+    | _ -> 0
+  else 0
+
 let print_tree base_name tree treemode textwidth textheight _margin debug
-    fontsize sideways imgwidth twopages split double =
+    fontsize sideways imgwidth twopages split _double =
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
     exit 1);
-  let tree = flip_tree_h tree in (* TODO fix the calling side *)
+  let nb_head_rows = get_nb_head_rows tree in
+  (*let tree = flip_tree_h tree in Not needed anymore *)
+  (* TODO fix the calling side *)
+  (*let tree = split_hr_cells tree in*)
   (*let tree = split_rows_with_vbar tree in*)
-  let tree = if double then double_each_cell tree else tree in
-  let tree = expand_cells tree in
-  let tree = merge_cells tree in
+  (*let tree = if double then double_each_cell tree else tree in*)
+  (*let tree = expand_cells tree in*)
+  (*let tree = merge_cells tree in*)
   (*let tree = expand_hrl_cells tree in*)
-  let cols = find_empty_columns tree in
+  let cols = find_empty_columns tree nb_head_rows in
   Printf.eprintf "Number of columns: %d\n" (List.length cols);
   let non_empty_col_nbr =
     List.fold_left (fun a col -> if col.[0] = 'F' then a + 1 else a) 0 cols
   in
   let tabular_env =
     (* TODO fond right number of columns *)
-    let rec loop s i = if i = 0 then s ^ "c" else loop (s ^ "c") (i - 1) in
-    loop "" 255
+    let rec loop s i = if i = 0 then s ^ "X" else loop (s ^ "X") (i - 1) in
+    loop "X" (List.length cols + 1)
   in
-  let tabular_env = tabular_env ^ tabular_env in
   let cell_wid =
     (if sideways then textheight *. if twopages then 2.0 else 1.0
     else textwidth *. if twopages then 2.0 else 1.0)
     /. Float.of_int non_empty_col_nbr
   in
-  let half_cell_wid = cell_wid /. 2.0 in
+  let _half_cell_wid = cell_wid /. 2.0 in
 
   (* on top of tabular, one can use tables
      \begin{table}[h!]
@@ -588,12 +640,13 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
   *)
   let print_tree_mode_1 tree page =
     let tabular_b =
-      Format.sprintf "%s\n\\begin{tabular}{%s}\n"
+      Format.sprintf "%s\n\\begin{nohyphens}\\begin{tabularx}{%s}{%s}\n"
         (if sideways then "\\begin{sideways}" else "")
+        (if sideways then "24cm" else "15.5cm")
         tabular_env
     in
     let tabular_e =
-      Format.sprintf "\\end{tabular}\n%s"
+      Format.sprintf "\\end{tabularx}\\end{nohyphens}\n%s"
         (if sideways then "\\end{sideways}\n" else "")
     in
 
@@ -602,96 +655,106 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
     ^ List.fold_left
         (fun acc1 row ->
           incr row_nb;
+          let row = List.rev row in
           let _, row_str =
             List.fold_left
               (fun (col, acc2) (_, s, ty, te, it, im) ->
-                let colspan_b =
+                let _colspan_b =
                   if s > 1 then Format.sprintf "\\multicolumn{%d}{c}{" s else ""
                 in
-                let colspan_e = if s > 1 then "}" else "" in
+                let _colspan_e = if s > 1 then "}" else "" in
                 (* compute new_wid taking into account empty columns *)
-                let nb_full_col = get_nb_full_col_in_span cols col s in
-                let new_wid = cell_wid *. Float.of_int nb_full_col in
+                let _nb_full_col = get_nb_full_col_in_span cols col s in
+                let _new_wid = cell_wid in
 
                 (* for testing purposes, add \\fbox{ to minipage_b and } to minipage_e *)
                 let fbox_b = if debug = 1 then "\\fbox{" else "" in
                 let fbox_e = if debug = 1 then "}" else "" in
-                let minipage_b =
-                  Format.sprintf "%s\\begin{minipage}{%1.2fcm}" fbox_b new_wid
-                in
-                let minipage_e = Format.sprintf "\\end{minipage}%s" fbox_e in
+                let minipage_b = Format.sprintf "%s" fbox_b in
+                let minipage_e = Format.sprintf "%s" fbox_e in
                 let font_b =
                   if fontsize = "" then "" else "\\" ^ fontsize ^ "{"
                 in
                 let font_e = if fontsize = "" then "" else "}" in
                 (* parbox width and multicolums clash *)
                 let cell_str =
-                  Format.sprintf "%s%s" colspan_b minipage_b
                   (* begin of cell *)
-                  ^ (match ty with
-                    | "Te" | "It" -> (
-                        let te =
-                          Sutil.replace '\n' ' ' te |> Sutil.suppress_leading_sp
-                          |> Sutil.clean_double_back_slash_2
-                          |> Sutil.clean_leading_double_back_slash
-                          |> Sutil.clean_item
-                        in
-                        let it =
-                          Sutil.replace '\n' ' ' it |> Sutil.suppress_leading_sp
-                          |> Sutil.clean_double_back_slash_2
-                          |> Sutil.clean_leading_double_back_slash
-                          |> Sutil.clean_item
-                        in
-                        match (te, it) with
-                        | "", it when it <> "" ->
-                            "\\begin{center}" ^ font_b ^ it ^ font_e
-                            ^ "\\end{center}"
-                        | te, "" when te <> "" ->
-                            "\\begin{center}" ^ font_b ^ te ^ font_e
-                            ^ "\\end{center}"
-                        | te, it when te <> "" && it <> "" ->
-                            "\\begin{center}" ^ font_b ^ te ^ "\\\\" ^ it
-                            ^ font_e ^ "\\end{center}"
-                        | "", "" -> ""
-                        | _, _ ->
-                            "\\begin{center}" ^ font_b ^ te ^ it ^ font_e
-                            ^ "\\end{center}")
-                    | "Hl" ->
-                        Format.sprintf
-                          "\\begin{flushleft}\\rule{%1.2fcm}{%s}\\end{flushleft}"
-                          half_cell_wid rule_thickns
-                    | "Hr" ->
-                        Format.sprintf
-                          "\\begin{flushright}\\rule{%1.2fcm}{%s}\\end{flushright}"
-                          half_cell_wid rule_thickns
-                    | "Hc" ->
-                        Format.sprintf
-                          "\\begin{center}\\rule{%1.2fcm}{%s}\\end{center}"
-                          new_wid rule_thickns
-                    | "Vr1" ->
-                        Format.sprintf
-                          "\\begin{center}\\rule{%s}{%s}\\end{center}"
-                          rule_thickns "0.5cm"
-                    | "Vr2" ->
-                        Format.sprintf
-                          "\\begin{center}\\rule{%s}{%s}\\end{center}"
-                          rule_thickns "0.5cm"
-                    | "E" -> ""
-                    | "Im" ->
-                        Format.sprintf
-                          {|\\begin{center}
-                          \\includegraphics[width=%1.2fcm]{%s}
-                          \\end{center}|}
-                          imgwidth
-                          (get_img_name base_name im)
-                    | _ -> "??")
-                  ^ Format.sprintf "%s%s" minipage_e colspan_e
+                  match ty with
+                  | "Te" | "It" ->
+                      let str =
+                        Format.sprintf "%s %s %s" minipage_b
+                          (let te =
+                             Sutil.replace '\n' ' ' te
+                             |> Sutil.suppress_leading_sp
+                             |> Sutil.clean_double_back_slash_2
+                             |> Sutil.clean_leading_double_back_slash
+                             |> Sutil.clean_item
+                           in
+                           let it =
+                             Sutil.replace '\n' ' ' it
+                             |> Sutil.suppress_leading_sp
+                             |> Sutil.clean_double_back_slash_2
+                             |> Sutil.clean_leading_double_back_slash
+                             |> Sutil.clean_item
+                           in
+                           match (te, it) with
+                           | "", it when it <> "" -> font_b ^ it ^ font_e
+                           | te, "" when te <> "" -> font_b ^ te ^ font_e
+                           | te, it when te <> "" && it <> "" ->
+                               font_b ^ te ^ "\\\\" ^ it ^ font_e
+                           | "", "" -> ""
+                           | _, _ -> font_b ^ te ^ it ^ font_e)
+                          minipage_e
+                      in
+                      if s = 1 then str
+                      else Format.sprintf "\\multicolumn{%d}{c}{%s}" s str
+                  | "Hl" ->
+                      Format.sprintf
+                        "%s\\multicolumn{1}{l}{\\rule{0.5cm}{%s}}%s" minipage_b
+                        rule_thickns minipage_e
+                  | "Hr" ->
+                      Format.sprintf
+                        "%s\\multicolumn{1}{r}{\\rule{0.5cm}{%s}}%s" minipage_b
+                        rule_thickns minipage_e
+                  | "Hc" ->
+                      (* concat colspan entries of multicolumn 1 *)
+                      Format.sprintf "%s%s%s" minipage_b
+                        (let rec loop i acc =
+                           if i = s then acc
+                           else
+                             loop (i + 1)
+                               (acc
+                               ^ Format.sprintf
+                                   "\\multicolumn{1}{c}{\\rule{1cm}{%s}} %s"
+                                   rule_thickns
+                                   (if i + 1 = s then "" else "&"))
+                         in
+                         loop 0 "")
+                        minipage_e
+                  | "Vr1" ->
+                      Format.sprintf
+                        "%s\\multicolumn{%d}{c}{\\rule{%s}{0.5cm}}%s" minipage_b
+                        s rule_thickns minipage_e
+                  | "Vr2" ->
+                      Format.sprintf
+                        "%s\\multicolumn{1}{c}{\\rule{%s}{0.5cm}}%s" minipage_b
+                        rule_thickns minipage_e
+                  | "E" ->
+                      Format.sprintf "%s\\multicolumn{1}{c}{}%s" minipage_b
+                        minipage_e
+                  | "Im" ->
+                      Format.sprintf
+                        {|%s\\includegraphics[width=%1.2fcm]{%s}%s|} minipage_b
+                        imgwidth
+                        (get_img_name base_name im)
+                        minipage_e
+                  | _ -> "??"
                   (* end of cell *)
                 in
                 (col + s, acc2 ^ cell_str ^ " &\n"))
               (0, "") row
           in
-          (* somewhat of a hack to ling the two half trees *)
+          (* somewhat of a hack to link the two half trees *)
           let row_str =
             if twopages && page = "left" && !row_nb = !nb_rows + 1 then
               row_str ^ "> >"
@@ -712,9 +775,13 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
     let tree, _n =
       List.fold_left
         (fun (acc1, r) row ->
-          let str =
+          let row = List.rev row in
+          let span_t =
+            List.fold_left (fun acc (_, s, _, _, _, _) -> acc + s) 0 row
+          in
+          let _, j, str =
             List.fold_left
-              (fun acc2 (_, s, ty, te, it, im) ->
+              (fun (i, j, acc2) (_, s, ty, te, it, im) ->
                 let cell =
                   (match ty with
                   | "Te" -> "Te " ^ Sutil.clean_double_back_slash te
@@ -727,19 +794,21 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
                   | "E" -> "E" ^ ""
                   | "Im" -> "Im " ^ im
                   | _ -> "x")
-                  ^ if s > 1 then Format.sprintf "(%d)" s else ""
+                  ^ Format.sprintf "(%d)" s
                 in
-                acc2 ^ "[" ^ cell ^ "] ")
-              "" row
+                (i + 1, j + s, acc2 ^ Format.sprintf "[(%d)" i ^ cell ^ "] "))
+              (0, 0, "") row
           in
-          ( acc1 ^ Format.sprintf "Row %d: (%d) %s\\\\\n" r (List.length row) str,
+          ( acc1
+            ^ Format.sprintf "Row %d: (%d) (%d)%s(%d)\\\\\n" r (List.length row)
+                span_t str j,
             r + 1 ))
         ("", 1) tree
     in
     Format.sprintf "Interim print (%d)\\\\\n %s\n" (String.length tree) tree
   in
   if twopages then
-    let tree_left, tree_right = split_tree tree twopages sideways split in
+    let tree_right, tree_left = split_tree tree twopages sideways split in
     match treemode with
     | 0 ->
         print_tree_mode_0 tree_left
