@@ -28,21 +28,22 @@ de Gw\kern-0.1em To\LaTeX}
 <y Arbres>
 <y NoEp>
 
-\setlength{\tabcolsep}{0.04em}
+<y \setlength{\tabcolsep}{0.04em}>
 
 <x TreeMode 1>
-<x Debug 0>
+<x Debug 1>
 
 <x Unit cm>
 <x ImgWidth 1.19>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
+<x TreeMode 0>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
 <x TwoPages on>
+<x TreeMode 1>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont (2 pages)</a>
-\index{Dupont, Léon François}
 <x TwoPages off>
 \newpage
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=A&p=alexandre&n=dupont&v=3&siblings=on&notes=on&t=T&after=&before=&dag=on&templ=tex&w=%%%PASSWD%%%">Arbre ascendant d'Alexandre Dupont</a>
-\index{dupont, Alexandre}
 <x TreeMode 0>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=A&p=alexandre&n=dupont&v=3&siblings=on&notes=on&t=T&after=&before=&dag=on&templ=tex&w=%%%PASSWD%%%">Arbre ascendant d'Alexandre Dupont</a>
 <x BumpSub off>
