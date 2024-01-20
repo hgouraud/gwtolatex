@@ -202,7 +202,7 @@ let get_nb_full_col_in_span cols b s =
   loop 0 0 cols
 
 (* split trees (Desc) whose first (3) rows are a single cell *)
-let split_tree tree twopages sideways split =
+let split_tree tree _twopages _sideways split =
   let row1 = List.nth tree 0 in
   let row2 = List.nth tree 1 in
   let row3 = List.nth tree 2 in
@@ -235,20 +235,7 @@ let split_tree tree twopages sideways split =
   in
   let cols = find_empty_columns new_tree 0 in
   let nb_cols = List.length cols in
-
-  (* scan from middle to find first empty col *)
-  let _col_middle =
-    let rec find_empty_col i =
-      if i + 1 = List.length cols || (List.nth cols i).[0] = 'E' then i
-      else find_empty_col (i + 1)
-    in
-    find_empty_col (nb_cols / 2)
-  in
-
-  let col_middle =
-    (nb_cols / 2) - split - if sideways && twopages then nb_cols * 10 / 4 else 0
-  in
-
+  let col_middle = (nb_cols / 2) - split in
   (* TODO see if better column *)
   let row_split _c i1 i2 row =
     let rec loop i new_row row =
@@ -489,20 +476,44 @@ let expand_cells tree =
   List.rev tree
 
 let merge_cells tree =
-  let merge_cell cell new_row =
-    if List.length new_row > 0 then
-      let first_cell = List.nth new_row 0 in
-      match (cell, first_cell) with
-      | (_, s1, ty1, _, _, _), (_, s2, ty2, _, _, _)
-        when ty1 = ty2 && (ty1 = "E" || ty1 = "Hc") ->
-          (0, s1 + s2, ty1, "", "", "") :: List.tl new_row
-      | _, _ -> cell :: new_row
-    else cell :: new_row
-  in
   let rec merge row new_row =
     match row with
     | [] -> List.rev new_row
-    | cell :: row -> merge row (merge_cell cell new_row)
+    | (w1, s1, ty1, te1, it1, im1) :: (_w2, s2, ty2, te2, it2, im2) :: row
+      when ty1 = ty2 && te1 = "" && te2 = "" && it1 = "" && it2 = "" && im1 = ""
+           && im2 = "" ->
+        merge ((w1, s1 + s2, ty1, te1, it1, im1) :: row) new_row
+    | (w1, s1, ty1, te1, it1, im1)
+      :: (_w2, s2, ty2, _te2, _it2, _im2)
+      :: (_w3, s3, ty3, te3, it3, im3)
+      :: row
+      when ty1 = ty3 && ty2 = "E" && te1 = "" && te3 = "" && it1 = ""
+           && it3 = "" && im1 = "" && im3 = "" ->
+        merge ((w1, s1 + s2 + s3, ty1, te1, it1, im1) :: row) new_row
+    | (w1, s1, ty1, te1, it1, im1)
+      :: (_w2, s2, ty2, _te2, _it2, _im2)
+      :: (w3, s3, ty3, te3, it3, im3)
+      :: row
+      when ty1 = "Hl" && ty2 = "E" && ty3 = "Hc" ->
+        merge row
+          ((w3, s2 + s3, ty3, te3, it3, im3)
+          :: (w1, s1, ty1, te1, it1, im1)
+          :: new_row)
+    | (w1, s1, ty1, te1, it1, im1)
+      :: (_w2, s2, ty2, _te2, _it2, _im2)
+      :: (w3, s3, ty3, te3, it3, im3)
+      :: row
+      when ty1 = "Hc" && ty2 = "E" && ty3 = "Hr" ->
+        merge row
+          ((w3, s3, ty3, te3, it3, im3)
+          :: (w1, s1 + s2, ty1, te1, it1, im1)
+          :: new_row)
+    | (w1, s1, ty1, te1, it1, im1) :: (w2, s2, ty2, te2, it2, im2) :: row ->
+        merge
+          ((w2, s2, ty2, te2, it2, im2) :: row)
+          ((w1, s1, ty1, te1, it1, im1) :: new_row)
+    | (w1, s1, ty1, te1, it1, im1) :: row ->
+        merge row ((w1, s1, ty1, te1, it1, im1) :: new_row)
   in
   let rec loop tree new_tree =
     match tree with
@@ -595,45 +606,66 @@ let get_nb_head_rows tree =
   else 0
 
 let print_tree base_name tree treemode textwidth textheight _margin debug
-    fontsize sideways imgwidth twopages split double =
+    fontsize sideways imgwidth twopages split _double =
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
     exit 1);
   let nb_head_rows = get_nb_head_rows tree in
   let cols = find_empty_columns tree nb_head_rows in
-  (*
   Printf.eprintf "Empty columns: \n";
   List.iter (fun c -> Printf.eprintf " %s" c) cols;
   Printf.eprintf "\n";
-  *)
-  let non_empty_col_nbr =
+  let col_f_n =
     List.fold_left (fun a col -> if col.[0] = 'F' then a + 1 else a) 0 cols
   in
+  let tree_width =
+    match (twopages, sideways) with
+    | true, true -> textheight *. 0.9 *. 2.0
+    | true, false -> textheight *. 0.9
+    | false, true -> textwidth *. 2.0
+    | false, false -> textwidth
+  in
+  let col_sep = 0.1 in
+  let col_e_w = 0.1 in
+  let col_n = List.length cols in
+  let col_e_n = col_n - col_f_n in
+  let col_f_w =
+    (tree_width
+    -. (Float.of_int (col_n - 1) *. col_sep)
+    -. (Float.of_int col_e_n *. col_e_w))
+    /. Float.of_int col_f_n
+  in
+  Printf.eprintf
+    "Textwidth: %2.2f, col_f_n: %d, col_f_w: %1.2f, col_e_n: %d, col_e_w: %1.2f\n"
+    textwidth col_f_n col_f_w col_e_n col_e_w;
+
   (*let colwidth = textwidth /. Float.of_int non_empty_col_nbr in*)
-  let colwidth = textwidth /. Float.of_int (List.length cols) in
-  let colwidth = if double then colwidth *. 2.0 else colwidth in
-  let half_colwidth = Format.sprintf "%1.2fcm" (colwidth /. 2.0) in
-  let colwidth = Format.sprintf "%1.2fcm" colwidth in
+  let colwidth = Format.sprintf "%1.2fcm" col_f_w in
+  let half_colwidth = Format.sprintf "%1.2fcm" (col_f_w /. 2.0) in
+  (* TODO take into account trees split in two *)
   let tabular_env =
-    (* TODO find right number of columns *)
-    let colspec_f = if debug = 1 then "X|" else "X" in
-    let colspec_e = if debug = 1 then "c|" else "c" in
+    let colspec_f = Format.sprintf "p{%1.2fcm}" col_f_w in
+    let colspec_e = Format.sprintf "p{%1.2fcm}" col_e_w in
     let empty_col i = (List.nth cols i).[0] = 'E' in
-    let rec loop s i =
-      if i = 0 then s ^ if empty_col i then colspec_e else colspec_f
-      else loop (s ^ if empty_col i then colspec_e else colspec_f) (i - 1)
+
+    let tab_env =
+      let rec loop res i =
+        if i = col_n then res
+        else loop ((if empty_col i then colspec_e else colspec_f) :: res) (i + 1)
+      in
+      loop [] 0 |> List.rev
     in
-    loop (if debug = 1 then "|" else "") (List.length cols - 1)
+    let tab_env =
+      if debug = 1 then "|" ^ String.concat "|" tab_env ^ "|c|"
+      else String.concat "c" tab_env
+    in
+    tab_env
+    (* TODO is two pages start at col_middle when doing right part *)
   in
-  (* TODO remove last & before newline !! *)
-  let tabular_env = tabular_env ^ "c" in
+
   (*Printf.eprintf "Tabular env: %s\n" tabular_env;*)
-  let cell_wid =
-    (if sideways then textheight *. if twopages then 2.0 else 1.0
-    else textwidth *. if twopages then 2.0 else 1.0)
-    /. Float.of_int non_empty_col_nbr
-  in
+  let cell_wid = col_f_w in
   let _half_cell_wid = cell_wid /. 2.0 in
 
   (* on top of tabular, one can use tables
@@ -650,16 +682,14 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
   *)
   let print_tree_mode_1 tree page =
     let tabular_b =
-      Format.sprintf "%s\\nohyphens\n\\begin{tabularx}{%s}{%s}\n"
+      Format.sprintf "%s\\nohyphens\n\\begin{tabular}{%s}\n"
         (if sideways then "\\begin{sideways}" else "")
-        (if sideways then "24cm" else "15.5cm")
         tabular_env
     in
     let tabular_e =
-      Format.sprintf "\\end{tabularx}\n\\hyphenation{nor-mal-ly}\n%s"
+      Format.sprintf "\\end{tabular}\n\\hyphenation{nor-mal-ly}\n%s"
         (if sideways then "\\end{sideways}\n" else "")
     in
-
     row_nb := 0;
     tabular_b
     ^ List.fold_left
@@ -683,25 +713,22 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
                   if fontsize = "" then "" else "\\" ^ fontsize ^ "{"
                 in
                 let font_e = if fontsize = "" then "" else "}" in
-                (* parbox width and multicolums clash *)
                 let hr s lrc =
-                  let rec loop acc n =
-                    if n = 0 then acc
+                  let rec loop i acc =
+                    if i = s then acc
                     else
-                      loop
+                      loop (i + 1)
                         (acc
-                        ^ (if lrc = "e" then "\\multicolumn{1}{c}{}"
+                        ^ (if lrc = "e" then ""
                           else
-                            Format.sprintf
-                              "%s\\multicolumn{1}{%s}{\\rule{%s}{%s}}%s"
-                              minipage_b lrc
+                            (* TODO align left or right *)
+                            Format.sprintf "%s\\rule{%s}{%s}%s" minipage_b
                               (if lrc = "c" then Format.sprintf "%s" colwidth
                               else Format.sprintf "%s" half_colwidth)
                               rule_thickns minipage_e)
-                        ^ if n > 1 then "&\n" else "")
-                        (n - 1)
+                        ^ if i + 1 = s then "" else "&\n")
                   in
-                  loop "" s
+                  loop 0 ""
                 in
                 let cell_str =
                   (* begin of cell *)
@@ -760,24 +787,34 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
                              else
                                loop (i + 1)
                                  (acc
-                                 ^ Format.sprintf
-                                     "\\multicolumn{1}{c}{\\rule{%s}{%s}}%s"
-                                     colwidth rule_thickns
-                                     (if i + 1 = s then "" else "&"))
+                                 ^ Format.sprintf "\\rule{%s}{%s}%s" colwidth
+                                     rule_thickns
+                                     (if i + 1 = s then "" else "&\n"))
                            in
                            loop 0 "")
                           minipage_e
                     | "Vr1" ->
-                        Format.sprintf
-                          "%s\\multicolumn{%d}{c}{\\rule{%s}{0.5cm}}%s"
-                          minipage_b s rule_thickns minipage_e
+                        if s = 1 then
+                          Format.sprintf "%s\\rule{%s}{0.5cm}%s" minipage_b
+                            rule_thickns minipage_e
+                        else
+                          Format.sprintf
+                            "%s\\multicolumn{%d}{c}{\\rule{%s}{0.5cm}}%s"
+                            minipage_b s rule_thickns minipage_e
                     | "Vr2" ->
-                        Format.sprintf
-                          "%s\\multicolumn{1}{c}{\\rule{%s}{0.5cm}}%s"
-                          minipage_b rule_thickns minipage_e
+                        if s = 1 then
+                          Format.sprintf "%s\\rule{%s}{0.5cm}%s" minipage_b
+                            rule_thickns minipage_e
+                        else
+                          Format.sprintf
+                            "%s\\multicolumn{1}{c}{\\rule{%s}{0.5cm}}%s"
+                            minipage_b rule_thickns minipage_e
                     | "E" ->
-                        Format.sprintf "%s\\multicolumn{1}{c}{}%s" minipage_b
-                          minipage_e
+                        if s = 1 then
+                          Format.sprintf "%s%s" minipage_b minipage_e
+                        else
+                          Format.sprintf "%s\\multicolumn{%d}{c}{}%s" minipage_b
+                            s minipage_e
                     | "Im" ->
                         Format.sprintf
                           {|%s\\includegraphics[width=%1.2fcm]{%s}%s|}
@@ -791,6 +828,9 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
                 (col + s, acc2 ^ cell_str ^ "&\n"))
               (0, "") row
           in
+          let row_str =
+            String.sub row_str 0 (String.length row_str - 2) ^ "\n"
+          in
           (* somewhat of a hack to link the two half trees *)
           let row_str =
             if twopages && page = "left" && !row_nb = !nb_rows + 1 then
@@ -803,7 +843,7 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
             else row_str
           in
           (* Printf.eprintf "Row string: %s\n" row_str; *)
-          acc1 ^ row_str ^ "\\\\\n")
+          acc1 ^ row_str ^ "\n\\\\\n")
         "" tree
     ^ tabular_e
   in
@@ -862,11 +902,15 @@ let print_tree base_name tree treemode textwidth textheight _margin debug
         ^ print_tree_mode_0 tree_right
     | 1 ->
         print_tree_mode_1 tree_left "left"
+        ^ "\\par\n"
+        ^ print_tree_mode_0 tree_left
         ^ "\\newpage\n"
         ^ print_tree_mode_1 tree_right "right"
+        ^ "\\par\n"
+        ^ print_tree_mode_0 tree_right
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n
   else
     match treemode with
     | 0 -> print_tree_mode_0 tree
-    | 1 -> print_tree_mode_1 tree ""
+    | 1 -> print_tree_mode_1 tree "" ^ "\\par\n" ^ print_tree_mode_0 tree
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n
