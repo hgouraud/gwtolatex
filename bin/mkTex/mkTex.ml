@@ -1,16 +1,11 @@
 (* Copyright (c) 2013 H.Gouraud *)
 open Gwtolatex
+open Config
 
 type name = string * string
 
 (* TODO suppress (pages liŽes) and (modifier) in m=NOTES *)
 (* TODO suppress "base chausey ..." *)
-type my_tree =
-  | Text of string
-  | Element of string * (name * string) list * my_tree list
-
-(* TODO Imagek = Portrait !! *)
-type im_type = Portrait | Imagek | Images | Vignette
 
 let new_tree = ref [ [] ]
 let new_row = ref []
@@ -22,15 +17,11 @@ let c_item = ref ""
 let c_img = ref ""
 
 (* execution context *)
-let base_name = ref ""
 let passwd = ref ""
-let family = ref ""
 let out_file = ref ""
-let debug = ref 0
 let dev = ref false
 let second = ref false
 let index = ref 0
-let verbose = ref false
 let dict1 = ref (Hashtbl.create 100)
 let dict2 = ref (Hashtbl.create 100)
 let img_name_list = ref []
@@ -38,7 +29,6 @@ let img_name_list = ref []
 (* Assumes we are running in bases folder GeneWeb security constraint *)
 let gw2l_dist = ref "./gw2l_dist"
 let livres = ref "../livres"
-let bases = ref "."
 let test = ref false
 let follow = ref false
 let test_nb = ref 0
@@ -80,8 +70,64 @@ let offset = ref false
 let xoffset = ref 0.0
 let yoffset = ref 0.0
 let twopages = ref false
-let split = ref 1
+let split = ref 0
 let double = ref false
+let bases = ref ""
+let base_name = ref ""
+let passwd = ref ""
+let family = ref ""
+let debug = ref 0
+let verbose = ref false
+let treemode = ref 1
+
+let set_conf =
+  let conf =
+    ref
+      {
+        bases = !bases;
+        base_name = !base_name;
+        passwd = !passwd;
+        family = !family;
+        debug = !debug;
+        verbose = !verbose;
+        treemode = !treemode;
+        (* formatting *)
+        unit = "cm";
+        textwidth = 15.5;
+        textheight = 22.5;
+        margin = 2.5;
+        colsep = 0.1;
+        rule_thickns = 0.5;
+        fontsize = "";
+        imgwidth = 5.1;
+        vignwidth = 1.5;
+        sideways = false;
+        twopages = false;
+        double = false;
+        split = 0;
+        (* mkTex *)
+        arbres = true;
+        sub = false;
+        chapter = 0;
+        collectimages = true;
+        image_nbr = 0;
+        current_level = 0;
+        section_on_a_tag = true;
+        highlights = [];
+        hrule = true;
+        imagelabels = 3;
+        nbimgperline = 3;
+        section = 0;
+        subsection = 0;
+        subsubsection = 0;
+        subsubsubsection = 0;
+        offset = false;
+        wide = false;
+        xoffset = 0.0;
+        yoffset = 0.0;
+      }
+  in
+  conf
 
 let _strip_nl s =
   let b = Buffer.create 10 in
@@ -211,7 +257,7 @@ use the macros \textasciitilde, \textasciicircum, and \textbackslash.
 let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
 
-let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
+let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
   let _trace =
     Format.sprintf "Type: %s, name: %s, (%d, %d, %d, %d), nb: %d"
       (match im_type with
@@ -227,7 +273,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n"
         !portraitwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
-        (String.concat Filename.dir_sep [ "."; "images"; !base_name ])
+        (String.concat Filename.dir_sep [ "."; "images"; conf.base_name ])
         Filename.dir_sep
         (* GeneWeb replaces ' ' by '_' in key computations *)
         (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
@@ -236,7 +282,7 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       (* TODO manage images location *)
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n" !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
-        (String.concat Filename.dir_sep [ "."; "images"; !base_name ])
+        (String.concat Filename.dir_sep [ "."; "images"; conf.base_name ])
         Filename.dir_sep
         (* GeneWeb replaces ' ' by '_' in key computations *)
         (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
@@ -249,7 +295,8 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
       in
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\n" !imgwidth
         !unit (* 5 cm in page mode, 1.5 cm in table mode *)
-        (String.concat Filename.dir_sep [ "."; "src"; !base_name; "images" ])
+        (String.concat Filename.dir_sep
+           [ "."; "src"; conf.base_name; "images" ])
         Filename.dir_sep name
         (if image_id <> "" && false then
          Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec
@@ -259,7 +306,8 @@ let print_image (im_type, name, (ch, sec, ssec, sssec), nb) =
   | Vignette ->
       Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !vignwidth
         !unit
-        (String.concat Filename.dir_sep [ "."; "src"; !base_name; "images" ])
+        (String.concat Filename.dir_sep
+           [ "."; "src"; conf.base_name; "images" ])
         Filename.dir_sep name
 
 (* ignore tag but read children *)
@@ -322,16 +370,16 @@ let one_page och line = output_string och line
     each tag is processed according to its role
 *)
 
-let rec process_tree_cumul base och cumul tree (row, col) =
+let rec process_tree_cumul conf base och cumul tree (row, col) =
   let get_child children =
     List.fold_left
-      (fun acc c -> acc ^ process_tree_cumul base och "" c (row, col))
+      (fun acc c -> acc ^ process_tree_cumul conf base och "" c (row, col))
       "" children
   in
 
   let continue cumul children =
     List.fold_left
-      (fun acc c -> acc ^ process_tree_cumul base och cumul c (row, col))
+      (fun acc c -> acc ^ process_tree_cumul conf base och cumul c (row, col))
       cumul children
   in
 
@@ -350,14 +398,15 @@ let rec process_tree_cumul base och cumul tree (row, col) =
         Format.sprintf "%s%s\\includegraphics[width=%2.2f%s]{%s%s%s}%s%s"
           content minipage_b !textwidth
           !unit (* 5 cm in page mode, 1.5 cm in table mode *)
-          (String.concat Filename.dir_sep [ "."; "src"; !base_name; "images" ])
+          (String.concat Filename.dir_sep
+             [ "."; "src"; conf.base_name; "images" ])
           Filename.dir_sep name caption minipage_e
     | _ ->
         let image =
           ( Images,
             name,
-            (!chapter, !section, !subsection, !subsubsection),
-            !image_nbr )
+            (conf.chapter, conf.section, conf.subsection, conf.subsubsection),
+            conf.image_nbr )
         in
         if !collect_images && k = "" && not vignette then (
           images_in_page := image :: !images_in_page;
@@ -387,7 +436,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
   *)
   let read_src_file v content =
     let src_dir =
-      String.concat Filename.dir_sep [ !bases; "src"; !base_name ]
+      String.concat Filename.dir_sep [ conf.bases; "src"; conf.base_name ]
     in
     let ic =
       try Some (open_in (Filename.concat src_dir (v ^ ".txt"))) with _ -> None
@@ -467,7 +516,8 @@ let rec process_tree_cumul base och cumul tree (row, col) =
         if m = "SRC" || m = "DOC" then read_src_file v content
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
-        else if String.lowercase_ascii b <> String.lowercase_ascii !base_name
+        else if
+          String.lowercase_ascii b <> String.lowercase_ascii conf.base_name
         then
           Format.sprintf "%s\\footnote{%s}" content
             (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
@@ -511,7 +561,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
           (!chapter, !section, !subsection, !subsubsection),
           !image_nbr )
       in
-      print_image image ^ index_s
+      print_image conf image ^ index_s
     in
     str
   in
@@ -721,7 +771,8 @@ let rec process_tree_cumul base och cumul tree (row, col) =
             in
             let content =
               List.fold_left
-                (fun acc c -> acc ^ process_tree_cumul base och cumul c tabl)
+                (fun acc c ->
+                  acc ^ process_tree_cumul conf base och cumul c tabl)
                 "" children
             in
             if Sutil.contains clas "container" && cols > 1 then
@@ -735,9 +786,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
             new_row := [];
             let _ = continue "" children in
             if !new_row <> [] then new_tree := !new_row :: !new_tree;
-            Trees.print_tree !base_name (List.rev !new_tree) !treemode
-              !textwidth !textheight !margin !debug !fontsize !sideways
-              !imgwidth !twopages !split !double
+            Trees.print_tree conf (List.rev !new_tree)
         | "cell" ->
             if !c_typ <> "" || !c_txt <> "" || !c_item <> "" || !c_img <> ""
             then
@@ -804,7 +853,7 @@ let rec process_tree_cumul base och cumul tree (row, col) =
   in
   cumul ^ element
 
-let process_html base och body =
+let process_html conf base och body =
   let open Markup in
   let tree =
     body |> string |> parse_html |> signals
@@ -815,7 +864,7 @@ let process_html base och body =
   in
   let content =
     match tree with
-    | Some tree -> process_tree_cumul base och "" tree (0, 0)
+    | Some tree -> process_tree_cumul conf base och "" tree (0, 0)
     | _ -> "bad tree"
   in
   output_string och content
@@ -824,7 +873,7 @@ let bad_code c = c >= 400
 
 (* <x Cmd param>remain *)
 (*       i     j       *)
-let one_command och line =
+let one_command conf och line =
   let line = String.sub line 0 (String.length line - 1) in
   let i =
     try String.index_from line 3 ' ' with Not_found -> String.length line - 1
@@ -847,111 +896,144 @@ let one_command och line =
     output_string och (Format.sprintf "\\%s{%s}%s\n" c param remain)
   in
   match cmd with
-  | "Adjust_w" ->
-      output_string och
-        (Format.sprintf "Newwidth {\\bf %s}\n" (* TODO *)
-           (if param <> "" then param else "7cm"))
   | "Arbres" | "Trees" ->
-      if param = "on" || param = "On" then (
-        imgwidth := 1.5;
-        arbres := true)
-      else (
-        imgwidth := imgwidth_default;
-        arbres := false)
-  | "BumpSub" -> sub := param = "on" || param = "On"
+      if param = "on" || param = "On" then
+        { conf with imgwidth = 1.5; arbres = true }
+      else { conf with imgwidth = imgwidth_default; arbres = false }
+  | "BumpSub" -> { conf with sub = param = "on" || param = "On" }
   | "Chapter" ->
-      if !image_label > 1 then image_nbr := 0;
       out "chapter" param;
       incr chapter;
-      current_level := 0;
-      section := 0;
-      subsection := 0;
-      subsubsection := 0
-  | "CollectImages" -> collect_images := param = "on" || param = "On"
-  | "Ep" -> ep := param = "on" || param = "On"
-  | "Fiches" -> section_on_a_tag := param = "on" || param = "On"
+      {
+        conf with
+        image_nbr = (if conf.imagelabels > 1 then 0 else conf.imagelabels);
+        current_level = 0;
+        section = 0;
+        subsection = 0;
+        subsubsection = 0;
+      }
+  | "CollectImages" ->
+      { conf with collectimages = param = "on" || param = "On" }
+  | "Fiches" -> { conf with section_on_a_tag = param = "on" || param = "On" }
   | "FontSize" ->
-      if param = "off" || param = "Off" || param = "" then fontsize := ""
-      else fontsize := param
+      {
+        conf with
+        fontsize =
+          (if param = "off" || param = "Off" || param = "" then "" else param);
+      }
   | "HighLight" ->
-      highlights :=
-        if param = "off" || param = "Off" then [] else param :: !highlights
-  | "Hrule" -> hrule := param = "on" || param = "On"
-  | "ImageLabels" -> (
-      image_label := try int_of_string param with Failure _ -> 3)
-  | "ImgWidth" -> imgwidth := Float.of_string param
+      {
+        conf with
+        highlights =
+          (if param = "off" || param = "Off" then []
+          else param :: conf.highlights);
+      }
+  | "Hrule" -> { conf with hrule = param = "on" || param = "On" }
+  | "ImageLabels" ->
+      {
+        conf with
+        imagelabels = (try int_of_string param with Failure _ -> 3);
+      }
+  | "ImgWidth" -> { conf with imgwidth = Float.of_string param }
   | "NbImgPerLine" ->
-      (nbimgperline := try int_of_string param with Failure _ -> 3);
-      imgwidth := !textwidth /. Float.of_int !nbimgperline
-  | "Input" -> (
-      let param = Sutil.replace_str param "%%%LIVRES%%%" !livres in
-      let param = Sutil.replace_str param "%%%GW2L_DIST%%%" !gw2l_dist in
-      let param = Sutil.replace_str param "%%%PASSWD%%%" !passwd in
-      let ic = open_in param in
-      try
-        while true do
-          let line = input_line ic in
-          let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
-          let line = Sutil.replace_str line "%%%GW2L_DIST%%%" !gw2l_dist in
-          let line = Sutil.replace_str line "%%%PASSWD%%%" !passwd in
-          output_string och (line ^ "\n")
-        done
-      with End_of_file -> close_in ic)
-  | "LaTeX" -> output_string och param
-  | "Newpage" -> output_string och "\\newpage"
-  | "Print" -> output_string och param
-  | "Sideways" -> sideways := param = "on" || param = "On"
-  | "TwoPages" -> twopages := param = "on" || param = "On"
-  | "Split" -> split := int_of_string param
-  | "DoubleCells" -> double := param = "on" || param = "On"
+      let nb = try int_of_string param with Failure _ -> 3 in
+      {
+        conf with
+        nbimgperline = nb;
+        imgwidth = conf.textwidth /. Float.of_int nb;
+      }
+  | "Input" ->
+      (let param = Sutil.replace_str param "%%%LIVRES%%%" !livres in
+       let param = Sutil.replace_str param "%%%GW2L_DIST%%%" !gw2l_dist in
+       let param = Sutil.replace_str param "%%%PASSWD%%%" !passwd in
+       let ic = open_in param in
+       try
+         while true do
+           let line = input_line ic in
+           let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
+           let line = Sutil.replace_str line "%%%GW2L_DIST%%%" !gw2l_dist in
+           let line = Sutil.replace_str line "%%%PASSWD%%%" !passwd in
+           output_string och (line ^ "\n")
+         done
+       with End_of_file -> close_in ic);
+      conf
+  | "LaTeX" ->
+      output_string och param;
+      conf
+  | "Newpage" ->
+      output_string och "\\newpage";
+      conf
+  | "Print" ->
+      output_string och param;
+      conf
+  | "Sideways" -> { conf with sideways = param = "on" || param = "On" }
+  | "TwoPages" -> { conf with twopages = param = "on" || param = "On" }
+  | "Split" -> { conf with split = int_of_string param }
+  | "DoubleCells" -> { conf with double = param = "on" || param = "On" }
   | "Section" ->
-      if !image_label > 2 then image_nbr := 0;
       out "section" param;
       incr section;
-      current_level := 1;
-      subsection := 0;
-      subsubsection := 0
+      {
+        conf with
+        image_nbr = (if conf.imagelabels > 2 then 0 else conf.image_nbr);
+        current_level = 1;
+        subsection = 0;
+        subsubsection = 0;
+      }
   | "SubSection" ->
-      if !image_label > 3 then image_nbr := 0;
       out "subsection" param;
       incr subsection;
-      current_level := 2;
-      subsubsection := 0
+      {
+        conf with
+        image_nbr = (if conf.imagelabels > 3 then 0 else conf.image_nbr);
+        current_level = 2;
+        subsubsection = 0;
+      }
   | "SubSubSection" ->
-      if !image_label > 4 then image_nbr := 0;
       out "subsubsection" param;
       incr subsubsection;
-      current_level := 3
-  | "Version" -> output_string och (Sutil.version ^ "\n")
+      {
+        conf with
+        image_nbr = (if conf.imagelabels > 4 then 0 else conf.image_nbr);
+        current_level = 3;
+      }
+  | "Version" ->
+      output_string och (Sutil.version ^ "\n");
+      conf
   | "WideImages" ->
-      if param = "on" || param = "On" then (
-        imgwidth := !textwidth;
-        wide := true)
-      else (
-        imgwidth := imgwidth_default;
-        wide := false)
-  | "TextWidth" -> textwidth := Float.of_string param
+      {
+        conf with
+        imgwidth =
+          (if param = "on" || param = "On" then conf.textwidth
+          else imgwidth_default);
+        wide = param = "on" || param = "On";
+      }
+  | "TextWidth" -> { conf with textwidth = Float.of_string param }
+  | "TextHeight" -> { conf with textheight = Float.of_string param }
   | "VignWidth" ->
-      if param = "off" || param = "Off" then vignwidth := 1.0
-      else vignwidth := Float.of_string param
-  | "TreeMode" -> treemode := int_of_string param
-  | "Xoffset" ->
-      offset := true;
-      xoffset := Float.of_string param
-  | "Yoffset" ->
-      offset := true;
-      yoffset := Float.of_string param
+      {
+        conf with
+        vignwidth =
+          (if param = "off" || param = "Off" then 1.0
+          else Float.of_string param);
+      }
+  | "TreeMode" -> { conf with treemode = int_of_string param }
+  | "Xoffset" -> { conf with offset = true; xoffset = Float.of_string param }
+  | "Yoffset" -> { conf with offset = true; yoffset = Float.of_string param }
   | "Offset" ->
-      if param = "on" || param = "On" then offset := true
-      else (
-        offset := false;
-        xoffset := 0.0;
-        yoffset := 0.0)
-  | "Unit" -> unit := param
-  | "Debug" -> debug := int_of_string param
-  | _ -> output_string och (Format.sprintf "%%%s%s\n" cmd remain)
+      {
+        conf with
+        offset = param = "on" || param = "On";
+        xoffset = 0.0;
+        yoffset = 0.0;
+      }
+  | "Unit" -> { conf with unit = param }
+  | "Debug" -> { conf with debug = int_of_string param }
+  | _ ->
+      output_string och (Format.sprintf "%%%s%s\n" cmd remain);
+      conf
 
-let one_http_call base och line =
+let one_http_call conf base och line =
   let url_beg = try String.index_from line 0 '"' with Not_found -> 0 in
   let url_end =
     try String.index_from line (url_beg + 1) '"' with Not_found -> 0
@@ -984,7 +1066,7 @@ let one_http_call base och line =
               (Format.sprintf "Bad code when fetching %s: %d!\n"
                  (Lutil.escape url) code))
           else
-            let _ = process_html base och body in
+            let _ = process_html conf base och body in
             ()
       | Error (_, msg) ->
           Printf.eprintf "error when fetching %s\n %s\n%!" url
@@ -994,7 +1076,7 @@ let one_http_call base och line =
                (Lutil.escape msg))
 
 (** print all images mentioned in the notes of a person *)
-let print_images och images_list =
+let print_images conf och images_list =
   output_string och (Format.sprintf "\\par\n");
   (* TODO manage Wide *)
   List.iter
@@ -1008,7 +1090,7 @@ let print_images och images_list =
           let name = Filename.remove_extension name in
           let images_dir =
             String.concat Filename.dir_sep
-              [ !bases; "src"; !base_name; "images" ]
+              [ conf.bases; "src"; conf.base_name; "images" ]
           in
           let image_id =
             match List.assoc_opt name1 !img_name_list with
@@ -1059,11 +1141,11 @@ let print_images och images_list =
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
-let process_one_line base _dict1 _dict2 och line =
+let process_one_line conf base _dict1 _dict2 och line =
   (*if !debug = 1 then Printf.eprintf "process_one_line: %s\n" line;*)
   let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
-  let line = Sutil.replace_str line "%%%BASE%%%" !base_name in
-  let line = Sutil.replace_str line "%%%PASSWD%%%" !passwd in
+  let line = Sutil.replace_str line "%%%BASE%%%" conf.base_name in
+  let line = Sutil.replace_str line "%%%PASSWD%%%" conf.passwd in
   match line.[0] with
   | '<' -> (
       match line.[1] with
@@ -1079,51 +1161,63 @@ let process_one_line base _dict1 _dict2 och line =
           let _fn, _sn, _ocn, _sp, _index_s =
             Hutil.get_real_person base i p n oc content
           in
-          let sec =
+          let conf, sec =
             (* -> chapter, 1-> section, ... *)
-            match !current_level with
-            | 0 ->
-                incr section;
-                ""
+            match conf.current_level with
+            | 0 -> ({ conf with section = conf.section + 1 }, "")
             | 1 ->
-                if !sub then (
-                  incr subsection;
-                  "sub")
-                else (
-                  incr section;
-                  "")
+                if !sub then
+                  ({ conf with subsection = conf.subsection + 1 }, "sub")
+                else ({ conf with section = conf.section + 1 }, "")
             | 2 ->
-                if !sub then (
-                  incr subsubsection;
-                  "subsub")
-                else (
-                  incr subsection;
-                  "sub")
+                if !sub then
+                  ( { conf with subsubsection = conf.subsubsection + 1 },
+                    "subsub" )
+                else ({ conf with subsection = conf.subsection + 1 }, "sub")
             | _ ->
-                if !sub then "subsubsub"
-                else (
-                  incr subsubsection;
-                  "subsub")
+                if !sub then (conf, "subsubsub")
+                else
+                  ( { conf with subsubsubsection = conf.subsubsubsection + 1 },
+                    "subsub" )
           in
-          if !image_label > !current_level + 1 then image_nbr := 0;
+          let conf =
+            if conf.imagelabels > conf.current_level + 1 then
+              { conf with image_nbr = 0 }
+            else conf
+          in
           let index =
             if Sutil.contains line "\\index" then "" (* index manually done *)
             else Format.sprintf "\\index{%s}" content (* automatic index *)
           in
           output_string och
             (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
-          (match !image_label with 1 -> () | 4 -> image_nbr := 0 | _ -> ());
-          one_http_call base och line;
-          if !collect_images && !images_in_page <> [] then
-            print_images och !images_in_page;
+
+          let conf =
+            match conf.imagelabels with
+            | 1 -> conf
+            | 4 -> { conf with image_nbr = 0 }
+            | _ -> conf
+          in
+          one_http_call conf base och line;
+          if conf.collectimages && !images_in_page <> [] then
+            print_images conf och !images_in_page;
           images_in_page := [];
           if !hrule then
-            output_string och (Format.sprintf "\\par\\vspace{0.5cm}\\hrule\n")
-      | 'b' -> one_page och line
-      | 'x' -> one_command och line
-      | 'y' -> output_string och ""
-      | _ -> output_string och (line ^ "\n"))
-  | _ -> output_string och (line ^ "\n")
+            output_string och (Format.sprintf "\\par\\vspace{0.5cm}\\hrule\n");
+          conf
+      | 'b' ->
+          one_page och line;
+          conf
+      | 'x' -> one_command conf och line
+      | 'y' ->
+          output_string och "";
+          conf
+      | _ ->
+          output_string och (line ^ "\n");
+          conf)
+  | _ ->
+      output_string och (line ^ "\n");
+      conf
 
 (* current version reads family.txt and runs pdflatex and makeindex *)
 (* in a short future makeBook will handle the whole process including  *)
@@ -1172,6 +1266,7 @@ let main () =
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
 
+  let conf = set_conf in
   let img_file =
     String.concat Filename.dir_sep
       [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
@@ -1213,8 +1308,9 @@ let main () =
 
   (match mode with
   | "html" ->
+      (* for testing purposes *)
       let body = really_input_string ic (in_channel_length ic) in
-      let _ = process_html base och body in
+      let _ = process_html conf base och body in
       close_in ic;
       close_out och;
       exit 0
@@ -1222,7 +1318,8 @@ let main () =
       try
         while true do
           let line = input_line ic in
-          process_one_line base dict1 dict2 och line
+          let conf = process_one_line conf base dict1 dict2 och line in
+          ()
         done
       with End_of_file ->
         close_in ic;
