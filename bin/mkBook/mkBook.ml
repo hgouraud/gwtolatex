@@ -75,7 +75,7 @@ let main () =
       ( "-index",
         Arg.Int (fun x -> index := x),
         " Number of times makeindex is done." );
-      ("-second", Arg.Clear second, " Do not run Pdflatex a second time.");
+      ("-once", Arg.Clear second, " Do not run Pdflatex a second time.");
       ("-dev", Arg.Set dev, " Run in the GitHub repo.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
       ("-mode", Arg.Int (fun x -> mode := x), " Print tree mode.");

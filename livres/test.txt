@@ -59,9 +59,9 @@ de Gw\kern-0.1em To\LaTeX}
 <x TreeMode 0>
 <y Arbres>
 <y NoEp>
-
 <x Unit cm>
-<x ImgWidth 2.0>
+<x Arbres on>
+<x PrintConfig>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
 <x TwoPages on>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont (2 pages)</a>

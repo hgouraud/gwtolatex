@@ -35,7 +35,7 @@ type t_table = { row : int; col : int; body : t_line list }
 
 type config = {
   bases : string;
-  base_name : string;
+  basename : string;
   passwd : string;
   family : string;
   debug : int;
@@ -47,7 +47,7 @@ type config = {
   textheight : float;
   margin : float;
   colsep : float;
-  rule_thickns : float;
+  rulethickns : float;
   fontsize : string;
   imgwidth : float;
   vignwidth : float;
@@ -60,7 +60,7 @@ type config = {
   arbres : bool;
   sub : bool;
   collectimages : bool;
-  section_on_a_tag : bool;
+  sectiononatag : bool;
   highlights : string list;
   hrule : bool;
   imagelabels : int;

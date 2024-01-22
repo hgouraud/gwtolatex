@@ -725,7 +725,7 @@ let print_tree (conf : Config.config) tree =
                             Format.sprintf "%s\\rule{%s}{%1.2fpt}%s" minipage_b
                               (if lrc = "c" then Format.sprintf "%s" colwidth
                               else Format.sprintf "%s" half_colwidth)
-                              conf.rule_thickns minipage_e)
+                              conf.rulethickns minipage_e)
                         ^ if i + 1 = s then "" else "&\n")
                   in
                   loop 0 ""
@@ -788,7 +788,7 @@ let print_tree (conf : Config.config) tree =
                                loop (i + 1)
                                  (acc
                                  ^ Format.sprintf "\\rule{%s}{%1.2fpt}%s"
-                                     colwidth conf.rule_thickns
+                                     colwidth conf.rulethickns
                                      (if i + 1 = s then "" else "&\n"))
                            in
                            loop 0 "")
@@ -796,19 +796,19 @@ let print_tree (conf : Config.config) tree =
                     | "Vr1" ->
                         if s = 1 then
                           Format.sprintf "%s\\rule{%1.2fpt}{0.5cm}%s" minipage_b
-                            conf.rule_thickns minipage_e
+                            conf.rulethickns minipage_e
                         else
                           Format.sprintf
                             "%s\\multicolumn{%d}{c}{\\rule{%1.2fpt}{0.5cm}}%s"
-                            minipage_b s conf.rule_thickns minipage_e
+                            minipage_b s conf.rulethickns minipage_e
                     | "Vr2" ->
                         if s = 1 then
                           Format.sprintf "%s\\rule{%1.2fpt}{0.5cm}%s" minipage_b
-                            conf.rule_thickns minipage_e
+                            conf.rulethickns minipage_e
                         else
                           Format.sprintf
                             "%s\\multicolumn{1}{c}{\\rule{%1.2fpt}{0.5cm}}%s"
-                            minipage_b conf.rule_thickns minipage_e
+                            minipage_b conf.rulethickns minipage_e
                     | "E" ->
                         if s = 1 then
                           Format.sprintf "%s%s" minipage_b minipage_e
@@ -819,7 +819,7 @@ let print_tree (conf : Config.config) tree =
                         Format.sprintf
                           {|%s\\includegraphics[width=%1.2fcm]{%s}%s|}
                           minipage_b conf.imgwidth
-                          (get_img_name conf.base_name im)
+                          (get_img_name conf.basename im)
                           minipage_e
                     | _ -> "??"
                   (* end of cell *)

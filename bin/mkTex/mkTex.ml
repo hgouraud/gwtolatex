@@ -40,7 +40,7 @@ let caption = ref ""
 
 (* launch setup *)
 let bases = ref ""
-let base_name = ref "x"
+let basename = ref "x"
 let passwd = ref ""
 let family = ref ""
 let debug = ref 0
@@ -61,17 +61,17 @@ let images_in_page = ref []
 let imgwidth_default = 5.1
 let textwidth_default = 15.5
 let textheight_default = 22.5
-let rule_thickns_default = 0.5
+let rulethickns_default = 0.5
 let vignwidth_default = 1.5
 let margin_default = 2.5
 let colsep_default = 0.1
 
-let make_conf xbases xbase_name xpasswd xfamily xdebug xverbose xtreemode =
-  Printf.eprintf "******* Set conf : base: %s, family: %s\n" !base_name !family;
+let make_conf xbases xbasename xpasswd xfamily xdebug xverbose xtreemode =
+  Printf.eprintf "******* Set conf : base: %s, family: %s\n" !basename !family;
   let conf =
     {
       bases = xbases;
-      base_name = xbase_name;
+      basename = xbasename;
       passwd = xpasswd;
       family = xfamily;
       debug = xdebug;
@@ -83,7 +83,7 @@ let make_conf xbases xbase_name xpasswd xfamily xdebug xverbose xtreemode =
       textheight = textheight_default;
       margin = margin_default;
       colsep = colsep_default;
-      rule_thickns = rule_thickns_default;
+      rulethickns = rulethickns_default;
       fontsize = "";
       imgwidth = imgwidth_default;
       vignwidth = vignwidth_default;
@@ -96,7 +96,7 @@ let make_conf xbases xbase_name xpasswd xfamily xdebug xverbose xtreemode =
       arbres = true;
       sub = false;
       collectimages = true;
-      section_on_a_tag = true;
+      sectiononatag = true;
       highlights = [];
       hrule = true;
       imagelabels = 3;
@@ -111,11 +111,11 @@ let make_conf xbases xbase_name xpasswd xfamily xdebug xverbose xtreemode =
 
 type p_type = Str | Int | Bool
 
-let print_conf conf =
+let dump_conf conf =
   Printf.eprintf "Configuration\n";
   Printf.eprintf "  Launch parameters:\n";
   Printf.eprintf "    bases = %s\n" conf.bases;
-  Printf.eprintf "    base_name = %s\n" conf.base_name;
+  Printf.eprintf "    basename = %s\n" conf.basename;
   Printf.eprintf "    passwd = %s\n" conf.passwd;
   Printf.eprintf "    family = %s\n" conf.family;
   Printf.eprintf "    debug = %d\n" conf.debug;
@@ -127,9 +127,68 @@ let print_conf conf =
   Printf.eprintf "    textheight = %1.2f\n" conf.textheight;
   Printf.eprintf "    margin = %1.2f\n" conf.margin;
   Printf.eprintf "    colsep = %1.2f\n" conf.colsep;
-  Printf.eprintf "    rule_thickns = %1.2f\n" conf.rule_thickns;
+  Printf.eprintf "    rulethickns = %1.2f\n" conf.rulethickns;
   Printf.eprintf "    fontsize = %s\n" conf.fontsize;
-  Printf.eprintf "    imgwidth = %1.2f\n" conf.imgwidth
+  Printf.eprintf "    imgwidth = %1.2f\n" conf.imgwidth;
+  Printf.eprintf "    vignwidth = %1.2f\n" conf.vignwidth;
+  Printf.eprintf "    portraitwidth = %1.2f\n" conf.portraitwidth;
+  Printf.eprintf "  Other params :\n";
+  Printf.eprintf "    collectimages = %s\n"
+    (if conf.verbose then "true" else "false");
+  Printf.eprintf "    sectiononatag = %s\n"
+    (if conf.verbose then "true" else "false");
+  Printf.eprintf "    nbimgperline = %d\n" conf.nbimgperline;
+  Printf.eprintf "    sideways = %s\n"
+    (if conf.verbose then "true" else "false");
+  Printf.eprintf "    twopages = %s\n"
+    (if conf.verbose then "true" else "false");
+  Printf.eprintf "    double = %s\n" (if conf.verbose then "true" else "false");
+  Printf.eprintf "    arbres =  %s\n" (if conf.arbres then "true" else "false");
+  Printf.eprintf "    split =  %d\n" conf.split
+
+let print_conf conf =
+  let config_str =
+    [
+      Format.sprintf "Configuration\n";
+      Format.sprintf "  Launch parameters:\n";
+      Format.sprintf "    bases = %s\n" conf.bases;
+      Format.sprintf "    basename = %s\n" conf.basename;
+      Format.sprintf "    passwd = %s\n" conf.passwd;
+      Format.sprintf "    family = %s\n" conf.family;
+      Format.sprintf "    debug = %d\n" conf.debug;
+      Format.sprintf "    verbose = %s\n"
+        (if conf.verbose then "true" else "false");
+      Format.sprintf "    treemode = %d\n" conf.treemode;
+      Format.sprintf "  Formatting:\n";
+      Format.sprintf "    unit = %s\n" conf.unit;
+      Format.sprintf "    textwidth = %1.2f\n" conf.textwidth;
+      Format.sprintf "    textheight = %1.2f\n" conf.textheight;
+      Format.sprintf "    margin = %1.2f\n" conf.margin;
+      Format.sprintf "    colsep = %1.2f\n" conf.colsep;
+      Format.sprintf "    rulethickns = %1.2f (pt)\n" conf.rulethickns;
+      Format.sprintf "    fontsize = %s\n" conf.fontsize;
+      Format.sprintf "    imgwidth = %1.2f\n" conf.imgwidth;
+      Format.sprintf "    vignwidth = %1.2f\n" conf.vignwidth;
+      Format.sprintf "    portraitwidth = %1.2f\n" conf.portraitwidth;
+      Format.sprintf "  Other params :\n";
+      Format.sprintf "    collectimages = %s\n"
+        (if conf.verbose then "true" else "false");
+      Format.sprintf "    sectiononatag = %s\n"
+        (if conf.verbose then "true" else "false");
+      Format.sprintf "    nbimgperline = %d\n" conf.nbimgperline;
+      Format.sprintf "    sideways = %s\n"
+        (if conf.verbose then "true" else "false");
+      Format.sprintf "    twopages = %s\n"
+        (if conf.verbose then "true" else "false");
+      Format.sprintf "    double = %s\n"
+        (if conf.verbose then "true" else "false");
+      Format.sprintf "    arbres =  %s\n"
+        (if conf.arbres then "true" else "false");
+      Format.sprintf "    split =  %d\n" conf.split;
+    ]
+  in
+  Format.sprintf "\\begin{verbatim}\n%s\\end{verbatim}"
+    (String.concat "" config_str)
 
 let _strip_nl s =
   let b = Buffer.create 10 in
@@ -275,7 +334,7 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n"
         conf.portraitwidth
         conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
-        (String.concat Filename.dir_sep [ "."; "images"; conf.base_name ])
+        (String.concat Filename.dir_sep [ "."; "images"; conf.basename ])
         Filename.dir_sep
         (* GeneWeb replaces ' ' by '_' in key computations *)
         (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
@@ -284,7 +343,7 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
       (* TODO manage images location *)
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n"
         conf.imgwidth conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
-        (String.concat Filename.dir_sep [ "."; "images"; conf.base_name ])
+        (String.concat Filename.dir_sep [ "."; "images"; conf.basename ])
         Filename.dir_sep
         (* GeneWeb replaces ' ' by '_' in key computations *)
         (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
@@ -297,8 +356,7 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
       in
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\n"
         conf.imgwidth conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
-        (String.concat Filename.dir_sep
-           [ "."; "src"; conf.base_name; "images" ])
+        (String.concat Filename.dir_sep [ "."; "src"; conf.basename; "images" ])
         Filename.dir_sep name
         (if image_id <> "" && false then
          Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec
@@ -308,8 +366,7 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
   | Vignette ->
       Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" conf.vignwidth
         conf.unit
-        (String.concat Filename.dir_sep
-           [ "."; "src"; conf.base_name; "images" ])
+        (String.concat Filename.dir_sep [ "."; "src"; conf.basename; "images" ])
         Filename.dir_sep name
 
 (* ignore tag but read children *)
@@ -401,7 +458,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
           content minipage_b conf.textwidth
           conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
           (String.concat Filename.dir_sep
-             [ "."; "src"; conf.base_name; "images" ])
+             [ "."; "src"; conf.basename; "images" ])
           Filename.dir_sep name caption minipage_e
     | _ ->
         let image =
@@ -438,7 +495,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
   *)
   let read_src_file v content =
     let src_dir =
-      String.concat Filename.dir_sep [ conf.bases; "src"; conf.base_name ]
+      String.concat Filename.dir_sep [ conf.bases; "src"; conf.basename ]
     in
     let ic =
       try Some (open_in (Filename.concat src_dir (v ^ ".txt"))) with _ -> None
@@ -518,8 +575,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         if m = "SRC" || m = "DOC" then read_src_file v content
         else if m = "D" && t = "V" then
           Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
-        else if
-          String.lowercase_ascii b <> String.lowercase_ascii conf.base_name
+        else if String.lowercase_ascii b <> String.lowercase_ascii conf.basename
         then
           Format.sprintf "%s\\footnote{%s}" content
             (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
@@ -596,7 +652,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             content
         | "h1" ->
             let content = get_child children in
-            if content <> "" && conf.section_on_a_tag then
+            if content <> "" && conf.sectiononatag then
               Format.sprintf "\\section{%s}" content
             else ""
         | "h2" ->
@@ -898,10 +954,19 @@ let one_command conf och line =
     output_string och (Format.sprintf "\\%s{%s}%s\n" c param remain)
   in
   match cmd with
+  | "DumpConfig" ->
+      dump_conf conf;
+      conf
+  | "PrintConfig" ->
+      output_string och (print_conf conf);
+      conf
   | "Arbres" | "Trees" ->
-      if param = "on" || param = "On" then
-        { conf with imgwidth = 1.5; arbres = true }
-      else { conf with imgwidth = imgwidth_default; arbres = false }
+      let arbres = param = "on" || param = "On" in
+      {
+        conf with
+        imgwidth = (if arbres then 1.5 else imgwidth_default);
+        arbres;
+      }
   | "BumpSub" -> { conf with sub = param = "on" || param = "On" }
   | "Chapter" ->
       out "chapter" param;
@@ -914,7 +979,7 @@ let one_command conf och line =
       conf
   | "CollectImages" ->
       { conf with collectimages = param = "on" || param = "On" }
-  | "Fiches" -> { conf with section_on_a_tag = param = "on" || param = "On" }
+  | "Fiches" -> { conf with sectiononatag = param = "on" || param = "On" }
   | "FontSize" ->
       {
         conf with
@@ -1084,7 +1149,7 @@ let print_images conf och images_list =
           let name = Filename.remove_extension name in
           let images_dir =
             String.concat Filename.dir_sep
-              [ "."; "src"; conf.base_name; "images" ]
+              [ "."; "src"; conf.basename; "images" ]
           in
           let image_id =
             match List.assoc_opt name1 !img_name_list with
@@ -1136,9 +1201,9 @@ let print_images conf och images_list =
   output_string och (Format.sprintf "\\par\n")
 
 let process_one_line conf base _dict1 _dict2 och line =
-  (*Printf.eprintf "process_one_line: %s, base: %s\n" line conf.base_name;*)
+  (*Printf.eprintf "process_one_line: %s, base: %s\n" line conf.basename;*)
   let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
-  let line = Sutil.replace_str line "%%%BASE%%%" conf.base_name in
+  let line = Sutil.replace_str line "%%%BASE%%%" conf.basename in
   let line = Sutil.replace_str line "%%%PASSWD%%%" conf.passwd in
   let conf =
     match line.[0] with
@@ -1228,7 +1293,7 @@ let main () =
   let speclist =
     [
       ("-bases", Arg.String (fun x -> bases := x), " Where are bases.");
-      ("-base", Arg.String (fun x -> base_name := x), " Choose base.");
+      ("-base", Arg.String (fun x -> basename := x), " Choose base.");
       ("-passwd", Arg.String (fun x -> passwd := x), " Set wizard password.");
       ("-family", Arg.String (fun x -> family := x), " Choose family.");
       ("-famille", Arg.String (fun x -> family := x), " Choose family.");
@@ -1264,15 +1329,13 @@ let main () =
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
 
-  Printf.eprintf "******* Arg parse : base: %s, family: %s\n" !base_name !family;
+  Printf.eprintf "******* Arg parse : base: %s, family: %s\n" !basename !family;
   let conf =
-    make_conf !bases !base_name !passwd !family !debug !verbose !treemode
+    make_conf !bases !basename !passwd !family !debug !verbose !treemode
   in
 
   Printf.eprintf "******* After make_conf : base: %s, family: %s\n"
-    conf.base_name conf.family;
-
-  print_conf conf;
+    conf.basename conf.family;
 
   let img_file =
     String.concat Filename.dir_sep
@@ -1302,7 +1365,7 @@ let main () =
   in
 
   (* TODO find a way to open base remotely *)
-  let base = Hutil.open_base (Filename.concat "." !base_name) in
+  let base = Hutil.open_base (Filename.concat "." !basename) in
 
   let och = open_out fname_out in
   let ic = open_in_bin fname_in in
@@ -1310,7 +1373,7 @@ let main () =
 
   Printf.eprintf
     "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
-    Sutil.version conf.family conf.base_name fname_out conf.debug;
+    Sutil.version conf.family conf.basename fname_out conf.debug;
   flush stderr;
 
   let tmp = ref conf in
