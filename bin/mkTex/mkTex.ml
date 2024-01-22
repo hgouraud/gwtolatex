@@ -1084,7 +1084,7 @@ let print_images conf och images_list =
           let name = Filename.remove_extension name in
           let images_dir =
             String.concat Filename.dir_sep
-              [ conf.bases; "src"; conf.base_name; "images" ]
+              [ "."; "src"; conf.base_name; "images" ]
           in
           let image_id =
             match List.assoc_opt name1 !img_name_list with
