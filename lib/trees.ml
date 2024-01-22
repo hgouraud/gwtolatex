@@ -110,11 +110,12 @@ let get_part lr side str =
   let str = Sutil.suppress_leading_sp str in
   let str = Sutil.replace_utf8_bar str in
   let res =
+    let len = String.length str in
     match (lr, side) with
-    | 0, "left" -> String.sub str 1 (String.length str - 1)
-    | 0, "right" -> String.sub str 1 (String.length str - 1)
-    | 1, "left" -> String.sub str 0 (String.length str - 1)
-    | 1, "right" -> String.sub str 0 (String.length str - 1)
+    | 0, "left" when len > 1 -> String.sub str 1 (String.length str - 1)
+    | 0, "right" when len > 1 -> String.sub str 1 (String.length str - 1)
+    | 1, "left" when len > 1 -> String.sub str 0 (String.length str - 1)
+    | 1, "right" when len > 1 -> String.sub str 0 (String.length str - 1)
     | _, _ -> str
   in
   res
@@ -605,17 +606,12 @@ let get_nb_head_rows tree =
   else 0
 
 let print_tree (conf : Config.config) tree =
-  Printf.eprintf "Degug: %d, sideways: %s\n" conf.debug
-    (if conf.sideways then "yes" else "no");
   let i, w, w0, ok = test_tree_width tree in
   if not ok then (
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
     exit 1);
   let nb_head_rows = get_nb_head_rows tree in
   let cols = find_empty_columns tree nb_head_rows in
-  Printf.eprintf "Empty columns: \n";
-  List.iter (fun c -> Printf.eprintf " %s" c) cols;
-  Printf.eprintf "\n";
   let col_f_n =
     List.fold_left (fun a col -> if col.[0] = 'F' then a + 1 else a) 0 cols
   in
@@ -636,17 +632,15 @@ let print_tree (conf : Config.config) tree =
     -. (Float.of_int col_e_n *. col_e_w))
     /. Float.of_int col_f_n
   in
-  Printf.eprintf
-    "Textwidth: %2.2f, col_f_n: %d, col_f_w: %1.2f, col_e_n: %d, col_e_w: %1.2f\n"
-    conf.textwidth col_f_n col_f_w col_e_n col_e_w;
 
   (*let colwidth = conf.textwidth /. Float.of_int non_empty_col_nbr in*)
   let colwidth = Format.sprintf "%1.2fcm" col_f_w in
-  let half_colwidth = Format.sprintf "%1.2fcm" (col_f_w /. 2.0) in
+  let half_colwidth = Format.sprintf "%1.2fcm" (col_f_w /. 2.05) in
+  let quarter_colwidth = Format.sprintf "%1.2fcm" (col_f_w /. 4.05) in
   (* TODO take into account trees split in two *)
   let tabular_env =
-    let colspec_f = Format.sprintf "p{%1.2fcm}" col_f_w in
-    let colspec_e = Format.sprintf "p{%1.2fcm}" col_e_w in
+    let colspec_f = Format.sprintf "P{%1.2fcm}" col_f_w in
+    let colspec_e = Format.sprintf "P{%1.2fcm}" col_e_w in
     let empty_col i = (List.nth cols i).[0] = 'E' in
 
     let tab_env =
@@ -658,15 +652,11 @@ let print_tree (conf : Config.config) tree =
     in
     let tab_env =
       if conf.debug = 1 then "|" ^ String.concat "|" tab_env ^ "|c|"
-      else String.concat "c" tab_env
+      else String.concat "" tab_env
     in
-    tab_env
+    tab_env ^ "c"
     (* TODO is two pages start at col_middle when doing right part *)
   in
-
-  (*Printf.eprintf "Tabular env: %s\n" tabular_env;*)
-  let cell_wid = col_f_w in
-  let _half_cell_wid = cell_wid /. 2.0 in
 
   (* on top of tabular, one can use tables
      \begin{table}[h!]
@@ -682,12 +672,14 @@ let print_tree (conf : Config.config) tree =
   *)
   let print_tree_mode_1 (conf : Config.config) tree page =
     let tabular_b =
-      Format.sprintf "%s\\nohyphens\n\\begin{tabular}{%s}\n"
+      Format.sprintf
+        "%s\\nohyphens\\newcolumntype{P}[1]{>{\\centering\\arraybackslash}p{#1}}\n\
+         \\begin{tabular}{%s}\n"
         (if conf.sideways then "\\begin{sideways}" else "")
         tabular_env
     in
     let tabular_e =
-      Format.sprintf "\\end{tabular}\n\\hyphenation{nor-mal-ly}\n%s"
+      Format.sprintf "\\end{tabular}\n\\hyphenation{nor-mal-ly}\n%s\n"
         (if conf.sideways then "\\end{sideways}\n" else "")
     in
     row_nb := 0;
@@ -721,12 +713,18 @@ let print_tree (conf : Config.config) tree =
                         (acc
                         ^ (if lrc = "e" then ""
                           else
-                            (* TODO align left or right *)
-                            Format.sprintf "%s\\rule{%s}{%1.2fpt}%s" minipage_b
+                            Format.sprintf
+                              "%s{\\centering %s\\rule{%s}{%1.2fpt}%s}"
+                              minipage_b
+                              (if lrc = "r" then
+                               Format.sprintf "\\hspace{%s}" quarter_colwidth
+                              else if lrc = "l" then
+                                Format.sprintf "\\hspace{-%s}" quarter_colwidth
+                              else "")
                               (if lrc = "c" then Format.sprintf "%s" colwidth
                               else Format.sprintf "%s" half_colwidth)
                               conf.rulethickns minipage_e)
-                        ^ if i + 1 = s then "" else "&\n")
+                        ^ if i + 1 = s then "" else "&")
                   in
                   loop 0 ""
                 in
@@ -764,21 +762,21 @@ let print_tree (conf : Config.config) tree =
                         if s = 1 then str
                         else Format.sprintf "\\multicolumn{%d}{c}{%s}" s str
                     | "Hl" ->
-                        let odd = s / 2 * 2 = s in
+                        let odd = s / 2 * 2 <> s in
                         if s = 1 then hr s "l"
                         else if odd then
                           hr (s / 2) "c"
                           ^ "&\n" ^ hr 1 "l" ^ " &\n"
                           ^ hr (s / 2) "e"
-                        else hr (s / 2) "l" ^ "&\n" ^ hr (s / 2) "e"
+                        else hr (s / 2) "c" ^ "&\n" ^ hr (s / 2) "e"
                     | "Hr" ->
-                        let odd = s / 2 * 2 = s in
+                        let odd = s / 2 * 2 <> s in
                         if s = 1 then hr s "r"
                         else if odd then
                           hr (s / 2) "e"
                           ^ "&\n" ^ hr 1 "r" ^ "&\n"
                           ^ hr (s / 2) "c"
-                        else hr (s / 2) "e" ^ "&\n" ^ hr (s / 2) "r"
+                        else hr (s / 2) "e" ^ "&\n" ^ hr (s / 2) "c"
                     | "Hc" ->
                         (* concat colspan entries of multicolumn 1 *)
                         Format.sprintf "%s%s%s" minipage_b
@@ -824,25 +822,26 @@ let print_tree (conf : Config.config) tree =
                     | _ -> "??"
                   (* end of cell *)
                 in
-                (* TODO remove last & before \\ *)
                 (col + s, acc2 ^ cell_str ^ "&\n"))
               (0, "") row
           in
+
+          (* TODO remove last & before \\ *)
           let row_str =
+            (* TODO check this -2 ? &\n ?? *)
             String.sub row_str 0 (String.length row_str - 2) ^ "\n"
           in
-          (* somewhat of a hack to link the two half trees *)
+          (* somewhat of a hack to link the two half trees with some arrow *)
           let row_str =
             if conf.twopages && page = "left" && !row_nb = nb_head_rows + 1 then
-              row_str ^ "> >"
+              row_str ^ "$\\hspace{-0.4cm}\\rightarrow$"
             else row_str
           in
           let row_str =
             if conf.twopages && page = "right" && !row_nb = nb_head_rows + 1
-            then "" ^ row_str
+            then "$\\leftarrow\\hspace{-0.4cm}$" ^ row_str
             else row_str
           in
-          (* Printf.eprintf "Row string: %s\n" row_str; *)
           acc1 ^ row_str ^ "\n\\\\\n")
         "" tree
     ^ tabular_e
@@ -902,16 +901,11 @@ let print_tree (conf : Config.config) tree =
         ^ print_tree_mode_0 conf tree_right
     | 1 ->
         print_tree_mode_1 conf tree_left "left"
-        ^ "\\par\n"
-        ^ print_tree_mode_0 conf tree_left
         ^ "\\newpage\n"
         ^ print_tree_mode_1 conf tree_right "right"
-        ^ "\\par\n"
-        ^ print_tree_mode_0 conf tree_right
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n
   else
     match conf.treemode with
     | 0 -> print_tree_mode_0 conf tree
-    | 1 ->
-        print_tree_mode_1 conf tree "" ^ "\\par\n" ^ print_tree_mode_0 conf tree
+    | 1 -> print_tree_mode_1 conf tree ""
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n

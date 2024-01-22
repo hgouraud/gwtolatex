@@ -59,6 +59,7 @@ let images_in_page = ref []
 
 (* defaults *)
 let imgwidth_default = 5.1
+let portraitwidth_default = 5.1
 let textwidth_default = 15.5
 let textheight_default = 22.5
 let rulethickns_default = 0.5
@@ -965,7 +966,43 @@ let one_command conf och line =
       {
         conf with
         imgwidth = (if arbres then 1.5 else imgwidth_default);
+        portraitwidth = (if arbres then 1.5 else portraitwidth_default);
         arbres;
+      }
+  | "ColSep" -> { conf with colsep = Float.of_string param }
+  (* TODO recode using make_conf *)
+  | "Defaults" ->
+      {
+        conf with
+        treemode = 1;
+        (* formatting *)
+        unit = "cm";
+        textwidth = textwidth_default;
+        textheight = textheight_default;
+        margin = margin_default;
+        colsep = colsep_default;
+        rulethickns = rulethickns_default;
+        fontsize = "";
+        imgwidth = imgwidth_default;
+        vignwidth = vignwidth_default;
+        portraitwidth = imgwidth_default;
+        sideways = false;
+        twopages = false;
+        double = false;
+        split = 0;
+        (* mkTex *)
+        arbres = true;
+        sub = false;
+        collectimages = true;
+        sectiononatag = true;
+        highlights = [];
+        hrule = true;
+        imagelabels = 3;
+        nbimgperline = 3;
+        offset = false;
+        wide = false;
+        xoffset = 0.0;
+        yoffset = 0.0;
       }
   | "BumpSub" -> { conf with sub = param = "on" || param = "On" }
   | "Chapter" ->
@@ -1260,9 +1297,6 @@ let process_one_line conf base _dict1 _dict2 och line =
 
             one_http_call conf base och line;
 
-            Printf.eprintf "Collect images: %s\n"
-              (if conf.collectimages then "yes" else "no");
-
             if conf.collectimages && !images_in_page <> [] then
               print_images conf och !images_in_page;
             images_in_page := [];
@@ -1387,9 +1421,9 @@ let main () =
       close_out och;
       exit 0
   | _ -> (
+      tmp := conf;
       try
         while true do
-          tmp := conf;
           let line = input_line ic in
           tmp := process_one_line !tmp base dict1 dict2 och line
         done

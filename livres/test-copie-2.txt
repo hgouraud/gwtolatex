@@ -57,15 +57,28 @@ de Gw\kern-0.1em To\LaTeX}
 
 <x Section Arbres généalogiques>
 <x TreeMode 1>
+<y Debug 1>
 <x Unit cm>
-<x Arbres on>
+<x ImgWidth 1.2>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
 <x TwoPages on>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont (2 pages)</a>
-<x TwoPages off>
-<x LaTeX \newpage>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=A&p=alexandre&n=dupont&v=3&siblings=on&notes=on&t=T&after=&before=&dag=on&templ=tex&w=%%%PASSWD%%%">Arbre ascendant d'Alexandre Dupont</a>
 <x BumpSub off>
+<x TwoPages off>
+
+
+<y TreeMode 1>
+<y Debug 1>
+<y Unit cm>
+<y ImgWidth 1.19>
+<y href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
+<y TwoPages on>
+<y href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=2;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont (2 pages)</a>
+<y TwoPages off>
+<y LaTeX \newpage>
+<y href="http://127.0.0.1:2317/%%%BASE%%%?m=A&p=alexandre&n=dupont&v=3&siblings=on&notes=on&t=T&after=&before=&dag=on&templ=tex&w=%%%PASSWD%%%">Arbre ascendant d'Alexandre Dupont</a>
+<y BumpSub off>
+<y TwoPages off>
 
 % Standard tail of document
 \printindex
