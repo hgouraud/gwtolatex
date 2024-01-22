@@ -36,98 +36,100 @@ let test_nb = ref 0
 (* current values *)
 let treemode = ref 0
 let passe = ref 0
-let current_level = ref 0
-let images_in_page = ref []
-let chapter = ref 0
-let section = ref 0
-let subsection = ref 0
-let subsubsection = ref 0
-let image_nbr = ref 0
-let image_label = ref 3
 let caption = ref ""
-let collect_images = ref false
-let wide = ref false
-let section_on_a_tag = ref false
-let highlights = ref []
-let _width = ref 7
-let sub = ref false
-let _trees = ref false
-let ep = ref false
-let arbres = ref false
-let sideways = ref false
-let textwidth = ref 15.5 (* in cm *)
-let textheight = ref 22.5
-let margin = ref 2.5
-let fontsize = ref ""
-let hrule = ref true
-let imgwidth_default = 5.1
-let imgwidth = ref imgwidth_default
-let portraitwidth = ref imgwidth_default
-let nbimgperline = ref 3
-let vignwidth = ref 1.0
-let unit = ref "cm"
-let offset = ref false
-let xoffset = ref 0.0
-let yoffset = ref 0.0
-let twopages = ref false
-let split = ref 0
-let double = ref false
+
+(* launch setup *)
 let bases = ref ""
-let base_name = ref ""
+let base_name = ref "x"
 let passwd = ref ""
 let family = ref ""
 let debug = ref 0
 let verbose = ref false
 let treemode = ref 1
 
-let set_conf =
+(* chapter section images numbering *)
+let chapter = ref 0
+let section = ref 0
+let subsection = ref 0
+let subsubsection = ref 0
+let subsubsubsection = ref 0
+let current_level = ref 0
+let image_nbr = ref 0
+let images_in_page = ref []
+
+(* defaults *)
+let imgwidth_default = 5.1
+let textwidth_default = 15.5
+let textheight_default = 22.5
+let rule_thickns_default = 0.5
+let vignwidth_default = 1.5
+let margin_default = 2.5
+let colsep_default = 0.1
+
+let make_conf xbases xbase_name xpasswd xfamily xdebug xverbose xtreemode =
+  Printf.eprintf "******* Set conf : base: %s, family: %s\n" !base_name !family;
   let conf =
-    ref
-      {
-        bases = !bases;
-        base_name = !base_name;
-        passwd = !passwd;
-        family = !family;
-        debug = !debug;
-        verbose = !verbose;
-        treemode = !treemode;
-        (* formatting *)
-        unit = "cm";
-        textwidth = 15.5;
-        textheight = 22.5;
-        margin = 2.5;
-        colsep = 0.1;
-        rule_thickns = 0.5;
-        fontsize = "";
-        imgwidth = 5.1;
-        vignwidth = 1.5;
-        sideways = false;
-        twopages = false;
-        double = false;
-        split = 0;
-        (* mkTex *)
-        arbres = true;
-        sub = false;
-        chapter = 0;
-        collectimages = true;
-        image_nbr = 0;
-        current_level = 0;
-        section_on_a_tag = true;
-        highlights = [];
-        hrule = true;
-        imagelabels = 3;
-        nbimgperline = 3;
-        section = 0;
-        subsection = 0;
-        subsubsection = 0;
-        subsubsubsection = 0;
-        offset = false;
-        wide = false;
-        xoffset = 0.0;
-        yoffset = 0.0;
-      }
+    {
+      bases = xbases;
+      base_name = xbase_name;
+      passwd = xpasswd;
+      family = xfamily;
+      debug = xdebug;
+      verbose = xverbose;
+      treemode = xtreemode;
+      (* formatting *)
+      unit = "cm";
+      textwidth = textwidth_default;
+      textheight = textheight_default;
+      margin = margin_default;
+      colsep = colsep_default;
+      rule_thickns = rule_thickns_default;
+      fontsize = "";
+      imgwidth = imgwidth_default;
+      vignwidth = vignwidth_default;
+      portraitwidth = imgwidth_default;
+      sideways = false;
+      twopages = false;
+      double = false;
+      split = 0;
+      (* mkTex *)
+      arbres = true;
+      sub = false;
+      collectimages = true;
+      section_on_a_tag = true;
+      highlights = [];
+      hrule = true;
+      imagelabels = 3;
+      nbimgperline = 3;
+      offset = false;
+      wide = false;
+      xoffset = 0.0;
+      yoffset = 0.0;
+    }
   in
   conf
+
+type p_type = Str | Int | Bool
+
+let print_conf conf =
+  Printf.eprintf "Configuration\n";
+  Printf.eprintf "  Launch parameters:\n";
+  Printf.eprintf "    bases = %s\n" conf.bases;
+  Printf.eprintf "    base_name = %s\n" conf.base_name;
+  Printf.eprintf "    passwd = %s\n" conf.passwd;
+  Printf.eprintf "    family = %s\n" conf.family;
+  Printf.eprintf "    debug = %d\n" conf.debug;
+  Printf.eprintf "    verbose = %s\n" (if conf.verbose then "true" else "false");
+  Printf.eprintf "    treemode = %d\n" conf.treemode;
+  Printf.eprintf "  Formatting:\n";
+  Printf.eprintf "    unit = %s\n" conf.unit;
+  Printf.eprintf "    textwidth = %1.2f\n" conf.textwidth;
+  Printf.eprintf "    textheight = %1.2f\n" conf.textheight;
+  Printf.eprintf "    margin = %1.2f\n" conf.margin;
+  Printf.eprintf "    colsep = %1.2f\n" conf.colsep;
+  Printf.eprintf "    rule_thickns = %1.2f\n" conf.rule_thickns;
+  Printf.eprintf "    fontsize = %s\n" conf.fontsize;
+  Printf.eprintf "    imgwidth = %1.2f\n" conf.imgwidth
 
 let _strip_nl s =
   let b = Buffer.create 10 in
@@ -271,8 +273,8 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
   | Portrait ->
       (* TODO manage images location *)
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n"
-        !portraitwidth
-        !unit (* 5 cm in page mode, 1.5 cm in table mode *)
+        conf.portraitwidth
+        conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "images"; conf.base_name ])
         Filename.dir_sep
         (* GeneWeb replaces ' ' by '_' in key computations *)
@@ -280,8 +282,8 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
         "jpg"
   | Imagek ->
       (* TODO manage images location *)
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n" !imgwidth
-        !unit (* 5 cm in page mode, 1.5 cm in table mode *)
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s.%s}\n"
+        conf.imgwidth conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "images"; conf.base_name ])
         Filename.dir_sep
         (* GeneWeb replaces ' ' by '_' in key computations *)
@@ -293,8 +295,8 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
         | Some id -> id
         | None -> ""
       in
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\n" !imgwidth
-        !unit (* 5 cm in page mode, 1.5 cm in table mode *)
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\n"
+        conf.imgwidth conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep
            [ "."; "src"; conf.base_name; "images" ])
         Filename.dir_sep name
@@ -304,8 +306,8 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
         else "")
       (* TODO deal with !caption here, possibly \begin{image}...\end{image} *)
   | Vignette ->
-      Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" !vignwidth
-        !unit
+      Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" conf.vignwidth
+        conf.unit
         (String.concat Filename.dir_sep
            [ "."; "src"; conf.base_name; "images" ])
         Filename.dir_sep name
@@ -396,8 +398,8 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
           else ""
         in
         Format.sprintf "%s%s\\includegraphics[width=%2.2f%s]{%s%s%s}%s%s"
-          content minipage_b !textwidth
-          !unit (* 5 cm in page mode, 1.5 cm in table mode *)
+          content minipage_b conf.textwidth
+          conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
           (String.concat Filename.dir_sep
              [ "."; "src"; conf.base_name; "images" ])
           Filename.dir_sep name caption minipage_e
@@ -405,12 +407,12 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         let image =
           ( Images,
             name,
-            (conf.chapter, conf.section, conf.subsection, conf.subsubsection),
-            conf.image_nbr )
+            (!chapter, !section, !subsection, !subsubsection),
+            !image_nbr )
         in
-        if !collect_images && k = "" && not vignette then (
+        if conf.collectimages && k = "" && not vignette then (
           images_in_page := image :: !images_in_page;
-          match !image_label with
+          match conf.imagelabels with
           | 1 ->
               Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d)}}" content
                 !image_nbr
@@ -525,7 +527,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         else if m = "CAL" then content ^ index_s
         else if Sutil.contains content "includegraphics" then
           "{\\bf " ^ content ^ "}"
-        else if List.mem test_hl !highlights then
+        else if List.mem test_hl conf.highlights then
           "{\\hl {\\bf " ^ content ^ "}}"
         else "{\\bf " ^ content ^ "}" ^ index_s
       in
@@ -594,7 +596,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             content
         | "h1" ->
             let content = get_child children in
-            if content <> "" && !section_on_a_tag then
+            if content <> "" && conf.section_on_a_tag then
               Format.sprintf "\\section{%s}" content
             else ""
         | "h2" ->
@@ -712,7 +714,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                     else content
                 | "highlight" ->
                     (* highlight content *)
-                    if List.mem content !highlights then
+                    if List.mem content conf.highlights then
                       Format.sprintf "{\\hl{\\bf %s}}" content
                     else content
                 | "caption" ->
@@ -736,7 +738,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                     Format.sprintf "%s, %s%s" sn fn
                       (if oc <> 0 then Format.sprintf " (%d)" oc else "")
                   in
-                  (List.mem test_hl !highlights, index_l)
+                  (List.mem test_hl conf.highlights, index_l)
                 in
                 (if hl then Format.sprintf "{\\hl " ^ content ^ "}"
                 else content)
@@ -904,14 +906,12 @@ let one_command conf och line =
   | "Chapter" ->
       out "chapter" param;
       incr chapter;
-      {
-        conf with
-        image_nbr = (if conf.imagelabels > 1 then 0 else conf.imagelabels);
-        current_level = 0;
-        section = 0;
-        subsection = 0;
-        subsubsection = 0;
-      }
+      image_nbr := if conf.imagelabels > 1 then 0 else conf.imagelabels;
+      current_level := 0;
+      section := 0;
+      subsection := 0;
+      subsubsection := 0;
+      conf
   | "CollectImages" ->
       { conf with collectimages = param = "on" || param = "On" }
   | "Fiches" -> { conf with section_on_a_tag = param = "on" || param = "On" }
@@ -973,30 +973,24 @@ let one_command conf och line =
   | "Section" ->
       out "section" param;
       incr section;
-      {
-        conf with
-        image_nbr = (if conf.imagelabels > 2 then 0 else conf.image_nbr);
-        current_level = 1;
-        subsection = 0;
-        subsubsection = 0;
-      }
+      image_nbr := if conf.imagelabels > 2 then 0 else !image_nbr;
+      current_level := 1;
+      subsection := 0;
+      subsubsection := 0;
+      conf
   | "SubSection" ->
       out "subsection" param;
       incr subsection;
-      {
-        conf with
-        image_nbr = (if conf.imagelabels > 3 then 0 else conf.image_nbr);
-        current_level = 2;
-        subsubsection = 0;
-      }
+      image_nbr := if conf.imagelabels > 3 then 0 else !image_nbr;
+      current_level := 2;
+      subsubsection := 0;
+      conf
   | "SubSubSection" ->
       out "subsubsection" param;
       incr subsubsection;
-      {
-        conf with
-        image_nbr = (if conf.imagelabels > 4 then 0 else conf.image_nbr);
-        current_level = 3;
-      }
+      image_nbr := if conf.imagelabels > 4 then 0 else !image_nbr;
+      current_level := 3;
+      conf
   | "Version" ->
       output_string och (Sutil.version ^ "\n");
       conf
@@ -1082,7 +1076,7 @@ let print_images conf och images_list =
   List.iter
     (fun (im_type, name, (ch, sec, ssec, _sssec), nbr) ->
       (* let wide = Sutil.contains name "-wide" in *)
-      let width = Format.sprintf "%2.2f%s" !imgwidth !unit in
+      let width = Format.sprintf "%2.2f%s" conf.imgwidth conf.unit in
       match im_type with
       | Imagek | Portrait | Vignette -> ()
       | Images ->
@@ -1098,7 +1092,7 @@ let print_images conf och images_list =
             | None -> ""
           in
           let img_number =
-            match !image_label with
+            match conf.imagelabels with
             | 1 -> Format.sprintf "\n\\hglabxsa{%d}{%d}{%d}" ch sec nbr
             | 3 -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
             | 4 -> Format.sprintf "\n\\hglabxb{%d}{%d}{%d}{%d}" ch sec ssec nbr
@@ -1142,82 +1136,86 @@ let print_images conf och images_list =
   output_string och (Format.sprintf "\\par\n")
 
 let process_one_line conf base _dict1 _dict2 och line =
-  (*if !debug = 1 then Printf.eprintf "process_one_line: %s\n" line;*)
+  (*Printf.eprintf "process_one_line: %s, base: %s\n" line conf.base_name;*)
   let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
   let line = Sutil.replace_str line "%%%BASE%%%" conf.base_name in
   let line = Sutil.replace_str line "%%%PASSWD%%%" conf.passwd in
-  match line.[0] with
-  | '<' -> (
-      match line.[1] with
-      | 'a' ->
-          let content = get_a_content line in
-          let href = Hutil.get_href line in
-          let href_attrl = Hutil.split_href href in
-          let i = Hutil.get_href_attr "i" href_attrl in
-          let p = Hutil.get_href_attr "p" href_attrl in
-          let n = Hutil.get_href_attr "n" href_attrl in
-          let oc = Hutil.get_href_attr "oc" href_attrl in
-          (* get_real_person builds \index if any *)
-          let _fn, _sn, _ocn, _sp, _index_s =
-            Hutil.get_real_person base i p n oc content
-          in
-          let conf, sec =
-            (* -> chapter, 1-> section, ... *)
-            match conf.current_level with
-            | 0 -> ({ conf with section = conf.section + 1 }, "")
-            | 1 ->
-                if !sub then
-                  ({ conf with subsection = conf.subsection + 1 }, "sub")
-                else ({ conf with section = conf.section + 1 }, "")
-            | 2 ->
-                if !sub then
-                  ( { conf with subsubsection = conf.subsubsection + 1 },
-                    "subsub" )
-                else ({ conf with subsection = conf.subsection + 1 }, "sub")
-            | _ ->
-                if !sub then (conf, "subsubsub")
-                else
-                  ( { conf with subsubsubsection = conf.subsubsubsection + 1 },
-                    "subsub" )
-          in
-          let conf =
-            if conf.imagelabels > conf.current_level + 1 then
-              { conf with image_nbr = 0 }
-            else conf
-          in
-          let index =
-            if Sutil.contains line "\\index" then "" (* index manually done *)
-            else Format.sprintf "\\index{%s}" content (* automatic index *)
-          in
-          output_string och
-            (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
+  let conf =
+    match line.[0] with
+    | '<' -> (
+        match line.[1] with
+        | 'a' ->
+            let content = get_a_content line in
+            let href = Hutil.get_href line in
+            let href_attrl = Hutil.split_href href in
+            let i = Hutil.get_href_attr "i" href_attrl in
+            let p = Hutil.get_href_attr "p" href_attrl in
+            let n = Hutil.get_href_attr "n" href_attrl in
+            let oc = Hutil.get_href_attr "oc" href_attrl in
+            (* get_real_person builds \index if any *)
+            let _fn, _sn, _ocn, _sp, _index_s =
+              Hutil.get_real_person base i p n oc content
+            in
+            let sec =
+              (* -> chapter, 1-> section, ... *)
+              match !current_level with
+              | 0 ->
+                  incr section;
+                  ""
+              | 1 ->
+                  if conf.sub then (
+                    incr subsection;
+                    "sub")
+                  else (
+                    incr section;
+                    "")
+              | 2 ->
+                  if conf.sub then (
+                    incr subsubsection;
+                    "subsub")
+                  else (
+                    incr subsection;
+                    "sub")
+              | _ ->
+                  if conf.sub then "subsubsub"
+                  else (
+                    incr subsubsubsection;
+                    "subsub")
+            in
+            image_nbr :=
+              if conf.imagelabels > !current_level + 1 then 0 else !image_nbr;
+            let index =
+              if Sutil.contains line "\\index" then "" (* index manually done *)
+              else Format.sprintf "\\index{%s}" content (* automatic index *)
+            in
+            output_string och
+              (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
 
-          let conf =
-            match conf.imagelabels with
-            | 1 -> conf
-            | 4 -> { conf with image_nbr = 0 }
-            | _ -> conf
-          in
-          one_http_call conf base och line;
-          if conf.collectimages && !images_in_page <> [] then
-            print_images conf och !images_in_page;
-          images_in_page := [];
-          if !hrule then
-            output_string och (Format.sprintf "\\par\\vspace{0.5cm}\\hrule\n");
-          conf
-      | 'b' ->
-          one_page och line;
-          conf
-      | 'x' -> one_command conf och line
-      | 'y' ->
-          output_string och "";
-          conf
-      | _ ->
-          output_string och (line ^ "\n");
-          conf)
-  | _ ->
-      output_string och (line ^ "\n");
-      conf
+            image_nbr := if conf.imagelabels = 4 then 0 else !image_nbr;
+
+            one_http_call conf base och line;
+
+            Printf.eprintf "Collect images: %s\n"
+              (if conf.collectimages then "yes" else "no");
+
+            if conf.collectimages && !images_in_page <> [] then
+              print_images conf och !images_in_page;
+            images_in_page := [];
+            if conf.hrule then
+              output_string och (Format.sprintf "\\par\\vspace{0.5cm}\\hrule\n");
+            conf
+        | 'x' -> one_command conf och line
+        | 'y' ->
+            output_string och "";
+            conf
+        | _ ->
+            output_string och (line ^ "\n");
+            conf)
+    | _ ->
+        output_string och (line ^ "\n");
+        conf
+  in
+  conf
 
 (* current version reads family.txt and runs pdflatex and makeindex *)
 (* in a short future makeBook will handle the whole process including  *)
@@ -1266,7 +1264,16 @@ let main () =
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
 
-  let conf = set_conf in
+  Printf.eprintf "******* Arg parse : base: %s, family: %s\n" !base_name !family;
+  let conf =
+    make_conf !bases !base_name !passwd !family !debug !verbose !treemode
+  in
+
+  Printf.eprintf "******* After make_conf : base: %s, family: %s\n"
+    conf.base_name conf.family;
+
+  print_conf conf;
+
   let img_file =
     String.concat Filename.dir_sep
       [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
@@ -1303,8 +1310,10 @@ let main () =
 
   Printf.eprintf
     "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
-    Sutil.version fname_in !base_name fname_out !debug;
+    Sutil.version conf.family conf.base_name fname_out conf.debug;
   flush stderr;
+
+  let tmp = ref conf in
 
   (match mode with
   | "html" ->
@@ -1317,9 +1326,9 @@ let main () =
   | _ -> (
       try
         while true do
+          tmp := conf;
           let line = input_line ic in
-          let conf = process_one_line conf base dict1 dict2 och line in
-          ()
+          tmp := process_one_line !tmp base dict1 dict2 och line
         done
       with End_of_file ->
         close_in ic;

@@ -1,5 +1,6 @@
 lib: [
   "_build/install/default/lib/gwtolatex/META"
+  "_build/install/default/lib/gwtolatex/config.ml"
   "_build/install/default/lib/gwtolatex/dune-package"
   "_build/install/default/lib/gwtolatex/gwtolatex.a"
   "_build/install/default/lib/gwtolatex/gwtolatex.cma"
@@ -8,6 +9,9 @@ lib: [
   "_build/install/default/lib/gwtolatex/gwtolatex.cmx"
   "_build/install/default/lib/gwtolatex/gwtolatex.cmxa"
   "_build/install/default/lib/gwtolatex/gwtolatex.ml"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Config.cmi"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Config.cmt"
+  "_build/install/default/lib/gwtolatex/gwtolatex__Config.cmx"
   "_build/install/default/lib/gwtolatex/gwtolatex__Hutil.cmi"
   "_build/install/default/lib/gwtolatex/gwtolatex__Hutil.cmt"
   "_build/install/default/lib/gwtolatex/gwtolatex__Hutil.cmx"

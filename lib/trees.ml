@@ -848,7 +848,7 @@ let print_tree (conf : Config.config) tree =
     ^ tabular_e
   in
 
-  let print_tree_mode_0 conf tree =
+  let print_tree_mode_0 _conf tree =
     let tree, _n =
       List.fold_left
         (fun (acc1, r) row ->
