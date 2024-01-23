@@ -65,10 +65,9 @@ let textheight_default = 22.5
 let rulethickns_default = 0.5
 let vignwidth_default = 1.5
 let margin_default = 2.5
-let colsep_default = 0.1
+let colsep_default = 0.05
 
 let make_conf xbases xbasename xpasswd xfamily xdebug xverbose xtreemode =
-  Printf.eprintf "******* Set conf : base: %s, family: %s\n" !basename !family;
   let conf =
     {
       bases = xbases;
@@ -643,7 +642,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             let content = get_child children in
             Lutil.simple_tag_1 t content
         (* TODO check here we are terminating something!! *)
-        | "br" -> "\\newline\n"
+        | "br" -> "\\par\n"
         | "sup" ->
             let content = get_child children in
             if content <> "" then Format.sprintf "\\textsuperscript{%s}" content
@@ -1389,13 +1388,9 @@ let main () =
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
 
-  Printf.eprintf "******* Arg parse : base: %s, family: %s\n" !basename !family;
   let conf =
     make_conf !bases !basename !passwd !family !debug !verbose !treemode
   in
-
-  Printf.eprintf "******* After make_conf : base: %s, family: %s\n"
-    conf.basename conf.family;
 
   let img_file =
     String.concat Filename.dir_sep

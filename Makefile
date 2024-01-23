@@ -11,6 +11,8 @@ BASES=$(GW2L_BASES)
 
 CPPO_D=$(GWDB_D) $(OS_D) $(SYSLOG_D) $(SOSA_D)
 
+COMMIT_ID := $(shell git rev-parse --short HEAD)
+
 bin/gwrepl/.depend:
 	@echo -n "Generating $@…"
 	@pwd > $@
@@ -56,8 +58,11 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	# Apple extended attributes
 	# xattr -d com.apple.quarantine $(DISTRIB_DIR)/make-*.sh;
 	cp $(ENV_DIR)/Gw2LaTeX-env.tex $(DISTRIB_DIR)
-	cp ../geneweb/hd/etc/version.txt $(DISTRIB_DIR)/gw_version.txt
-	cp ./version.txt $(DISTRIB_DIR)
+	cp ./version.txt ./tmp
+	echo ", commit: " >> ./tmp
+	echo $(COMMIT_ID) >> ./tmp
+	cp ./tmp $(DISTRIB_DIR)/version.txt
+	$(RM) ./tmp
 
 install: distrib
 	$(RM) -r $(BASES)/$(DISTRIB_DIR)

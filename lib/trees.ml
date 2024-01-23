@@ -630,7 +630,7 @@ let print_tree (conf : Config.config) tree =
       match (conf.twopages, conf.sideways) with
       | true, true -> conf.textheight *. 0.9 *. 2.0
       | true, false -> conf.textwidth *. 0.9
-      | false, true -> conf.textheight *. 2.0
+      | false, true -> conf.textheight *. 0.9
       | false, false -> conf.textwidth
     in
     let col_sep = conf.colsep in
@@ -836,10 +836,10 @@ let print_tree (conf : Config.config) tree =
           in
 
           (* TODO remove last & before \\ *)
-          let row_str =
-            (* TODO check this -2 ? &\n ?? *)
-            String.sub row_str 0 (String.length row_str - 2)
-          in
+          let j = try String.rindex row_str '&' with Not_found -> -1 in
+          (* remove last & *)
+          let row_str = if j > 0 then String.sub row_str 0 j else row_str in
+
           (* somewhat of a hack to link the two half trees with some arrow *)
           let row_str =
             if conf.twopages && page = "left" && !row_nb = nb_head_rows + 1 then
