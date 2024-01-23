@@ -69,6 +69,7 @@ de Gw\kern-0.1em To\LaTeX}
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=A&p=alexandre&n=dupont&v=3&siblings=on&notes=on&t=T&after=&before=&dag=on&templ=tex&w=%%%PASSWD%%%">Arbre ascendant d'Alexandre Dupont</a>
 <x NewSection off>
 <x LaTeX \label{relation}>
+<x Sideways on>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?em=R;ep=alexandre;en=dupont;m=NG;select=input;fn=;sn=;n=sebastien+durand;bd=0;color=;et=S;image=off;w=%%%PASSWD%%%;dag=on;templ=tex">Chemin entre Alexandre Dupont et Sébastien Durand</a>
 \index{Dupont, Alexandre},\index{Durand, Sébastien}
 
