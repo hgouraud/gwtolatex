@@ -162,6 +162,10 @@ let main () =
     else gw2l_options
   in
   let gw2l_options =
+    if !gw_dir <> "" then Format.sprintf "-gw %s" !gw_dir :: gw2l_options
+    else gw2l_options
+  in
+  let gw2l_options =
     if !passwd <> "" then Format.sprintf "-passwd %s" !passwd :: gw2l_options
     else gw2l_options
   in

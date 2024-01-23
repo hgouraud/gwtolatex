@@ -17,6 +17,7 @@ let c_item = ref ""
 let c_img = ref ""
 
 (* execution context *)
+let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
 let passwd = ref ""
 let out_file = ref ""
 let dev = ref false
@@ -52,7 +53,6 @@ let chapter = ref 0
 let section = ref 0
 let subsection = ref 0
 let subsubsection = ref 0
-let subsubsubsection = ref 0
 let current_level = ref 0
 let image_nbr = ref 0
 let images_in_page = ref []
@@ -653,13 +653,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             content
         | "h1" ->
             let content = get_child children in
-            if content <> "" && conf.sectiononatag then
-              Format.sprintf "\\section{%s}" content
-            else ""
+            if content <> "" then Format.sprintf "{\\Large %s}" content else ""
         | "h2" ->
             let content = get_child children in
-            if content <> "" then Format.sprintf "\\subsection{%s}" content
-            else ""
+            if content <> "" then Format.sprintf "{\\large %s}" content else ""
         | "h3" ->
             let content = get_child children in
             (* TODO parametrer ce comportement *)
@@ -671,9 +668,11 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                 "\n\\par\\hgbato{Bateaux}"
               else if Sutil.contains content "Occupants" then
                 "\n\\par\\hgbato{Occupants}"
-              else Format.sprintf "\\subsubsection{%s}" content
+              else if content <> "" then
+                Format.sprintf "\\textbf{ %s bb}bb" content
+              else ""
             in
-            if content <> "" then str else "xxx"
+            if content <> "" then str else ""
         | "hr" -> "\\par\\noindent\\rule{\\textwidth}{0.4pt}\n"
         | "p" ->
             let content = get_child children in
@@ -933,34 +932,28 @@ let bad_code c = c >= 400
 (* <x Cmd param>remain *)
 (*       i     j       *)
 let one_command conf och line =
-  let line = String.sub line 0 (String.length line - 1) in
-  let i =
-    try String.index_from line 3 ' ' with Not_found -> String.length line - 1
+  let len = String.length line in
+  let line, len =
+    if line.[len - 1] = '\n' then (String.sub line 0 (len - 1), len - 1)
+    else (line, len)
   in
-  let j =
-    try String.index_from line 0 '>' with Not_found -> String.length line - 1
-  in
+  let i = try String.index_from line 3 ' ' with Not_found -> len - 1 in
+  let j = try String.index_from line 0 '>' with Not_found -> len - 1 in
   let cmd = if i > 0 then String.sub line 3 (i - 3) else "" in
   let param =
-    if i > 0 && i < String.length line - 1 && j > 0 && j < String.length line
-    then String.sub line (i + 1) (j - i - 1)
+    if i > 0 && i < len - 1 && j > 0 && j < len then
+      String.sub line (i + 1) (j - i - 1)
     else ""
   in
   let remain =
-    if j > 0 && j < String.length line - 1 then
-      String.sub line (j + 1) (String.length line - j - 1)
-    else ""
+    if j > 0 && j < len - 1 then String.sub line (j + 1) (len - j - 1) else ""
   in
   let out c param =
     output_string och (Format.sprintf "\\%s{%s}%s\n" c param remain)
   in
+  if conf.debug = 2 then
+    Printf.eprintf "Cmd: %s, param: %s, remain: %s\n" cmd param remain;
   match cmd with
-  | "DumpConfig" ->
-      dump_conf conf;
-      conf
-  | "PrintConfig" ->
-      output_string och (print_conf conf);
-      conf
   | "Arbres" | "Trees" ->
       let arbres = param = "on" || param = "On" in
       {
@@ -969,8 +962,21 @@ let one_command conf och line =
         portraitwidth = (if arbres then 1.5 else portraitwidth_default);
         arbres;
       }
-  | "ColSep" -> { conf with colsep = Float.of_string param }
   (* TODO recode using make_conf *)
+  | "BumpSub" -> { conf with sub = param = "on" || param = "On" }
+  | "Chapter" ->
+      out "chapter" param;
+      incr chapter;
+      image_nbr := if conf.imagelabels > 1 then 0 else conf.imagelabels;
+      current_level := 0;
+      section := 0;
+      subsection := 0;
+      subsubsection := 0;
+      conf
+  | "CollectImages" ->
+      { conf with collectimages = param = "on" || param = "On" }
+  | "ColSep" -> { conf with colsep = Float.of_string param }
+  | "Debug" -> { conf with debug = int_of_string param }
   | "Defaults" ->
       {
         conf with
@@ -1004,25 +1010,31 @@ let one_command conf och line =
         xoffset = 0.0;
         yoffset = 0.0;
       }
-  | "BumpSub" -> { conf with sub = param = "on" || param = "On" }
-  | "Chapter" ->
-      out "chapter" param;
-      incr chapter;
-      image_nbr := if conf.imagelabels > 1 then 0 else conf.imagelabels;
-      current_level := 0;
-      section := 0;
-      subsection := 0;
-      subsubsection := 0;
+  | "DoubleCells" -> { conf with double = param = "on" || param = "On" }
+  | "DumpConfig" ->
+      dump_conf conf;
       conf
-  | "CollectImages" ->
-      { conf with collectimages = param = "on" || param = "On" }
-  | "Fiches" -> { conf with sectiononatag = param = "on" || param = "On" }
   | "FontSize" ->
       {
         conf with
         fontsize =
           (if param = "off" || param = "Off" || param = "" then "" else param);
       }
+  | "GeneWebCommit" ->
+      let file =
+        String.concat Filename.dir_sep [ !gw_dir; "etc"; "version.txt" ]
+      in
+      let ic = open_in file in
+      let _line = input_line ic in
+      (* get second line *)
+      let line = input_line ic in
+      let i = try String.index_from line 0 ':' with Not_found -> -1 in
+      if i > 0 then
+        output_string och
+          ("\\par\nGeneWeb version : "
+          ^ String.sub line (i + 3) (String.length line - i - 6))
+      else output_string och "GeneWeb version not found\n";
+      conf
   | "HighLight" ->
       {
         conf with
@@ -1036,13 +1048,12 @@ let one_command conf och line =
         conf with
         imagelabels = (try int_of_string param with Failure _ -> 3);
       }
-  | "ImgWidth" -> { conf with imgwidth = Float.of_string param }
-  | "NbImgPerLine" ->
-      let nb = try int_of_string param with Failure _ -> 3 in
+  | "ImgWidth" ->
       {
         conf with
-        nbimgperline = nb;
-        imgwidth = conf.textwidth /. Float.of_int nb;
+        imgwidth =
+          (if param = "off" || param = "Off" then imgwidth_default
+          else Float.of_string param);
       }
   | "Input" ->
       (let param = Sutil.replace_str param "%%%LIVRES%%%" !livres in
@@ -1062,16 +1073,37 @@ let one_command conf och line =
   | "LaTeX" ->
       output_string och param;
       conf
-  | "Newpage" ->
+  | "NbImgPerLine" ->
+      let nb = try int_of_string param with Failure _ -> 3 in
+      {
+        conf with
+        nbimgperline = nb;
+        imgwidth = conf.textwidth /. Float.of_int nb;
+      }
+  | "NewPage" ->
       output_string och "\\newpage";
       conf
+  | "NewSection" -> { conf with sectiononatag = param = "on" || param = "On" }
+  | "Offset" ->
+      {
+        conf with
+        offset = param = "on" || param = "On";
+        xoffset = 0.0;
+        yoffset = 0.0;
+      }
+  | "PortraitWidth" ->
+      {
+        conf with
+        portraitwidth =
+          (if param = "off" || param = "Off" then imgwidth_default
+          else Float.of_string param);
+      }
   | "Print" ->
       output_string och param;
       conf
-  | "Sideways" -> { conf with sideways = param = "on" || param = "On" }
-  | "TwoPages" -> { conf with twopages = param = "on" || param = "On" }
-  | "Split" -> { conf with split = int_of_string param }
-  | "DoubleCells" -> { conf with double = param = "on" || param = "On" }
+  | "PrintConfig" ->
+      output_string och (print_conf conf);
+      conf
   | "Section" ->
       out "section" param;
       incr section;
@@ -1080,6 +1112,8 @@ let one_command conf och line =
       subsection := 0;
       subsubsection := 0;
       conf
+  | "Sideways" -> { conf with sideways = param = "on" || param = "On" }
+  | "Split" -> { conf with split = int_of_string param }
   | "SubSection" ->
       out "subsection" param;
       incr subsection;
@@ -1093,9 +1127,21 @@ let one_command conf och line =
       image_nbr := if conf.imagelabels > 4 then 0 else !image_nbr;
       current_level := 3;
       conf
+  | "TextHeight" -> { conf with textheight = Float.of_string param }
+  | "TextWidth" -> { conf with textwidth = Float.of_string param }
+  | "TreeMode" -> { conf with treemode = int_of_string param }
+  | "TwoPages" -> { conf with twopages = param = "on" || param = "On" }
+  | "Unit" -> { conf with unit = param }
   | "Version" ->
       output_string och (Sutil.version ^ "\n");
       conf
+  | "VignWidth" ->
+      {
+        conf with
+        vignwidth =
+          (if param = "off" || param = "Off" then 1.0
+          else Float.of_string param);
+      }
   | "WideImages" ->
       {
         conf with
@@ -1104,27 +1150,8 @@ let one_command conf och line =
           else imgwidth_default);
         wide = param = "on" || param = "On";
       }
-  | "TextWidth" -> { conf with textwidth = Float.of_string param }
-  | "TextHeight" -> { conf with textheight = Float.of_string param }
-  | "VignWidth" ->
-      {
-        conf with
-        vignwidth =
-          (if param = "off" || param = "Off" then 1.0
-          else Float.of_string param);
-      }
-  | "TreeMode" -> { conf with treemode = int_of_string param }
   | "Xoffset" -> { conf with offset = true; xoffset = Float.of_string param }
   | "Yoffset" -> { conf with offset = true; yoffset = Float.of_string param }
-  | "Offset" ->
-      {
-        conf with
-        offset = param = "on" || param = "On";
-        xoffset = 0.0;
-        yoffset = 0.0;
-      }
-  | "Unit" -> { conf with unit = param }
-  | "Debug" -> { conf with debug = int_of_string param }
   | _ ->
       output_string och (Format.sprintf "%%%s%s\n" cmd remain);
       conf
@@ -1262,8 +1289,10 @@ let process_one_line conf base _dict1 _dict2 och line =
               (* -> chapter, 1-> section, ... *)
               match !current_level with
               | 0 ->
-                  incr section;
-                  ""
+                  if conf.sub then (
+                    incr section;
+                    "")
+                  else ""
               | 1 ->
                   if conf.sub then (
                     incr subsection;
@@ -1278,11 +1307,7 @@ let process_one_line conf base _dict1 _dict2 och line =
                   else (
                     incr subsection;
                     "sub")
-              | _ ->
-                  if conf.sub then "subsubsub"
-                  else (
-                    incr subsubsubsection;
-                    "subsub")
+              | _ -> "subsub"
             in
             image_nbr :=
               if conf.imagelabels > !current_level + 1 then 0 else !image_nbr;
@@ -1328,6 +1353,7 @@ let main () =
     [
       ("-bases", Arg.String (fun x -> bases := x), " Where are bases.");
       ("-base", Arg.String (fun x -> basename := x), " Choose base.");
+      ("-gw", Arg.String (fun x -> gw_dir := x), " Set gw folder.");
       ("-passwd", Arg.String (fun x -> passwd := x), " Set wizard password.");
       ("-family", Arg.String (fun x -> family := x), " Choose family.");
       ("-famille", Arg.String (fun x -> family := x), " Choose family.");

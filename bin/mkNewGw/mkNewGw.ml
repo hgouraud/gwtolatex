@@ -22,6 +22,7 @@ type 'a read_family =
 (* execution context *)
 let base = ref ""
 let passwd = ref ""
+let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
 let family = ref ""
 let out_file = ref ""
 let debug = ref 0
@@ -339,6 +340,7 @@ let main () =
     [
       ("-bases", Arg.String (fun x -> bases := x), " Where are bases.");
       ("-base", Arg.String (fun x -> base := x), " Which base.");
+      ("-gw", Arg.String (fun x -> gw_dir := x), " Set gw folder.");
       ("-passwd", Arg.String (fun x -> passwd := x), " Set wizard password.");
       ("-family", Arg.String (fun x -> family := x), " Choose family.");
       ("-famille", Arg.String (fun x -> family := x), " Choose family.");

@@ -23,12 +23,46 @@ beg
 - h Antoine 0
 end
 
-fam Dupont Antoine + Durand Isabelle 0
+fam Durand Edouard + Durand Georgette 0
+fevt
+#marr 
+end fevt
+beg
+- f Antoinette 0
+- h Jules 0
+end
+
+
+fam Dupont Maurice + Durand Antoinette
+fevt
+#marr 
+end fevt
+beg
+- h Marcel 0
+end
+
+fam Dupont Antoine + Martin Isabelle 0
 fevt
 #marr 
 end fevt
 beg
 - h Alexandre 0
+end
+
+fam Dupont Marcel + Durand Sylvie 0
+fevt
+#marr 
+end fevt
+beg
+- h Alain 0
+end
+
+fam Durand Jules + Gaudin Augustine 0
+fevt
+#marr 
+end fevt
+beg
+- h Sébastien 0
 end
 
 notes Dupont Léon
@@ -100,8 +134,6 @@ end pevt
 page-ext page-liee-test
   TITLE=Page liée test
     
-  <p align="center"><b>PAGE TEST</b></p>
-  <p>
   Contenu d'une page test
   <img SRC="%sm=IM;s=image-test-4.jpg">
 

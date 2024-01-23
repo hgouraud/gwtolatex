@@ -133,6 +133,10 @@ les commandes \LaTeX{} équivalentes (\verb|\chapter|, \verb|\section|...).
 section,/soussection... La page \pageref{pageliee} en donne un exemple.
 Sans ce paramètre à «\,on\,», la section {\bf Page liée test} aurait été
 numérotée 4.2. (TODO voir si on peut "automatiser" ce processus).
+\item[NewSection] Lorsque ce paramètre est «\,on\,», les commandes «\,<a\,»
+qui suivent ouvrent une section d'un niveau supplémentaire. On comparera le cas
+des fiches individuelles page \pageref{fiches} et celui des arbres page 
+\pageref{relation}. 
 
 \item[Input] Inclure dans le livre le fichier désigné. Dans ce fichier,
 remplacer les occurrences de \verb|%%%LIVRES%%%|, \verb|%%%BASE%%%| et
@@ -152,15 +156,13 @@ la numérotation des images (ch, sec, ssec, img-nbr).
 \item[Sideways] Imprime la page en mode paysage (utile pour les arbres
 qui peuvent être larges).\label{sideways}
 \item[Unit] Définit l'unité (cm, mm, pt, em).
+\item[ImgWidth] Définit la largeur des images (float).
 \item[VignWidth] Définit la largeur des vignettes (float).
-\item[Wide] «\,on/off\,». Donne aux images qui suivent la largeur du texte
+\item[PortraitWidth] Définit la largeur des portraits (float).
+\item[WideImages] «\,on/off\,». Donne aux images qui suivent la largeur du texte
 (\verb|\textwidth|).
-\item[ImageWidth] Définit la largeur des photos (chaine: «\,textwidth\,», «\,5.1cm\,»).
-\item[WideImage] Force la largeur des photos à textwidth.
-\item[Width] Définit la largeur des images (float).
 \item[NbImgPerLine] Définit le nombre d'images par ligne (defaut 3) et en
 déduit la largeur.
-
 \item[Arbres/Trees] «\,on/off\,».
 \item[FontSize] Définit la taille de la police de caractères\label{fontsize}
 (small, tiny, off returns to default).
@@ -228,7 +230,10 @@ taille de la police de caractères (commande «\,FontSize\,» page \pageref{font
 de rassembler des informations dans des documents séparés appelés «\,pages liées\,».
 Ces pages sont «\,appelées\,» par la commande GeneWeb \verb|m=NOTES;f=fichier| ou
 \verb|[[[fichier/étiquette]]]|. Le contenu de ces pages est traité de la même
-manière que les notes individuelles. À titre d'exemple, la fiche de
+manière que les notes individuelles et n'influence pas la numérotation
+des sections.
+
+À titre d'exemple, la fiche de
 {\bf Léon Dupont}, page \pageref{leondupont} appelle la page lié
 \verb|page-liee-test| cachée sous l'étiquette {\bf projet de barrage}
 page \pageref{pageliee} dont le contenu (extrait du format archive
@@ -419,14 +424,15 @@ Le logiciel \verb|mkBook| est lancé avec les paramètres suivants :
 \begin{description}
 \item[-base] nom de la base utilisée.
 \item[-bases] «\,.\,»; mkBook est exécuté dans le dossier bases (WIP).
-\item[-passwd] mot de passe magicien (user:pwd) si nécessaire.
+\item[-gw] dossier des binaires GeneWeb.
+\item[-passwd] mot de passe magicien (\verb|user:pwd|) si nécessaire.
 \item[-livres] dossier des «\,livres\,».
 \item[-family] nom du «\,livre\,».
 \item[-famille] idem.
 \item[-o] nom du fichier résultat. Par défaut \verb|livres/family.pdf|.
-\item[-debug] mode debug.
-\item[-level] niveau des messages de debug.
-\item[-v] exécuter pdflatex en mode verbose.
+\item[-debug] niveau de debug. Par défaut 0.
+\item[-once] run pdflatex once only. Par défaut «\,faux\,».
+\item[-v] exécuter pdflatex en mode verbose. Par défaut «\,faux\,».
 \item[-help] liste des paramètres.
 \end{description}
 
