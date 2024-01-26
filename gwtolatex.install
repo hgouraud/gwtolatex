@@ -24,6 +24,9 @@ lib: [
   "_build/install/default/lib/gwtolatex/gwtolatex__Sutil.cmi"
   "_build/install/default/lib/gwtolatex/gwtolatex__Sutil.cmt"
   "_build/install/default/lib/gwtolatex/gwtolatex__Sutil.cmx"
+  "_build/install/default/lib/gwtolatex/gwtolatex__TreeAux.cmi"
+  "_build/install/default/lib/gwtolatex/gwtolatex__TreeAux.cmt"
+  "_build/install/default/lib/gwtolatex/gwtolatex__TreeAux.cmx"
   "_build/install/default/lib/gwtolatex/gwtolatex__Trees.cmi"
   "_build/install/default/lib/gwtolatex/gwtolatex__Trees.cmt"
   "_build/install/default/lib/gwtolatex/gwtolatex__Trees.cmx"
@@ -32,6 +35,7 @@ lib: [
   "_build/install/default/lib/gwtolatex/mkImgDict.ml"
   "_build/install/default/lib/gwtolatex/opam"
   "_build/install/default/lib/gwtolatex/sutil.ml"
+  "_build/install/default/lib/gwtolatex/treeAux.ml"
   "_build/install/default/lib/gwtolatex/trees.ml"
 ]
 libexec: [
