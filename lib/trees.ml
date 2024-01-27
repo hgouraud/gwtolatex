@@ -58,9 +58,9 @@ let print_tree (conf : Config.config) tree =
       -. (Float.of_int col_e_n *. col_e_w))
       /. Float.of_int col_f_n
     in
-    let colwidth = Format.sprintf "%1.2fcm" col_f_w in
-    let half_colwidth = Format.sprintf "%1.2fcm" (col_f_w /. 2.05) in
-    let quarter_colwidth = Format.sprintf "%1.2fcm" (col_f_w /. 4.05) in
+    let colwidth = col_f_w in
+    let half_colwidth = col_f_w /. 2.05 in
+    let quarter_colwidth = col_f_w /. 4.05 in
     (* TODO take into account trees split in two *)
     let tabular_env =
       let colspec_f = Format.sprintf "P{%1.2fcm}" col_f_w in
@@ -90,11 +90,11 @@ let print_tree (conf : Config.config) tree =
     (*let tree = split_hr_cells conf tree in*)
     (*let tree = split_rows_with_vbar conf tree in*)
     (*let tree = if conf.double then double_each_cell conf tree else tree in*)
-    let tree = expand_cells conf tree in
+    (*let tree = expand_cells conf tree in*)
 
     (*let tree = merge_cells conf tree in*)
     (*let tree = expand_hrl_cells conf tree in*)
-    (*let tree = remove_duplicate_rows tree in*)
+    let tree = remove_duplicate_rows tree in
     let cols, tabular_env, colwidth, half_colwidth, quarter_colwidth =
       init_cols tree nb_head_rows
     in
@@ -104,9 +104,14 @@ let print_tree (conf : Config.config) tree =
       Format.eprintf "Tabular env: tree length: %d\n%s\n%s\n" (List.length tree)
         cols_str tab_env;
 
-    let offset =
+    let offset_b =
       if conf.hoffset <> 0. then
         Format.sprintf "\\hspace{%1.2f%s}\n" conf.hoffset conf.unit
+      else ""
+    in
+    let offset_e =
+      if conf.hoffset <> 0. then
+        Format.sprintf "\\hspace{-%1.2f%s}\n" conf.hoffset conf.unit
       else ""
     in
     let tabular_b =
@@ -114,10 +119,11 @@ let print_tree (conf : Config.config) tree =
         "%s\\nohyphens\\newcolumntype{P}[1]{>{\\centering\\arraybackslash}p{#1}}\n\
          %s\\begin{tabular}{%s}\n"
         (if conf.sideways then "\\begin{sideways}" else "")
-        offset tabular_env
+        offset_b tabular_env
     in
     let tabular_e =
-      Format.sprintf "\\end{tabular}\n\\hyphenation{nor-mal-ly}\n%s\n"
+      Format.sprintf "\\end{tabular}%s\n\\hyphenation{nor-mal-ly}\n%s\n"
+        offset_e
         (if conf.sideways then "\\end{sideways}\n" else "")
     in
     row_nb := 0;
@@ -143,9 +149,14 @@ let print_tree (conf : Config.config) tree =
                   let fbox_b = if conf.debug = 999 then "\\fbox{" else "" in
                   let fbox_e = if conf.debug = 999 then "}" else "" in
                   let minipage_b =
-                    Format.sprintf "%s\\begin{minipage}{%s}" fbox_b colwidth
+                    Format.sprintf "%s\\begin{minipage}{%1.2f%s}\\begin{center}"
+                      fbox_b
+                      (colwidth *. Float.of_int s)
+                      conf.unit
                   in
-                  let minipage_e = Format.sprintf "\\end{minipage}%s" fbox_e in
+                  let minipage_e =
+                    Format.sprintf "\\end{center}\\end{minipage}%s" fbox_e
+                  in
                   let font_b =
                     if conf.fontsize = "" then ""
                     else "\\" ^ conf.fontsize ^ "{"
@@ -162,13 +173,17 @@ let print_tree (conf : Config.config) tree =
                               Format.sprintf
                                 "{\\centering %s\\rule{%s}{%1.2fpt}}"
                                 (if lrc = "r" then
-                                 Format.sprintf "\\hspace{%s}" quarter_colwidth
+                                 Format.sprintf "\\hspace{%1.2f%s}"
+                                   quarter_colwidth conf.unit
                                 else if lrc = "l" then
-                                  Format.sprintf "\\hspace{-%s}"
-                                    quarter_colwidth
+                                  Format.sprintf "\\hspace{-%1.2f%s}"
+                                    quarter_colwidth conf.unit
                                 else "")
-                                (if lrc = "c" then Format.sprintf "%s" colwidth
-                                else Format.sprintf "%s" half_colwidth)
+                                (if lrc = "c" then
+                                 Format.sprintf "%1.2f%s" colwidth conf.unit
+                                else
+                                  Format.sprintf "%1.2f%s" half_colwidth
+                                    conf.unit)
                                 conf.rulethickns)
                           ^ if i + 1 = s then "" else "&")
                     in
@@ -233,26 +248,26 @@ let print_tree (conf : Config.config) tree =
                                else
                                  loop (i + 1)
                                    (acc
-                                   ^ Format.sprintf "\\rule{%s}{%1.2fpt}%s"
-                                       colwidth conf.rulethickns
+                                   ^ Format.sprintf "\\rule{%1.2f%s}{%1.2fpt}%s"
+                                       colwidth conf.unit conf.rulethickns
                                        (if i + 1 = s then "" else "&\n"))
                              in
                              loop 0 "")
                       | "Vr1" ->
                           if s = 1 then
-                            Format.sprintf "\\rule{%1.2fpt}{0.5cm}"
+                            Format.sprintf "\\rule{%1.2fpt}{0.3cm}"
                               conf.rulethickns
                           else
                             Format.sprintf
-                              "\\multicolumn{%d}{c}{\\rule{%1.2fpt}{0.5cm}}" s
+                              "\\multicolumn{%d}{c}{\\rule{%1.2fpt}{0.3cm}}" s
                               conf.rulethickns
                       | "Vr2" ->
                           if s = 1 then
-                            Format.sprintf "\\rule{%1.2fpt}{0.5cm}"
+                            Format.sprintf "\\rule{%1.2fpt}{0.3cm}"
                               conf.rulethickns
                           else
                             Format.sprintf
-                              "\\multicolumn{s}{c}{\\rule{%1.2fpt}{0.5cm}}"
+                              "\\multicolumn{s}{c}{\\rule{%1.2fpt}{0.3cm}}"
                               conf.rulethickns
                       | "E" ->
                           if s = 1 then Format.sprintf ""
