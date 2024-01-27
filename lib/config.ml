@@ -67,6 +67,6 @@ type config = {
   nbimgperline : int;
   offset : bool;
   wide : bool;
-  xoffset : float;
-  yoffset : float;
+  hoffset : float;
+  voffset : float;
 }

@@ -44,11 +44,9 @@ let print_tree (conf : Config.config) tree =
       List.fold_left (fun a col -> if col.[0] = 'F' then a + 1 else a) 0 cols
     in
     let tree_width =
-      match (conf.twopages, conf.sideways) with
-      | true, true -> conf.textheight *. 0.9 *. 2.0
-      | true, false -> conf.textwidth
-      | false, true -> conf.textheight *. 0.9
-      | false, false -> conf.textwidth
+      match conf.sideways with
+      | true -> conf.textheight (* maybe *.0.9 to account for title *)
+      | false -> conf.textwidth
     in
     let col_sep = conf.colsep in
     let col_e_w = conf.colsep in
@@ -87,21 +85,40 @@ let print_tree (conf : Config.config) tree =
     (cols, tabular_env, colwidth, half_colwidth, quarter_colwidth)
   in
 
-  (* mode &, actually print tree *)
+  (* ***************************   mode 1, actually print tree *)
   let print_tree_mode_1 (conf : Config.config) tree page =
+    (*let tree = split_hr_cells conf tree in*)
+    (*let tree = split_rows_with_vbar conf tree in*)
+    (*let tree = if conf.double then double_each_cell conf tree else tree in*)
+    let tree = expand_cells conf tree in
+
+    (*let tree = merge_cells conf tree in*)
+    (*let tree = expand_hrl_cells conf tree in*)
+    (*let tree = remove_duplicate_rows tree in*)
     let cols, tabular_env, colwidth, half_colwidth, quarter_colwidth =
       init_cols tree nb_head_rows
+    in
+
+    let cols_str, tab_env = print_tab_env cols tabular_env in
+    if conf.debug = 1 then
+      Format.eprintf "Tabular env: tree length: %d\n%s\n%s\n" (List.length tree)
+        cols_str tab_env;
+
+    let offset =
+      if conf.hoffset <> 0. then
+        Format.sprintf "\\hspace{%1.2f%s}\n" conf.hoffset conf.unit
+      else ""
     in
     let tabular_b =
       Format.sprintf
         "%s\\nohyphens\\newcolumntype{P}[1]{>{\\centering\\arraybackslash}p{#1}}\n\
-         \\begin{tabular}{%s}\n"
-        (if conf.sideways then "\\begin{landscape}" else "")
-        tabular_env
+         %s\\begin{tabular}{%s}\n"
+        (if conf.sideways then "\\begin{sideways}" else "")
+        offset tabular_env
     in
     let tabular_e =
       Format.sprintf "\\end{tabular}\n\\hyphenation{nor-mal-ly}\n%s\n"
-        (if conf.sideways then "\\end{landscape}\n" else "")
+        (if conf.sideways then "\\end{sideways}\n" else "")
     in
     row_nb := 0;
     tabular_b
@@ -307,25 +324,7 @@ let print_tree (conf : Config.config) tree =
             r + 1 ))
         ("", 1) tree
     in
-    let cols_str = String.concat ", " cols in
-    let tab_env =
-      let rec loop i j0 j1 acc1 =
-        let j =
-          try String.index_from tabular_env j1 'P' with Not_found -> -1
-        in
-        if j = -1 then
-          acc1 ^ "\\par\n"
-          ^ String.sub tabular_env
-              (if j0 = 0 then j0 else j0 - 1)
-              (String.length tabular_env - j0)
-        else if i = 12 then
-          loop 0 (j + 1) (j + 1)
-            (acc1 ^ "\\par\n"
-            ^ String.sub tabular_env (if j0 = 0 then j0 else j0 - 1) (j - j0))
-        else loop (i + 1) j0 (j + 1) acc1
-      in
-      loop 0 0 0 ""
-    in
+    let cols_str, tab_env = print_tab_env cols tabular_env in
     Format.sprintf "Interim print (%d)\\\\\n %s\\par\n%s\\par\n%s\n"
       (String.length tree) cols_str tab_env tree
   in
@@ -334,31 +333,27 @@ let print_tree (conf : Config.config) tree =
 
   (* FIXME Not needed anymore *)
   (* TODO fix the calling side *)
-  (*let tree = split_hr_cells conf tree in*)
-  (*let tree = split_rows_with_vbar conf tree in*)
-  (*let tree = if conf.double then double_each_cell conf tree else tree in*)
-  (*let tree = expand_cells conf tree in*)
-  let tree = test_zero_span_t tree in
+  test_zero_span_t tree "init";
   let tree = remove_empty_cols conf tree nb_head_rows in
-  (*let tree = merge_cells conf tree in*)
-  (*let tree = expand_hrl_cells conf tree in*)
-  (*let tree = remove_duplicate_rows tree in*)
   let i, w, w0, ok = test_tree_width tree nb_head_rows in
   if not ok then (
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
     exit 1);
+  test_zero_span_t tree "after empty cols";
   if conf.twopages then (
-    let tree_right, tree_left = split_tree conf tree in
+    let tree_left, tree_right = split_tree conf tree in
+    test_zero_span_t tree_left "tree_left";
+    test_zero_span_t tree_right "tree right";
     match conf.treemode with
-    | 0 -> print_tree_mode_0 conf tree_left ^ print_tree_mode_0 conf tree_right
+    | 0 -> print_tree_mode_0 conf tree_right ^ print_tree_mode_0 conf tree_left
     | 1 ->
         (if conf.debug = 1 then print_tree_mode_0 conf tree_left ^ "\\newpage"
         else "")
-        ^ print_tree_mode_1 conf tree_left "left"
+        ^ print_tree_mode_1 conf tree_right "right"
         ^ (if conf.debug = 1 then
            print_tree_mode_0 conf tree_right ^ "\\newpage"
           else "")
-        ^ print_tree_mode_1 conf tree_right "right"
+        ^ print_tree_mode_1 conf tree_left "left"
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n)
   else
     match conf.treemode with

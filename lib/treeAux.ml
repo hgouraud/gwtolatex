@@ -35,6 +35,7 @@ let nbr_empty_cols cols =
   List.fold_left (fun n col -> if col.[0] = 'E' then n + 1 else n) 0 cols
 
 let print_row row n =
+  Printf.eprintf "Rox %d = \n" n;
   List.iter
     (fun (_, s, ty, te, it, im) ->
       let te = Sutil.clean_double_back_slash_2 te |> Sutil.clean_item in
@@ -43,18 +44,19 @@ let print_row row n =
     row;
   Printf.eprintf "\n"
 
-let print_row_span _cols row n =
-  let span =
-    let rec loop span row =
-      match row with
-      | [] -> span
-      | (_, s, _, _, _, _) :: row -> loop (span + s) row
-    in
-    loop 0 row
+let row_span _cols row _n =
+  let rec loop span row =
+    match row with
+    | [] -> span
+    | (_, s, _, _, _, _) :: row -> loop (span + s) row
   in
-  Printf.eprintf "Row %d: %d cells, span %d\n" n (List.length row) span
+  loop 0 row
 
-let tree_rows_span cols tree =
+let print_row_span cols row n =
+  Printf.eprintf "Row %d: %d cells, span %d\n" n (List.length row)
+    (row_span cols row n)
+
+let print_tree_rows_span cols tree =
   let rec loop i tree =
     match tree with
     | [] -> ()
@@ -65,6 +67,7 @@ let tree_rows_span cols tree =
   loop 0 tree
 
 let print_tree tree n =
+  Printf.eprintf "print tree (%d)\n" n;
   let rec loop i tree =
     match tree with
     | [] -> ()
@@ -108,7 +111,10 @@ let is_empty_cell row i =
   in
   loop 0 row
 
-let update_cols old_cols row row_nb =
+let update_cols old_cols row _row_nb =
+  (*Printf.eprintf "update cols, row:%d; row len:%d, cols len: %d, span:%d\n"
+    row_nb (List.length row) (List.length old_cols)
+    (row_span old_cols row row_nb);*)
   let rec loop cols i row =
     match row with
     | [] -> List.rev cols
@@ -132,6 +138,7 @@ let update_cols old_cols row row_nb =
 (* an empty column is a column with only E, Hc, Hr -- *)
 (* scan the whole tree row by row to determine empty columns *)
 let find_empty_columns tree nb_head_rows =
+  (*Printf.eprintf "find empty cols, tree depth %d\n" (List.length tree);*)
   (* i is row number *)
   let _i, width, _w0, ok = test_tree_width tree nb_head_rows in
   let cols =
@@ -153,7 +160,7 @@ let find_empty_columns tree nb_head_rows =
   in
   loop 0 cols tree
 
-let remove_empty_cells cols row n =
+let remove_empty_cells cols row _n =
   let new_row =
     let rec loop i new_row row =
       match row with
@@ -198,7 +205,7 @@ let remove_empty_cols _conf tree nb_head_rows =
     let rec loop i new_tree tree =
       match tree with
       | [] -> List.rev new_tree
-      | [ (w, s, ty, te, it, im) ] :: tree when i < nb_head_rows ->
+      | [ (w, _s, ty, te, it, im) ] :: tree when i < nb_head_rows ->
           loop (i + 1) ([ (w, new_span, ty, te, it, im) ] :: new_tree) tree
       | row :: tree -> loop (i + 1) (row :: new_tree) tree
     in
@@ -335,21 +342,29 @@ let split_tree (conf : Config.config) tree =
       | [] -> List.rev new_row (* done *)
       | (w, s, ty, te, it, im) :: row when i1 = 0 && i + s <= i2 ->
           (* left part *)
+          if s <= 0 then
+            Printf.eprintf "Neg span left 1: i2:%d, i:%d, s:%d\n" i2 i s;
           loop (i + s) ((w, s, ty, te, it, im) :: new_row) row
-      | (_w, s, _ty, _te, _it, _im) :: row when i1 = 0 && i > i2 ->
+      | (_w, s, _ty, _te, _it, _im) :: row when i1 = 0 && i >= i2 ->
           (* ignore *)
           loop (i + s) new_row row
       | (w, s, ty, te, it, im) :: row when i1 = 0 && i + s > i2 ->
           (* split *)
+          if i2 - i <= 0 then
+            Printf.eprintf "Neg span left 2: i2:%d, i:%d, s:%d\n" i2 i s;
           loop (i + s) ((w, i2 - i, ty, te, it, im) :: new_row) row
       | (w, s, ty, te, it, im) :: row when i1 <> 0 && i >= i1 ->
           (* right part *)
+          if s <= 0 then
+            Printf.eprintf "Neg span right 1: i:%d, s:%d, i1:%d\n" i s i1;
           loop (i + s) ((w, s, ty, te, it, im) :: new_row) row
       | (_w, s, _ty, _te, _it, _im) :: row when i1 <> 0 && i + s <= i1 ->
           (* ignore *)
           loop (i + s) new_row row
       | (w, s, ty, te, it, im) :: row when i1 <> 0 && i + s >= i1 ->
           (* split *)
+          if i + s - i1 <= 0 then
+            Printf.eprintf "Neg span right 2: i:%d, s:%d, i1:%d\n" i s i1;
           loop (i + s) ((w, i + s - i1, ty, te, it, im) :: new_row) row
       | (_w, s, _ty, _te, _it, _im) :: _row ->
           Printf.eprintf "Assert: i=%d, i1=%d, i2=%d, s=%d\n" i i1 i2 s;
@@ -516,7 +531,7 @@ let expand_end_cells row =
   in
   List.rev row
 
-let expand_cells tree =
+let expand_cells _conf tree =
   let rec expand row new_row =
     match row with
     | (w1, s1, ty1, te1, it1, im1)
@@ -708,21 +723,46 @@ let get_nb_head_rows tree =
   else 0
 
 let test_zero_span_r row =
-  let rec loop new_row row =
+  let rec loop ok row =
     match row with
-    | [] -> List.rev new_row
-    | (w, s, ty, te, it, im) :: row ->
+    | [] -> ok
+    | (_w, s, _ty, _te, _it, _im) :: row ->
         if s = 0 then (
-          Printf.eprintf "Sezo span!!\n";
-          loop new_row row)
-        else loop ((w, s, ty, te, it, im) :: new_row) row
+          Printf.eprintf "Zero span!!\n";
+          loop false row)
+        else if s < 0 then (
+          Printf.eprintf "Negative span!!\n";
+          loop false row)
+        else loop ok row
   in
-  loop [] row
+  loop true row
 
-let test_zero_span_t tree =
-  let rec loop new_tree tree =
-    match tree with
-    | [] -> List.rev new_tree
-    | row :: tree -> loop (test_zero_span_r row :: new_tree) tree
+let test_zero_span_t tree comment =
+  let ok =
+    let rec loop ok tree =
+      match tree with
+      | [] -> ok
+      | row :: tree -> loop (ok && test_zero_span_r row) tree
+    in
+    loop true tree
   in
-  loop [] tree
+  if ok then () else Printf.eprintf "Zero or negative span at %s\n" comment
+
+let print_tab_env cols tabular_env =
+  let tab_env =
+    let rec loop i j0 j1 acc1 =
+      let j = try String.index_from tabular_env j1 'P' with Not_found -> -1 in
+      if j = -1 then
+        acc1 ^ "\\par\n"
+        ^ String.sub tabular_env
+            (if j0 = 0 then j0 else j0 - 1)
+            (String.length tabular_env - j0)
+      else if i = 12 then
+        loop 0 (j + 1) (j + 1)
+          (acc1 ^ "\\par\n"
+          ^ String.sub tabular_env (if j0 = 0 then j0 else j0 - 1) (j - j0))
+      else loop (i + 1) j0 (j + 1) acc1
+    in
+    loop 0 0 0 ""
+  in
+  (String.concat ", " cols, tab_env)

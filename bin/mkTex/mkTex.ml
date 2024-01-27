@@ -61,7 +61,7 @@ let images_in_page = ref []
 let imgwidth_default = 5.1
 let portraitwidth_default = 5.1
 let textwidth_default = 15.5
-let textheight_default = 22.5
+let textheight_default = 24.5
 let rulethickns_default = 0.5
 let vignwidth_default = 1.5
 let margin_default = 2.5
@@ -103,8 +103,8 @@ let make_conf xbases xbasename xpasswd xfamily xdebug xverbose xtreemode =
       nbimgperline = 3;
       offset = false;
       wide = false;
-      xoffset = 0.0;
-      yoffset = 0.0;
+      hoffset = 0.0;
+      voffset = 0.0;
     }
   in
   conf
@@ -1006,8 +1006,8 @@ let one_command conf och line =
         nbimgperline = 3;
         offset = false;
         wide = false;
-        xoffset = 0.0;
-        yoffset = 0.0;
+        hoffset = 0.0;
+        voffset = 0.0;
       }
   | "DoubleCells" -> { conf with double = param = "on" || param = "On" }
   | "DumpConfig" ->
@@ -1083,13 +1083,7 @@ let one_command conf och line =
       output_string och "\\newpage";
       conf
   | "NewSection" -> { conf with sectiononatag = param = "on" || param = "On" }
-  | "Offset" ->
-      {
-        conf with
-        offset = param = "on" || param = "On";
-        xoffset = 0.0;
-        yoffset = 0.0;
-      }
+  | "OffsetOff" -> { conf with offset = false; hoffset = 0.0; voffset = 0.0 }
   | "PortraitWidth" ->
       {
         conf with
@@ -1149,8 +1143,8 @@ let one_command conf och line =
           else imgwidth_default);
         wide = param = "on" || param = "On";
       }
-  | "Xoffset" -> { conf with offset = true; xoffset = Float.of_string param }
-  | "Yoffset" -> { conf with offset = true; yoffset = Float.of_string param }
+  | "Hoffset" -> { conf with offset = true; hoffset = Float.of_string param }
+  | "Voffset" -> { conf with offset = true; voffset = Float.of_string param }
   | _ ->
       output_string och (Format.sprintf "%%%s%s\n" cmd remain);
       conf
