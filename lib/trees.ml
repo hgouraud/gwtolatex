@@ -59,8 +59,6 @@ let print_tree (conf : Config.config) tree =
       /. Float.of_int col_f_n
     in
     let colwidth = col_f_w in
-    let half_colwidth = col_f_w /. 2.05 in
-    let quarter_colwidth = col_f_w /. 4.05 in
     (* TODO take into account trees split in two *)
     let tabular_env =
       let colspec_f = Format.sprintf "P{%1.2fcm}" col_f_w in
@@ -82,7 +80,7 @@ let print_tree (conf : Config.config) tree =
       tab_env ^ "c"
       (* TODO is two pages start at col_middle when doing right part *)
     in
-    (cols, tabular_env, colwidth, half_colwidth, quarter_colwidth)
+    (cols, tabular_env, colwidth)
   in
 
   (* ***************************   mode 1, actually print tree *)
@@ -100,9 +98,7 @@ let print_tree (conf : Config.config) tree =
     (*let tree = merge_cells conf tree in*)
     (*let tree = expand_hrl_cells conf tree in*)
     let tree = remove_duplicate_rows tree in
-    let cols, tabular_env, colwidth, half_colwidth, quarter_colwidth =
-      init_cols tree nb_head_rows
-    in
+    let cols, tabular_env, colwidth = init_cols tree nb_head_rows in
 
     let cols_str, tab_env = print_tab_env cols tabular_env in
     if conf.debug = 1 then
@@ -179,15 +175,15 @@ let print_tree (conf : Config.config) tree =
                                 "{\\centering %s\\rule[0pt]{%s}{%1.2fpt}}"
                                 (if lrc = "r" then
                                  Format.sprintf "\\hspace{%1.2f%s}"
-                                   quarter_colwidth conf.unit
+                                   (colwidth /. 4.0) conf.unit
                                 else if lrc = "l" then
                                   Format.sprintf "\\hspace{-%1.2f%s}"
-                                    quarter_colwidth conf.unit
+                                    (colwidth /. 4.0) conf.unit
                                 else "")
                                 (if lrc = "c" then
                                  Format.sprintf "%1.2f%s" colwidth conf.unit
                                 else
-                                  Format.sprintf "%1.2f%s" half_colwidth
+                                  Format.sprintf "%1.2f%s" (colwidth /. 2.0)
                                     conf.unit)
                                 conf.rulethickns)
                           ^ if i + 1 = s then "" else "&")
@@ -309,9 +305,7 @@ let print_tree (conf : Config.config) tree =
   in
 
   let print_tree_mode_0 _conf tree =
-    let cols, tabular_env, _colwidth, _half_colwidth, _quarter_colwidth =
-      init_cols tree nb_head_rows
-    in
+    let cols, tabular_env, _colwidth = init_cols tree nb_head_rows in
     let tree, _n =
       List.fold_left
         (fun (acc1, r) row ->
