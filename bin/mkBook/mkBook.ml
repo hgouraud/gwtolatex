@@ -313,18 +313,15 @@ Inspect %s/tmp/gwc.log for possible errors.|}
 
   (* insert annexe *)
   let annex_file =
-    String.concat Filename.dir_sep [ !livres; !family ^ "-inputs"; "Annexes.pdf" ]
+    String.concat Filename.dir_sep
+      [ !livres; !family ^ "-inputs"; "Annexes.pdf" ]
   in
   if Sys.file_exists annex_file then (
     if !verbose then Printf.eprintf "Append annex\n";
-    let _ =
-      Sys.command
-        (Format.sprintf "cp %s %s" annex_file (Filename.concat "." "tmp"))
-    in
     let annex_cmd =
-      Format.sprintf "%s %s"
+      Format.sprintf "%s %s %s"
         (Filename.concat !gw2l_dir "append-annex.sh")
-        !family
+        !family !livres
     in
     flush stderr;
     let error = Sys.command annex_cmd in
