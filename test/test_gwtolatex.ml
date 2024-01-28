@@ -95,7 +95,7 @@ let suite =
              test "" "" );
            ( "replace_str" >:: fun _ ->
              let test aaa bbb sub1 sub2 =
-               let ccc = Sutil.replace_str bbb sub1 sub2 in
+               let ccc = Sutil.replace_str sub1 sub2 bbb in
                if aaa <> ccc then Printf.eprintf "Fail:(%s) (%s)\n" aaa ccc;
                assert (aaa = ccc)
              in
@@ -112,7 +112,7 @@ let suite =
              test "" "" "" "" );
            ( "replace_str2" >:: fun _ ->
              let test aaa bbb sub1 sub2 =
-               let ccc = Sutil.replace_str2 bbb sub1 sub2 in
+               let ccc = Sutil.replace_str2 sub1 sub2 bbb in
                if aaa <> ccc then Printf.eprintf "Fail:(%s) (%s)\n" aaa ccc;
                assert (aaa = ccc)
              in

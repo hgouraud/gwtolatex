@@ -1055,16 +1055,16 @@ let one_command conf och line =
           else Float.of_string param);
       }
   | "Input" ->
-      (let param = Sutil.replace_str param "%%%LIVRES%%%" !livres in
-       let param = Sutil.replace_str param "%%%GW2L_DIST%%%" !gw2l_dist in
-       let param = Sutil.replace_str param "%%%PASSWD%%%" !passwd in
+      (let param = Sutil.replace_str "%%%LIVRES%%%" !livres param in
+       let param = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist param in
+       let param = Sutil.replace_str "%%%PASSWD%%%" !passwd param in
        let ic = open_in param in
        try
          while true do
            let line = input_line ic in
-           let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
-           let line = Sutil.replace_str line "%%%GW2L_DIST%%%" !gw2l_dist in
-           let line = Sutil.replace_str line "%%%PASSWD%%%" !passwd in
+           let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
+           let line = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist line in
+           let line = Sutil.replace_str "%%%PASSWD%%%" !passwd line in
            output_string och (line ^ "\n")
          done
        with End_of_file -> close_in ic);
@@ -1202,7 +1202,7 @@ let print_images conf och images_list =
       match im_type with
       | Imagek | Portrait | Vignette -> ()
       | Images ->
-          let name1 = Sutil.replace_str name "\\_{}" "_" in
+          let name1 = Sutil.replace_str "\\_{}" "_" name in
           let name = Filename.remove_extension name in
           let images_dir =
             String.concat Filename.dir_sep
@@ -1251,17 +1251,16 @@ let print_images conf och images_list =
           output_string och
             (Format.sprintf
                "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\newline%s%s%s}\n"
-               width width images_dir Filename.dir_sep
-               (Sutil.replace_str name "\\_{}" "_")
-               img_number img_label index_list))
+               width width images_dir Filename.dir_sep name img_number img_label
+               index_list))
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 
 let process_one_line conf base _dict1 _dict2 och line =
   (*Printf.eprintf "process_one_line: %s, base: %s\n" line conf.basename;*)
-  let line = Sutil.replace_str line "%%%LIVRES%%%" !livres in
-  let line = Sutil.replace_str line "%%%BASE%%%" conf.basename in
-  let line = Sutil.replace_str line "%%%PASSWD%%%" conf.passwd in
+  let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
+  let line = Sutil.replace_str "%%%BASE%%%" conf.basename line in
+  let line = Sutil.replace_str "%%%PASSWD%%%" conf.passwd line in
   let conf =
     match line.[0] with
     | '<' -> (

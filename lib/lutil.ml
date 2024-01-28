@@ -57,14 +57,15 @@ let escape_aux str =
     str;
   Buffer.contents b
 
-(*\includegraphics[width=1.50cm]{./images/chausey/andre.0.fauchon\_{}villeplee.jpg}*)
+(*\includegraphics[width=1.50cm]{./images/chausey/andre.0.fauchon_villeplee.jpg}*)
+(* Do not escape _ in file names !! *)
 let escape str =
   let i = Sutil.contains_index str "\\includegraphics" in
   if i = -1 then escape_aux str
   else
     let rec loop str1 str2 =
       let i = Sutil.contains_index str1 "\\includegraphics" in
-      if i = -1 then str2 ^ str1
+      if i = -1 then str2 ^ escape_aux str1
       else
         let j = try String.index_from str1 i '}' with Not_found -> -1 in
         if j = -1 then str1 ^ str2

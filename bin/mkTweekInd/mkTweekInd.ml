@@ -504,7 +504,7 @@ let main () =
             |> List.filter (fun x -> x <> "")
             |> String.concat ", "
           in
-          let numbers = Sutil.replace_str numbers ", et" " et" in
+          let numbers = Sutil.replace_str ", et" " et" numbers in
           Format.sprintf "%s" numbers
         in
         (* TODO filter page numbers across several lists avoiding duplicates *)

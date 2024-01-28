@@ -433,7 +433,7 @@ let get_img_name base_name im =
     Format.sprintf "%s"
       (String.concat Filename.dir_sep [ "."; where; base_name; k ^ ext ])
   in
-  Sutil.replace_str name "\\_{}" "_"
+  Sutil.replace_str "\\_{}" "_" name
 
 (*
   goal: split crammed rows in two
