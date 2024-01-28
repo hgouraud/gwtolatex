@@ -313,7 +313,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
 
   (* insert annexe *)
   let annex_file =
-    String.concat Filename.dir_sep [ !livres; !family ^ "-annex.pdf" ]
+    String.concat Filename.dir_sep [ !livres; !family ^ "-inputs"; "Annexes.pdf" ]
   in
   if Sys.file_exists annex_file then (
     if !verbose then Printf.eprintf "Append annex\n";
