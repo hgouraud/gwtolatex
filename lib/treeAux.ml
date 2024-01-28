@@ -583,6 +583,7 @@ let expand_cells _conf tree =
   List.rev tree
 
 let merge_cells _conf tree =
+  (* TODO recompute half cell rules *)
   let rec merge row new_row =
     match row with
     | [] -> List.rev new_row

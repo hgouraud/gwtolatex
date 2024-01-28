@@ -1,4 +1,5 @@
 (* Copyright (c) 2024 H.Gouraud *)
+open Gwtolatex
 
 (* execution context *)
 let dist_dir = ref "./gw2l_dist"
@@ -20,7 +21,6 @@ let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
 let gw2l_dir = ref "./gw2l_dist"
 let test = ref false
 let test_nb = ref 0
-let version = "1.0"
 
 (*
 Make a book for -family using data from -base with gw2l_options
@@ -97,7 +97,7 @@ let main () =
   let base_new = !base ^ "-new" in
   Printf.eprintf
     "\nThis is \027[32mmkBook\027[0m version %s on base %s for family %s (%d)\n"
-    version !base !family !debug;
+    Sutil.version !base !family !debug;
   flush stderr;
 
   let print_chan channel =

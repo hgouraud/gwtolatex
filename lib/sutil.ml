@@ -1,7 +1,11 @@
 (* strings utilities *)
 (* v1  Henri, 2023/10/16 *)
 
-let version = "1.0"
+let version =
+  let ic =
+    open_in (String.concat Filename.dir_sep [ "."; "gw2l_dist"; "version.txt" ])
+  in
+  input_line ic
 
 let partics =
   [
