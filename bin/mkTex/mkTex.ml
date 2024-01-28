@@ -91,6 +91,7 @@ let make_conf xbases xbasename xpasswd xfamily xdebug xverbose xtreemode =
       sideways = false;
       twopages = false;
       double = false;
+      expand = 0;
       split = 0;
       (* mkTex *)
       arbres = true;
@@ -1013,6 +1014,7 @@ let one_command conf och line =
   | "DumpConfig" ->
       dump_conf conf;
       conf
+  | "Expand" -> { conf with expand = int_of_string param }
   | "FontSize" ->
       {
         conf with

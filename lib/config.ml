@@ -55,6 +55,7 @@ type config = {
   sideways : bool;
   twopages : bool;
   double : bool;
+  expand : int;
   split : int;
   (* mkTex *)
   arbres : bool;

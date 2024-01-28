@@ -90,8 +90,13 @@ let print_tree (conf : Config.config) tree =
     (*let tree = split_hr_cells conf tree in*)
     (*let tree = split_rows_with_vbar conf tree in*)
     (*let tree = if conf.double then double_each_cell conf tree else tree in*)
-    (*let tree = expand_cells conf tree in*)
-
+    let tree =
+      let rec loop n tree =
+        match n with 0 -> tree | _ -> loop (n - 1) (expand_cells conf tree)
+      in
+      loop conf.expand tree
+    in
+    let tree = squeeze_row_tree tree in
     (*let tree = merge_cells conf tree in*)
     (*let tree = expand_hrl_cells conf tree in*)
     let tree = remove_duplicate_rows tree in
@@ -117,7 +122,7 @@ let print_tree (conf : Config.config) tree =
     let tabular_b =
       Format.sprintf
         "%s\\nohyphens\\newcolumntype{P}[1]{>{\\centering\\arraybackslash}p{#1}}\n\
-         %s\\begin{tabular}{%s}\n"
+         \\renewcommand*{\\arraystretch}{0}%s\\begin{tabular}{%s}\n"
         (if conf.sideways then "\\begin{sideways}" else "")
         offset_b tabular_env
     in
@@ -171,7 +176,7 @@ let print_tree (conf : Config.config) tree =
                           ^ (if lrc = "e" then ""
                             else
                               Format.sprintf
-                                "{\\centering %s\\rule{%s}{%1.2fpt}}"
+                                "{\\centering %s\\rule[0pt]{%s}{%1.2fpt}}"
                                 (if lrc = "r" then
                                  Format.sprintf "\\hspace{%1.2f%s}"
                                    quarter_colwidth conf.unit
@@ -248,27 +253,28 @@ let print_tree (conf : Config.config) tree =
                                else
                                  loop (i + 1)
                                    (acc
-                                   ^ Format.sprintf "\\rule{%1.2f%s}{%1.2fpt}%s"
+                                   ^ Format.sprintf
+                                       "\\rule[0pt]{%1.2f%s}{%1.2fpt}%s"
                                        colwidth conf.unit conf.rulethickns
                                        (if i + 1 = s then "" else "&\n"))
                              in
                              loop 0 "")
                       | "Vr1" ->
                           if s = 1 then
-                            Format.sprintf "\\rule{%1.2fpt}{0.3cm}"
+                            Format.sprintf "\\rule{%1.2fpt}{0.2cm}"
                               conf.rulethickns
                           else
                             Format.sprintf
-                              "\\multicolumn{%d}{c}{\\rule{%1.2fpt}{0.3cm}}" s
+                              "\\multicolumn{%d}{c}{\\rule{%1.2fpt}{0.2cm}}" s
                               conf.rulethickns
                       | "Vr2" ->
                           if s = 1 then
-                            Format.sprintf "\\rule{%1.2fpt}{0.3cm}"
-                              conf.rulethickns
+                            Format.sprintf "\\rule[0pt]{%1.2fpt}{%1.2fpt}"
+                              conf.rulethickns conf.rulethickns
                           else
                             Format.sprintf
-                              "\\multicolumn{s}{c}{\\rule{%1.2fpt}{0.3cm}}"
-                              conf.rulethickns
+                              "\\multicolumn{%d}{c}{\\rule{%1.2fpt}{%1.2fpt}}" s
+                              conf.rulethickns conf.rulethickns
                       | "E" ->
                           if s = 1 then Format.sprintf ""
                           else Format.sprintf "\\multicolumn{%d}{c}{}" s

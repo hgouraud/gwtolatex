@@ -156,8 +156,7 @@ la numérotation des images (ch, sec, ssec, img-nbr).
 \item[Sideways] Imprime la page en mode paysage (utile pour les arbres
 qui peuvent être larges).\label{sideways}
 \item[Unit] Définit l'unité (cm, mm, pt, em).
-\item[Hoffset] Décale la page à droite/gauche.
-  Ne s'applique que pendant les arbres.
+\item[Hoffset] Décale la page à droite/gauche. Ne s'applique que pendant les arbres.
 \item[Voffset] Décale la page à haut/bas. Idem
 \item[OffsetOff] Annule le décalage de la page.
 \item[ImgWidth] Définit la largeur des images (float).
@@ -173,6 +172,10 @@ déduit la largeur.
 \item[TwoPages] Éclate un arbre sur deux pages (WIP).
 \item[TreeMode] 0 imprime l'arbre comme une liste de liste de cellules
 (debug, devrait fonctionner pour tous les arbres), 1 imprime l'arbre.
+\item[Expand] Cherche à étendre la largeur des cellules en utilisant
+les cellules vides adjacentes. Cette commande prend un paramètre indiquant
+le nombre de fois où cette opération est effectuée. ATTENTION : cette opération
+peut introduire des décalages dans les lignes horizontales des arbres.
 
 \item[Version] Imprime la version du logiciel.
 \end{description}

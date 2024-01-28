@@ -264,7 +264,7 @@ let copy_row row lr side =
     (fun (w, s, ty, te, it, im) ->
       ( w,
         s,
-        (if side = "bar" then match ty with "Te" | "It" -> "Vr2" | _ -> ty
+        (if side = "bar" then match ty with "Te" | "It" -> "Vr1" | _ -> ty
         else ty),
         (if side = "bar" then ""
         else match ty with "Te" -> get_part lr side te | _ -> te),
@@ -766,3 +766,39 @@ let print_tab_env cols tabular_env =
     loop 0 0 0 ""
   in
   (String.concat ", " cols, tab_env)
+
+let squeeze_row row_init =
+  let rec loop state new_row row =
+    match row with
+    | [] -> if state = 2 then List.rev new_row else row_init
+    | (a, s, typ, c, d, e) :: row -> (
+        match typ with
+        | ("E" | "Vr1") when state = 0 ->
+            loop 1 ((a, s, typ, c, d, e) :: new_row) row
+        | ("Hr" | "Hl" | "Hc") when state = 0 ->
+            loop 2 ((a, s, typ, c, d, e) :: new_row) row
+        | ("Te" | "It" | "Im") when state = 0 ->
+            loop 0 ((a, s, typ, c, d, e) :: new_row) row
+        | ("E" | "Vr1") when state = 1 ->
+            loop 1 ((a, s, typ, c, d, e) :: new_row) row
+        | ("Te" | "It" | "Im") when state = 1 ->
+            loop 0 ((a, s, typ, c, d, e) :: new_row) row
+        | ("Hr" | "Hl" | "Hc") when state = 1 ->
+            loop 2 ((a, s, typ, c, d, e) :: new_row) row
+        | "Vr1" when state = 2 -> loop 2 ((a, s, "Vr2", c, d, e) :: new_row) row
+        | "E" when state = 2 -> loop 2 ((a, s, typ, c, d, e) :: new_row) row
+        | ("Hr" | "Hl" | "Hc") when state = 2 ->
+            loop 2 ((a, s, typ, c, d, e) :: new_row) row
+        | ("Te" | "It" | "Im") when state = 2 ->
+            loop 0 ((a, s, typ, c, d, e) :: new_row) row
+        | _ -> loop state ((a, s, typ, c, d, e) :: new_row) row)
+  in
+  loop 0 [] row_init
+
+let squeeze_row_tree tree =
+  let rec loop new_tree tree =
+    match tree with
+    | [] -> List.rev new_tree
+    | row :: tree -> loop (squeeze_row row :: new_tree) tree
+  in
+  loop [] tree
