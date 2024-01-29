@@ -1,16 +1,14 @@
 \documentclass[a4paper]{book}
 
-\tracingcommands=1
-\tracingparagraphs=1 
-\tracingmacros=1
-\tracingoutput=1
 \makeindex
 
 <x Input ./gw2l_dist/Gw2LaTeX-env.tex>
 
 \newcommand{\gwtol}[0]{Gw\kern-0.1em ToLa\kern-0.13em T\kern-0.08em eX}
 
-% Edit your own title page data
+%%%%%%%%%%%%%%%%%%%%
+% Edit your own title page data here
+%%%%%%%%%%%%%%%%%%%%
 \begin{titlepage}
 \title{\Huge{Manuel d'utilisation \\
 de Gw\kern-0.1em To\LaTeX}
@@ -28,6 +26,9 @@ de Gw\kern-0.1em To\LaTeX}
 \maketitle         % genère le titre
 \tableofcontents   % table des matières
 
+%%%%%%%%%%%%%%%%%%%%
+% Your document starts here
+%%%%%%%%%%%%%%%%%%%%
 <x Chapter Avant-propos>
 <x Input %%%LIVRES%%%/test-inputs/Notes.tex>
 
@@ -73,11 +74,13 @@ de Gw\kern-0.1em To\LaTeX}
 <a href="http://127.0.0.1:2317/%%%BASE%%%?em=R;ep=alexandre;en=dupont;m=NG;select=input;fn=;sn=;n=sebastien+durand;bd=0;color=;et=S;image=off;w=%%%PASSWD%%%;dag=on;templ=tex">Chemin entre Alexandre Dupont et Sébastien Durand</a>
 \index{Dupont, Alexandre},\index{Durand, Sébastien}
 
-<x BumpSub off>
-
+%%%%%%%%%%%%%%%%%%
 % Standard tail of document
+% You may add or suppress Notes pages
+%%%%%%%%%%%%%%%%%%
 \printindex
 \label{index}
+% Notes page
 \newpage
 {\huge {\bf Notes}}
 \par
@@ -90,6 +93,7 @@ GwTo\LaTeX{} version :
 <y \hgbaseversion{}
 \par
 \pdftexbanner{}
+% Additionnal Notes page
 \newpage
 {\huge {\bf Notes}}
 % You may add additional notes pages as needed

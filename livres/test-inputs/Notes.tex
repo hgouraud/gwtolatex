@@ -7,8 +7,8 @@ au fil des ans, un outil en Python me permettant d'éditer périodiquement, et
 cette base.
 
 J'ai récemment (2024) décidé de reprendre ce travail pour en faire un outil
-«\,partageable\,», en m'efforçant de rendre aussi générique que possible ce que j'avais
-décidé de faire pour mon besoin personnel.
+«\,partageable\,», en m'efforçant de rendre aussi générique que possible ce que
+j'avais décidé de faire pour mon besoin personnel.
 
 La suite de ce document explique comment utiliser cet outil.
 
@@ -24,11 +24,12 @@ conduire GeneWeb à considérer \gwtol{} comme un robot!!
 \footnote{TODO mettre une temporisation de 1/2 sec dans \gwtol{}}
 Tous les appels vers GeneWeb ne sont pas nécessairement accessibles, en
 particulier certains arbres et les tableaux, mais ces restrictions sont
-susceptibles d'évoluer.
+susceptibles d'évoluer si des templates spécific pour TeX sont ajoutés.
 
 Les pages actuellement testées sont les pages personnelles
 (p=prénom\&n=patronyme\&occ=occ), les listes de descendances (limitées à
-une profondeur de 4; m=D\&v=4), les listes par titres (m=TT).
+une profondeur de 4; m=D\&v=4), les arbres (m=A et m=D), les graphes
+de relations (m=RLM) et les listes par titres (m=TT).
 
 La mise en page de l'ensemble (structuration en chapitres, sections ...,
 numérotations diverses, table des matières, index, références croisées)
@@ -45,15 +46,13 @@ Ainsi, le document que vous lisez a la structure suivante :
 \begin{verbatim}
 \documentclass[a4paper]{book}
 
-\tracingcommands=1
-\tracingparagraphs=1 
-\tracingmacros=1
-\tracingoutput=1
 \makeindex
 
 <x Input ./gw2l_dist/Gw2LaTeX-env.tex>
 
-% Edit your own title page data
+%%%%%%%%%%%%%%%%%%%%
+% Edit your own title page data here
+%%%%%%%%%%%%%%%%%%%%
 \begin{titlepage}
 \title{\Huge{Manuel d'utilisation \\
 de Gw\kern-0.1em To\LaTeX{}}
@@ -67,12 +66,20 @@ de Gw\kern-0.1em To\LaTeX{}}
 % Beginning of document
 \begin{document}
 
+%%%%%%%%%%%%%%%%%%%%
+% Your document starts here
+%%%%%%%%%%%%%%%%%%%%
+
 ...
 Liste de commandes \gwtol{} et de textes complémentaires
 ....
 
+%%%%%%%%%%%%%%%%%%
 % Standard tail of document
+% You may add or suppress Notes pages
+%%%%%%%%%%%%%%%%%%
 \printindex
+% Notes page
 \newpage
 {\huge {\bf Notes}}
 \par
@@ -87,6 +94,7 @@ GwTo\LaTeX{}{} version :
 <y \hgbaseversion{}
 \par
 \pdftexbanner{}
+% Additionnal Notes page
 \newpage
 {\huge {\bf Notes}}
 % You may add additional notes pages as needed
@@ -124,60 +132,59 @@ correspond au second.
 \end{description}
 Toutes les autres lignes du fichier \verb|famille.txt| sont recopiées tel-quel.
 
+Les commande \gwtol{} sont les suivantes :
+
 \begin{description}[style=nextline]
-\item[Chapter/Section/SubSection/SubSubSection] Nouveau chapitre/section/...
-\gwtol{} a besoin de connaitre la numérotation des chapitres et sections afin
-de numéroter correctement les images. Il ne faut donc pas utiliser directement
-les commandes \LaTeX{} équivalentes (\verb|\chapter|, \verb|\section|...).
+\item[Arbres/Trees] «\,on/off\,».
 \item[BumpSub] «\,on/off\,». Si «\,on\,», décale de un (en +) le niveau
 section,/soussection... La page \pageref{pageliee} en donne un exemple.
 Sans ce paramètre à «\,on\,», la section {\bf Page liée test} aurait été
 numérotée 4.2. (TODO voir si on peut "automatiser" ce processus).
-\item[NewSection] Lorsque ce paramètre est «\,on\,», les commandes «\,<a\,»
-qui suivent ouvrent une section d'un niveau supplémentaire. On comparera le cas
-des fiches individuelles page \pageref{fiches} et celui des arbres page 
-\pageref{relation}. 
-
-\item[Input] Inclure dans le livre le fichier désigné. Dans ce fichier,
-remplacer les occurrences de \verb|%%%LIVRES%%%|, \verb|%%%BASE%%%| et
-\verb|%%%PASSWD%%%| par leurs valeurs telles que définies au lancement du programme.
-\item[LaTeX] Insérer dans le livre une commande \LaTeX{}.
-\item[Newpage] Passer à la page suivante.
-\item[Print] Imprimer la valeur du paramètre.
-
-\item[HighLight] Surligner le nom de la personne désignée par «\,Patronyme prénom (occ)\,».
-Omettre «\, (0)\,» si l'occurrence est 0.
-\item[Hrule] Ajouter une ligne horizontale de la largeur du texte.
-
+\item[Chapter/Section/SubSection/SubSubSection] Nouveau chapitre/section/...
+\gwtol{} a besoin de connaitre la numérotation des chapitres et sections afin
+de numéroter correctement les images. Il ne faut donc pas utiliser directement
+les commandes \LaTeX{} équivalentes (\verb|\chapter|, \verb|\section|...).
 \item[CollectImages] «\,on/off\,», Rassembler les images citées dans les notes
 d'une personne pour les imprimer à la fin de la page personnelle.
-\item[ImageLabel] Précise le nombre d'éléments pris en compte dans
-la numérotation des images (ch, sec, ssec, img-nbr).
-\item[Sideways] Imprime la page en mode paysage (utile pour les arbres
-qui peuvent être larges).\label{sideways}
-\item[Unit] Définit l'unité (cm, mm, pt, em).
-\item[Hoffset] Décale la page à droite/gauche. Ne s'applique que pendant les arbres.
-\item[Voffset] Décale la page à haut/bas. Idem
-\item[OffsetOff] Annule le décalage de la page.
-\item[ImgWidth] Définit la largeur des images (float).
-\item[VignWidth] Définit la largeur des vignettes (float).
-\item[PortraitWidth] Définit la largeur des portraits (float).
-\item[WideImages] «\,on/off\,». Donne aux images qui suivent la largeur du texte
-(\verb|\textwidth|).
-\item[NbImgPerLine] Définit le nombre d'images par ligne (defaut 3) et en
-déduit la largeur.
-\item[Arbres/Trees] «\,on/off\,».
-\item[FontSize] Définit la taille de la police de caractères\label{fontsize}
-(small, tiny, off returns to default).
-\item[TwoPages] Éclate un arbre sur deux pages (WIP).
-\item[TreeMode] 0 imprime l'arbre comme une liste de liste de cellules
-(debug, devrait fonctionner pour tous les arbres), 1 imprime l'arbre.
 \item[Expand] Cherche à étendre la largeur des cellules en utilisant
 les cellules vides adjacentes. Cette commande prend un paramètre indiquant
 le nombre de fois où cette opération est effectuée. ATTENTION : cette opération
 peut introduire des décalages dans les lignes horizontales des arbres.
+\item[FontSize] Définit la taille de la police de caractères\label{fontsize}
+(small, tiny, off returns to default).
+\item[HighLight] Surligner le nom de la personne désignée par «\,Patronyme prénom (occ)\,».
+Omettre «\,(0)\,» si l'occurrence est 0.
+\item[Hoffset] Décale la page à droite/gauche. Ne s'applique que pendant les arbres.
+\item[Hrule] Ajouter une ligne horizontale de la largeur du texte.
+\item[ImageLabel] Précise le nombre d'éléments pris en compte dans
+la numérotation des images (ch, sec, ssec, img-nbr).
+\item[ImgWidth] Définit la largeur des images (float).
+\item[Input] Inclure dans le livre le fichier désigné. Dans ce fichier,
+remplacer les occurrences de \verb|%%%LIVRES%%%|, \verb|%%%BASE%%%| et
+\verb|%%%PASSWD%%%| par leurs valeurs telles que définies au lancement du programme.
+\item[LaTeX] Insérer dans le livre une commande \LaTeX{}.
+\item[NbImgPerLine] Définit le nombre d'images par ligne (defaut 3) et en
+déduit la largeur.
+\item[Newpage] Passer à la page suivante.
+\item[NewSection] Lorsque ce paramètre est «\,on\,», les commandes «\,<a\,»
+qui suivent ouvrent une section d'un niveau supplémentaire. On comparera le cas
+des fiches individuelles page \pageref{fiches} et celui des arbres page 
+\pageref{relation}. 
+\item[OffsetOff] Annule le décalage de la page.
+\item[PortraitWidth] Définit la largeur des portraits (float).
+\item[Print] Imprimer la valeur du paramètre.
+\item[Sideways] Imprime la page en mode paysage (utile pour les arbres
+qui peuvent être larges).\label{sideways}
+\item[TreeMode] 0 imprime l'arbre comme une liste de liste de cellules
+(debug, devrait fonctionner pour tous les arbres), 1 imprime l'arbre.
+\item[TwoPages] Éclate un arbre sur deux pages (WIP).
+\item[Unit] Définit l'unité (cm, mm, pt, em).
+\item[Version] Imprime la version du logiciel \gwtol{}.
+\item[Voffset] Décale la page à haut/bas. Idem
+\item[VignWidth] Définit la largeur des vignettes (float).
+\item[WideImages] «\,on/off\,». Donne aux images qui suivent la largeur du texte
+(\verb|\textwidth|).
 
-\item[Version] Imprime la version du logiciel.
 \end{description}
 
 \subsection{Les pages GeneWeb}
@@ -223,7 +230,6 @@ complétée par une liste des photos sur laquelle la personne apparaît.
 On reviendra plus loin (page \pageref{images}) sur cette fonctionnalité.
 Le dernier pavé cite les sources d'information pour les données collectées.
 
-
 \item[Liste par titre] Obtenues avec la commande
 \verb|m=TT;sm=S;t=titre;p=lieu;|.
 
@@ -232,6 +238,9 @@ La mise en page automatique de ces arbres est un problème difficile et
 nécessite des tâtonnements an ajustant la profondeur, l'orientation «\,portrait\,»
 ou «\,paysage\,» de la page (commande «\,Sideways\,» page \pageref{sideways}) et la
 taille de la police de caractères (commande «\,FontSize\,» page \pageref{fontsize}).
+Les paramètres «\,Hoffset\,» et «\,Voffset\,» permettent de décaler la page
+horizontalement ou verticalement. Le paramètre «\,Expand\,» cherche à élargir
+les cellules en occupant le cellules voisines vides.
 
 \item[Pages liées] GeneWeb permet au gestionnaire de la base généalogique
 de rassembler des informations dans des documents séparés appelés «\,pages liées\,».
@@ -268,10 +277,10 @@ end page-ext
 \end{verbatim}
 
 \item[Autres pages] \gwtol{} interprète les balises HTML et s'efforce de
-les traduire dans un équivalent. Dans la mesure où HTML et \LaTeX{} n'ont pas
-les mêmes conventions et modèle de mise en page, une traduction littérale
-n'est pas possible, et échoue dans les cas un peu complexes, les tableaux
-en particulier.
+les traduire dans un équivalent \LaTeX{}. Dans la mesure où HTML et \LaTeX{}
+n'ont pas les mêmes conventions et modèle de mise en page, une traduction
+littérale n'est pas possible, et échoue dans les cas un peu complexes,
+les tableaux en particulier.
 
 \end{description}
 
@@ -313,7 +322,7 @@ se doit de reproduire ces images.
 Les images appelées avec la commande \verb|m=IM| ont vocation à apparaître
 directement dans la partie note de la page. Dans \gwtol{}, ces images seront
 affichées directement dans la page avec la largeur définie par
-le paramètre «\,ImageWidth\,».
+le paramètre «\,ImgWidth\,».
 
 Les images désignées par une URL telle que :
 \verb|<a href="%sm=IMH;s=fichier.jpg">étiquette</a>| n'apparaissent pas
@@ -391,12 +400,12 @@ contient tous les éléments nécessaires au fonctionnement de \gwtol{}.
 
 \verb|./setup-test.sh| organise les données de la configuration de test et
 lance l'exécution du test (\verb|./run-test.sh|) qui construit le présent
-fichier (dans \verb|\gwtol{}/livres|). Cette dernière commande est
+fichier (dans \verb|gwtolatex/livres|). Cette dernière commande est
 suffisante si vous souhaitez relancer le test après une modification
 dans les données de test.
 
 À noter que \verb|./setup-test.sh| fait l'hypothèse que le répertoire
-\verb|\gwtol{}| est «\,à côté\,» du répertoire \verb|geneweb| et relance
+\verb|gwtolatex| est «\,à côté\,» du répertoire \verb|geneweb| et relance
 l'exécution de \verb|gwd| avec les paramètres appropriés. Il est à noter
 aussi qu'il convient d'avoir exécuté \verb|make install| dans le repo de GeneWeb.
 
@@ -411,8 +420,9 @@ cd dossier_des_bases
 \end{verbatim}
 
 Le répertoire \verb|dossier_livres| contient le fichier \verb|famille.txt|
-le fichier (optionnel) \verb|famille-annex.pdf| et un dossier
-\verb|famille-input| contenant \verb|who-is-where.txt| (optionnel)
+et un dossier
+\verb|famille-input| contenant \verb|who-is-where.txt| (optionnel),
+le fichier (optionnel) \verb|Annexes.pdf|
 et les fichiers éventuels appelés avec la commande \verb|<x Input fichier>|.
 Dans ces fichiers, les chaines de caractères \verb|%%%LIVRES%%%|,
 \verb|%%%BASE%%%| et \verb|%%%PASSWD%%%| seront remplacées par les valeurs

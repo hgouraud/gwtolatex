@@ -10,6 +10,11 @@ of persons on those images.
 LaTeX commands (footnotes, cross references, formatting data...) may be
 included into the GeneWeb notes in "invisible" <span> tags.
 
+The document "livres/test.pdf" provides a complete description of the
+software and its environment, as well as examples and a sample
+family.txt document. You may prefer to continue reading this .pdf
+document rather than the README file.
+
 A typical GeneWeb "page" can expand across several physical book pages.
 Pages can be almost any GeneWeb query.
 The source material for the book is a text file containing :
@@ -34,6 +39,7 @@ The source material for the book is a text file containing :
       | "Chapter" -> new chapter
       | "ImageLabel" -> nbr of items in image numbering (ch, sec, ssec, i_nbr)
       | "CollectImages" -> "on/off", collect_images to be printed at end of page
+      | "Expand" -> In trees, expand cells width using neighbouring empty cells.
       | "FontSize" -> set font size (small, tiny, off -> returns to default)
       | "HighLight" -> highlight a first_name, occ, surname person
       | "Hrule" -> produce a hrule after each individual page
@@ -58,10 +64,10 @@ The source material for the book is a text file containing :
       | "WideImage" -> set imagewidth to \textwidth
       | "Width" -> sets image width to param (float)
   * <y ...> comment
-  * <b command> WIP, to be modified. Ignored for the time being
 
-This package includes test and example files named gwtolatex-testn.{txt/html}
-The html files contain only <a ... > tags and do not produce any pdf output.
+This package includes historical test files and example files named 
+gwtolatex-testn.{txt/html}. The html files contain only <a ... > tags
+and do not produce any pdf output.
 
 The tools include:
 - mkImgDict -> creates an image database for further use
@@ -95,7 +101,7 @@ Install and test
 
 Make distrib will create a folder "gw2l_dist" containing the necessary components.
 Copy or move this folder into your bases folder.
-Create a folder "livres" containing the main famili description file "Family.txt",
+Create a folder "livres" containing the main family description file "Family.txt",
 and a folder Family-inputs containng
 possible supplemental files associated to <x Input file> commands that
 may appear in Family.txt.
@@ -113,7 +119,8 @@ in this who_is_where file. Capitals and accents must be strictly observed.
 
 To run a test case
 - run ".setup-test.sh" to create a temporary test base in the gwtolatex folder
-- run "./run-test.sh" should create ./gwtolatex/livres/test.pdf
+- run "./run-test.sh" should create ./gwtolatex/livres/test.pdf which is the
+user  manual of GwToLaTeX.
   from ./gwtolatex/livres/test.txt
 
 Warning:
