@@ -937,14 +937,19 @@ let one_command conf och line =
     if line.[len - 1] = '\n' then (String.sub line 0 (len - 1), len - 1)
     else (line, len)
   in
-  let i = try String.index_from line 3 ' ' with Not_found -> len - 1 in
-  let j = try String.index_from line 0 '>' with Not_found -> len - 1 in
+  let i = try String.index_from line 3 ' ' with Not_found -> -1 in
+  let i =
+    if i = -1 then try String.index_from line 3 '>' with Not_found -> -1
+    else i
+  in
+  let j = try String.index_from line 0 '>' with Not_found -> -1 in
   let cmd = if i > 0 then String.sub line 3 (i - 3) else "" in
   let param =
-    if i > 0 && i < len - 1 && j > 0 && j < len then
+    if i > 0 && i < len - 2 && j > 0 && j < len then
       String.sub line (i + 1) (j - i - 1)
-    else ""
+    else "" |> String.trim
   in
+  if cmd = "" then Printf.eprintf "Bad command: %s\n" line;
   let remain =
     if j > 0 && j < len - 1 then String.sub line (j + 1) (len - j - 1) else ""
   in

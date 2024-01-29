@@ -118,9 +118,9 @@ let print_tree (conf : Config.config) tree =
     let tabular_b =
       Format.sprintf
         "%s\\nohyphens\\newcolumntype{P}[1]{>{\\centering\\arraybackslash}p{#1}}\n\
-         \\renewcommand*{\\arraystretch}{0}%s\\begin{tabular}{%s}\n"
+         \\renewcommand*{\\arraystretch}{0}\\renewcommand*{\\tabcolsep}{%1.2f%s}%s\\begin{tabular}{%s}\n"
         (if conf.sideways then "\\begin{sideways}" else "")
-        offset_b tabular_env
+        conf.colsep conf.unit offset_b tabular_env
     in
     let tabular_e =
       Format.sprintf "\\end{tabular}%s\n\\hyphenation{nor-mal-ly}\n%s\n"
