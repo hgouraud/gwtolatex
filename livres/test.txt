@@ -11,9 +11,12 @@
 %%%%%%%%%%%%%%%%%%%%
 \begin{titlepage}
 \title{\Huge{Manuel d'utilisation \\
-de Gw\kern-0.1em To\LaTeX}
+de Gw\kern-0.1em T\kern-0.2em o\LaTeX}
 \par
-\large{Un complément à GeneWeb}}
+\large{Un complément à GeneWeb} \\
+Version :
+<x Input ./gw2l_dist/version.txt>
+}
 \author{Henri Gouraud \\
 \texttt{henri.gouraud@laposte.net} \\
 \copyright 2024}
