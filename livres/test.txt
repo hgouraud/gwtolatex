@@ -35,13 +35,22 @@ de Gw\kern-0.1em To\LaTeX}
 <x Chapter Listes de descendants>
 \label{descendance}
 <x HighLight Dupont, Léon>
+<x HighLight Dupont, Maurice>
+
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+françois;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Dupont</a>Dupont (Famille)
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Léon Dupont</a>Dupont, Léon (Famille)
+<x Section Famille Maurice Dupont>
+\index{Famille Maurice Dupont}
+Commentaire sur la famille de Maurice
+\par
+Pourrait être le contenu d'une note.
+\par
+<b href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=maurice;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">
 <x HighLight off>
 
 <x Chapter Fiches individuelles de personnes>
-<x NewSection on>
 <x CollectImages on>
+<x NewLevel on>
 <x LaTeX \label{fiches}>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Léon\label{leondupont}</a>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Lucien\index{Dupont, Lucien dit Le Frère}\label{luciendupont}</a>
@@ -51,7 +60,7 @@ de Gw\kern-0.1em To\LaTeX}
 <x Chapter Pages liées et arbres généalogiques>
 
 <x Section Pages liées>
-<x BumpSub on>
+<x NewLevel on>
 <x LaTeX \label{pageliee}>
 <x WideImages on>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES&f=page-liee-test;templ=tex;w=%%%PASSWD%%%">Page liée test\label{pageliee}</a>
@@ -59,6 +68,7 @@ de Gw\kern-0.1em To\LaTeX}
 
 <x Section Arbres généalogiques>
 <x TreeMode 1>
+<x Hrule off>
 <x Unit cm>
 <x Arbres on>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=3;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>

@@ -961,14 +961,20 @@ let one_command conf och line =
   match cmd with
   | "Arbres" | "Trees" ->
       let arbres = param = "on" || param = "On" in
+      if arbres then
       {
         conf with
         imgwidth = (if arbres then 1.5 else imgwidth_default);
         portraitwidth = (if arbres then 1.5 else portraitwidth_default);
         arbres;
+      } else
+      {
+        conf with
+        imgwidth = imgwidth_default;
+        portraitwidth = portraitwidth_default;
+        arbres;
       }
   (* TODO recode using make_conf *)
-  | "BumpSub" -> { conf with sub = param = "on" || param = "On" }
   | "Chapter" ->
       out "chapter" param;
       incr chapter;
@@ -1089,7 +1095,12 @@ let one_command conf och line =
   | "NewPage" ->
       output_string och "\\newpage";
       conf
-  | "NewSection" -> { conf with sectiononatag = param = "on" || param = "On" }
+  | "NewLevel" ->
+      {
+        conf with
+        sub = param = "on" || param = "On";
+        sectiononatag = param = "on" || param = "On";
+      }
   | "OffsetOff" -> { conf with offset = false; hoffset = 0.0; voffset = 0.0 }
   | "PortraitWidth" ->
       {
@@ -1272,7 +1283,7 @@ let process_one_line conf base _dict1 _dict2 och line =
     match line.[0] with
     | '<' -> (
         match line.[1] with
-        | 'a' ->
+        | 'a' | 'b' ->
             let content = get_a_content line in
             let href = Hutil.get_href line in
             let href_attrl = Hutil.split_href href in
@@ -1314,8 +1325,9 @@ let process_one_line conf base _dict1 _dict2 och line =
               if Sutil.contains line "\\index" then "" (* index manually done *)
               else Format.sprintf "\\index{%s}" content (* automatic index *)
             in
-            output_string och
-              (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
+            if line.[1] = 'a' then
+              output_string och
+                (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
 
             image_nbr := if conf.imagelabels = 4 then 0 else !image_nbr;
 

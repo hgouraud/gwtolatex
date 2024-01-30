@@ -129,17 +129,31 @@ donne la page \pageref{leondupont} et correspond au premier cas, alors que
     Lucien dit Le Frère}\label{luciendupont}</a>
 \end{verbatim}
 correspond au second.
+\item[b] Fonctionne comme le cas précédent («\,a\,») sans générer de
+nouvelle section. Permet à l'utilisateur de créer lui même la nouvelle
+section, et d'ajouter avant le contenu de la page des commentaires spécifiques.
+
+le texte :
+\begin{verbatim}
+<x Section Dupont, Léon>\label{leondupont}
+Commentaire qui n'existe pas dans l'autre cas.
+\par
+<b href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;
+    templ=tex;w=%%%PASSWD%%%"></a>
+\end{verbatim}
+est équivalent (au commentaire près) à 
+\begin{verbatim}
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien;n=dupont;oc=0;
+    templ=tex;w=%%%PASSWD%%%">Dupont, Léon\label{leondupont}</a>
+\end{verbatim}
 \end{description}
 Toutes les autres lignes du fichier \verb|famille.txt| sont recopiées tel-quel.
 
 Les commande \gwtol{} sont les suivantes :
 
 \begin{description}[style=nextline]
-\item[Arbres/Trees] «\,on/off\,».
-\item[BumpSub] «\,on/off\,». Si «\,on\,», décale de un (en +) le niveau
-section,/soussection... La page \pageref{pageliee} en donne un exemple.
-Sans ce paramètre à «\,on\,», la section {\bf Page liée test} aurait été
-numérotée 4.2. (TODO voir si on peut "automatiser" ce processus).
+\item[Arbres/Trees] If «\,on\,», set ImgWidth and PortraitWidth to 1.5.
+If «\,off\,» reset those parameters to their default values.
 \item[Chapter/Section/SubSection/SubSubSection] Nouveau chapitre/section/...
 \gwtol{} a besoin de connaitre la numérotation des chapitres et sections afin
 de numéroter correctement les images. Il ne faut donc pas utiliser directement
@@ -152,10 +166,11 @@ le nombre de fois où cette opération est effectuée. ATTENTION : cette opérat
 peut introduire des décalages dans les lignes horizontales des arbres.
 \item[FontSize] Définit la taille de la police de caractères\label{fontsize}
 (small, tiny, off returns to default).
-\item[HighLight] Surligner le nom de la personne désignée par «\,Patronyme prénom (occ)\,».
-Omettre «\,(0)\,» si l'occurrence est 0.
+\item[HighLight] Surligner le nom de la personne désignée par
+«\,Patronyme prénom (occ)\,». Omettre «\,(0)\,» si l'occurrence est 0.
 \item[Hoffset] Décale la page à droite/gauche. Ne s'applique que pendant les arbres.
-\item[Hrule] Ajouter une ligne horizontale de la largeur du texte.
+\item[Hrule] Ajouter une ligne horizontale de la largeur du texte à la fin
+des pages produites par «\,<a\,» ou «\,<b\,».
 \item[ImageLabel] Précise le nombre d'éléments pris en compte dans
 la numérotation des images (ch, sec, ssec, img-nbr).
 \item[ImgWidth] Définit la largeur des images (float).
@@ -166,11 +181,13 @@ remplacer les occurrences de \verb|%%%LIVRES%%%|, \verb|%%%BASE%%%| et
 \item[NbImgPerLine] Définit le nombre d'images par ligne (defaut 3) et en
 déduit la largeur.
 \item[Newpage] Passer à la page suivante.
-\item[NewSection] Lorsque ce paramètre est «\,on\,», les commandes «\,<a\,»
-qui suivent ouvrent une section d'un niveau supplémentaire. On comparera le cas
-des fiches individuelles page \pageref{fiches} et celui des arbres page 
-\pageref{relation}. 
-\item[OffsetOff] Annule le décalage de la page.
+\item[NewLevel] A l'intérieur d'un chapitre, lorsque ce paramètre est «\,on\,»,
+les commandes «\,<a\,» qui suivent ouvrent une section d'un niveau
+supplémentaire. On comparera le cas des fiches individuelles
+page \pageref{fiches} à celui des pages liées \pageref{pageliee}.
+Sans ce paramètre à «\,on\,», la section {\bf Page liée test} aurait été
+numérotée 4.2. (TODO voir si on peut "automatiser" ce processus).
+\item[OffsetOff] Annule le décalage horizontal et vertical de la page.
 \item[PortraitWidth] Définit la largeur des portraits (float).
 \item[Print] Imprimer la valeur du paramètre.
 \item[Sideways] Imprime la page en mode paysage (utile pour les arbres

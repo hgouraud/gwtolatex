@@ -32,10 +32,6 @@ The source material for the book is a text file containing :
   * <x Command parameter> issues a command to GwToLaTeX.
       parameter can be "on/off" or a string
       | "Arbres" -> "on/off"
-      | "BumpSub" ->
-            "on/off" if off, do not increment subsection level.
-            usefull is a section has been manually inserted and
-            is followed by automatic <a ...> (sub)sections
       | "Chapter" -> new chapter
       | "ImageLabel" -> nbr of items in image numbering (ch, sec, ssec, i_nbr)
       | "CollectImages" -> "on/off", collect_images to be printed at end of page
@@ -48,6 +44,10 @@ The source material for the book is a text file containing :
       | "NbImgPerLine" -> set the number of images across the page (default 3)
       | "Input" -> read the param file, scanning for %%%LIVRES%%%
       | "LaTeX" -> issues a LaTeX command
+      | "NewLevel" ->
+            "on/off" if off, do not increment subsection level.
+            usefull is a section has been manually inserted and
+            is followed by automatic <a ...> (sub)sections
       | "Newpage" -> newpage
       | "Print" -> print param
       | "Sideways" -> print page sideways (wip)
