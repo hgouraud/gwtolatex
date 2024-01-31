@@ -653,10 +653,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             content
         | "h1" ->
             let content = get_child children in
-            if content <> "" then Format.sprintf "{\\Large %s}" content else ""
+            if content <> "" then Format.sprintf "\n\\par{\\Large %s}\\par\n" content else ""
         | "h2" ->
             let content = get_child children in
-            if content <> "" then Format.sprintf "{\\large %s}" content else ""
+            if content <> "" then Format.sprintf "\n\\par{\\large %s}\\par\n" content else ""
         | "h3" ->
             let content = get_child children in
             (* TODO parametrer ce comportement *)
@@ -669,7 +669,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
               else if Sutil.contains content "Occupants" then
                 "\n\\par\\hgbato{Occupants}"
               else if content <> "" then
-                Format.sprintf "\\textbf{ %s bb}bb" content
+                Format.sprintf "\n\\par\\textbf{%s}\\par\n" content
               else ""
             in
             if content <> "" then str else ""
@@ -777,10 +777,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                     caption := content;
                     ""
                 | _ -> ""
+              else if mode = "a_ref" then
                 (* <span mode="a_ref" gw2w="which" gw2sn="snxx"
                      gw2fn="fnxx" gw2oc="ocxx" gw2al="alxx">content</span> *)
                 (* this mode allows the template code to pass parameters to mkTex *)
-              else if mode = "a_ref" then
                 let hl, str =
                   let _w = Hutil.get_attr attributes "gw2w" in
                   let sn = Hutil.get_attr attributes "gw2sn" in
