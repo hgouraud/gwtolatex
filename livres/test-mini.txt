@@ -1,0 +1,59 @@
+\documentclass[a4paper]{book}
+
+\makeindex
+
+<x Input ./gw2l_dist/Gw2LaTeX-env.tex>
+
+\newcommand{\gwtol}[0]{Gw\kern-0.1em ToLa\kern-0.13em T\kern-0.08em eX}
+
+%%%%%%%%%%%%%%%%%%%%
+% Edit your own title page data here
+%%%%%%%%%%%%%%%%%%%%
+\begin{titlepage}
+\title{\Huge{Manuel d'utilisation \\
+de Gw\kern-0.1em T\kern-0.2em o\LaTeX}
+\par
+\large{Un complément à GeneWeb} \\
+Version :
+<x Input ./gw2l_dist/version.txt>
+}
+\author{Henri Gouraud \\
+\texttt{henri.gouraud@laposte.net} \\
+\copyright 2024}
+\end{titlepage}
+
+% Beginning of document
+\begin{document}
+\WarningsOff*
+
+%%%%%%%%%%%%%%%%%%%%
+% Your document starts here
+%%%%%%%%%%%%%%%%%%%%
+<x Chapter Avant-propos>
+
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien&n=dupont&m=A&t=Z&v=6&maxv=4&num=on&birth=on&birth_place=on&marr=on&marr_date=on&marr_place=on&child=on&death=on&death_place=on&age=on&occu=on&repeat=on&gen=1&ns=1&hl=1">test tableau</a>
+
+%%%%%%%%%%%%%%%%%%
+% Standard tail of document
+% You may add or suppress Notes pages
+%%%%%%%%%%%%%%%%%%
+\printindex
+\label{index}
+% Notes page
+\newpage
+{\huge {\bf Notes}}
+\par
+Run mkBook du : {\ddmmyyyydate\today} at \currenttime
+<x GeneWebCommit on>
+\par
+GwTo\LaTeX{} version :
+<x Input ./gw2l_dist/version.txt>
+\par
+<y \hgbaseversion{}
+\par
+\pdftexbanner{}
+% Additionnal Notes page
+\newpage
+{\huge {\bf Notes}}
+% You may add additional notes pages as needed
+\end{document}

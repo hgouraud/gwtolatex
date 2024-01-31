@@ -15,10 +15,10 @@
       %end;
     %end;
   </title>
-  <meta name="robots" content="none"%/>
-  <meta http-equiv="content-type" content="text/html; charset=%charset;"%/>
-  <meta http-equiv="content-style-type" content="text/css"%/>
-  <link rel="shortcut icon" href="%image_prefix;/favicon_gwd.png"%/>
+  <meta name="robots" content="none">
+  <meta http-equiv="content-type" content="text/html; charset=%charset;">
+  <meta http-equiv="content-style-type" content="text/css">
+  <link rel="shortcut icon" href="%image_prefix;/favicon_gwd.png">
 %include.css;
 %base_header;
 </head>
@@ -30,13 +30,13 @@
     %if;(public_name != "")%public_name;%else;%first_name;%end;
     %if;(qualifier != "") <em>%qualifier;</em>%end;
     %sp;%surname;
-    %if;(alias != "") <em>(%alias;)</em>%end;<br%/>
+    %if;(alias != "") <em>(%alias;)</em>%end;<br>
     - [*surnames branch] -
   %elseif;(evar.t = "E")
     %if;(public_name != "")%public_name;%else;%first_name;%end;
     %if;(qualifier != "") <em>%qualifier;</em>%end;
     %sp;%surname;
-    %if;(alias != "") <em>(%alias;)</em>%end;<br%/>
+    %if;(alias != "") <em>(%alias;)</em>%end;<br>
     - [*list eclair] -
   %else;
     %apply;a_of_b%with;[*ancestors]%and;
@@ -54,11 +54,11 @@
     %if;(referer != "")
       <a href="%referer;"><img
        src="%image_prefix;/left.png"%wid_hei;left.png;
-       alt="&lt;&lt;" title="&lt;&lt;"%/></a>
+       alt="&lt;&lt;" title="&lt;&lt;"></a>
     %end;
     <a href="%prefix;"><img%sp;
     src="%image_prefix;/up.png"%wid_hei;up.png;
-    alt="^^" title="^^"%/></a>
+    alt="^^" title="^^"></a>
   </td></tr></table>
 %end;
 
@@ -98,7 +98,7 @@
         "pp.father", xx - 1, "ss1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
         "ss1&nbsp;+--&nbsp;", "ss1&nbsp;|&nbsp;&nbsp;&nbsp;")
     %end;
-    <tt>ss2</tt><a href="%prefix;%pp.access;">%pp;</a>%pp.title;%pp.dates;<br%/>
+    <tt>ss2</tt><a href="%prefix;%pp.access;">%pp;</a>%pp.title;%pp.dates;<br>
     %if;(pp.has_parents)
       %apply;ancestors_horizontally(
         "pp.mother", xx - 1, "ss3&nbsp;|&nbsp;&nbsp;&nbsp;",
@@ -165,7 +165,7 @@
       <table class="display_search">
         <tr>
           <td><b>[*sort by/date begin/alphabetic order/nb individuals/nb events]0</b></td>
-          <td><img src="%image_prefix;/picto_calendar.png"%/></td>
+          <td><img src="%image_prefix;/picto_calendar.png"></td>
           <td>
             %if;(evar.sort = "date")
               [sort by/date begin/alphabetic order/nb individuals/nb events]1
@@ -175,13 +175,13 @@
               </a>
             %end;
           </td>
-          <td><img src="%image_prefix;/picto_alphabetic_order.png"%/></td>
+          <td><img src="%image_prefix;/picto_alphabetic_order.png"></td>
           <td>
             <a href="%prefix;&amp;m=A&amp;p=%first_name_key;&amp;n=%surname_key;&amp;oc=%evar.oc;&amp;t=%evar.t;&amp;v=%evar.v;">
               [sort by/date begin/alphabetic order/nb individuals/nb events]2
             </a>
           </td>
-          <td><img src="%image_prefix;/picto_numeric_order.png"%/></td>
+          <td><img src="%image_prefix;/picto_numeric_order.png"></td>
           <td>
             %if;(evar.sort = "ind")
               [sort by/date begin/alphabetic order/nb individuals/nb events]3
@@ -204,7 +204,7 @@
     </div>
 
     <table class="list_eclair_table">
-      <thead>
+      <th>
       <tr class="list_eclair_table_header">
         <th>[*surname/surnames]0</th>
         <th>[*place]</th>
@@ -213,7 +213,7 @@
         <th>[*nb individuals]</th>
         <th>[*nb events]</th>
       </tr>
-      </thead>
+      </th>
       <tbody>
       %foreach;sorted_list_item;
         <tr>
@@ -256,15 +256,15 @@
       <table class="display_search">
         <tr>
           <td><b>[*sort by/date begin/alphabetic order/nb individuals/nb events]0</b></td>
-          <td><img src="%image_prefix;/picto_calendar.png"%/></td>
+          <td><img src="%image_prefix;/picto_calendar.png"></td>
           <td>
             <a href="%prefix;&amp;m=A&amp;p=%first_name_key;&amp;n=%surname_key;&amp;oc=%evar.oc;&amp;t=%evar.t;&amp;v=%evar.v;&amp;sort=date">
               [sort by/date begin/alphabetic order/nb individuals/nb events]1
             <a>
           </td>
-          <td><img src="%image_prefix;/picto_alphabetic_order.png"%/></td>
+          <td><img src="%image_prefix;/picto_alphabetic_order.png"></td>
           <td>[sort by/date begin/alphabetic order/nb individuals/nb events]2</td>
-          <td><img src="%image_prefix;/picto_numeric_order.png"%/></td>
+          <td><img src="%image_prefix;/picto_numeric_order.png"></td>
           <td>
             <a href="%prefix;&amp;m=A&amp;p=%first_name_key;&amp;n=%surname_key;&amp;oc=%evar.oc;&amp;t=%evar.t;&amp;v=%evar.v;&amp;sort=ind">
               [sort by/date begin/alphabetic order/nb individuals/nb events]3%nn;
@@ -364,9 +364,9 @@
       <table class="display_search">
         <tr>
           <td><b>[*sort by/branch/alphabetic order]0</b></td>
-          <td><img src="%image_prefix;/picto_branch.png"%/></td>
+          <td><img src="%image_prefix;/picto_branch.png"></td>
           <td>[sort by/branch/alphabetic order]1</td>
-          <td><img src="%image_prefix;/picto_alphabetic_order.png"%/></td>
+          <td><img src="%image_prefix;/picto_alphabetic_order.png"></td>
           <td>
             <a href="%prefix;&amp;m=A&amp;p=%first_name_key;&amp;n=%surname_key;&amp;oc=%evar.oc;&amp;sosab=%evar.sosab;&amp;t=%evar.t;&amp;v=%evar.v;">
               [sort by/branch/alphabetic order]2
@@ -455,13 +455,13 @@
       <table class="display_search">
         <tr>
           <td><b>[*sort by/branch/alphabetic order]0</b></td>
-          <td><img src="%image_prefix;/picto_branch.png"%/></td>
+          <td><img src="%image_prefix;/picto_branch.png"></td>
           <td>
             <a href="%prefix;&amp;m=A&amp;p=%first_name_key;&amp;n=%surname_key;&amp;oc=%evar.oc;&amp;sosab=%evar.sosab;&amp;t=%evar.t;&amp;v=%evar.v;&amp;sort=on">
               [sort by/branch/alphabetic order]1
             </a>
           </td>
-          <td><img src="%image_prefix;/picto_alphabetic_order.png"%/></td>
+          <td><img src="%image_prefix;/picto_alphabetic_order.png"></td>
           <td>[sort by/branch/alphabetic order]2</td>
         </tr>
       </table>

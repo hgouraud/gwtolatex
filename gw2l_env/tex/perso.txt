@@ -159,7 +159,7 @@
     \item [*age] %age;%nl;
   %end;
   %if;computable_death_age;
-    \item [*age at death:] %death_age;%nl;
+    \item [*age at death][:] %death_age;%nl;
   %end;
   %if;is_buried;
     \item %apply;capitalize(nth([buried],sex))
