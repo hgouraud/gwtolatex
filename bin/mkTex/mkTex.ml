@@ -398,30 +398,8 @@ let dummy_tags_3 =
 (* used for tree displays and large images *)
 (* various commands govern the layout *)
 (* as well as captions, labels and fig numbers *)
+(* obsolete *)
 
-(* example:
-
-   <y Split a html colon driven table across two pages (two passes)>
-   <y split paheheight_left paheheight_right Nbr_of_cols_in_left_page nbr_of_cols_in_right_page LR=1 Left first>
-   <y good numbers are 17 (after chapter heading), 23 (after section heading), 24 (std page)>
-   <y table is 59 wide>
-   <y trial and errors !!>
-
-   <begin page>
-   <sideways="1"
-   <split="23 24 32 28 RthenL">
-   <title="Arbre descendant d'Albert Marie (Toumagi)">
-   <index="Marie, Albert (Toumagi)">
-   <href="http://127.0.0.1:2317/Chausey?m=D;p=albert;n=marie;v=2;image=off;t=T;dag=on;templ=tex">
-   <end>
-
-   <begin page>
-   <sideways="1">
-   <title="Arbre ascendant d'Eugénie Collet">
-   <index="Collet, Eugénie (ep Vaillant)">
-   <href="http://127.0.0.1:2317/Chausey?m=A;p=eugenie (x);n=collet;v=5;siblings=on;notes=on;t=T;after=;before=;dag=on;templ=tex">
-   <end>
-*)
 
 let skip_m_cmd = [ "MOD_NOTES" ]
 let one_page och line = output_string och line
@@ -474,6 +452,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
           | 1 ->
               Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d)}}" content
                 !image_nbr
+          | 2 ->
+              Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d)}}" content
+                !chapter !image_nbr
           | 3 ->
               Format.sprintf "%s{\\raisebox{.6ex}{\\small (%d.%d.%d)}}" content
                 !chapter !section !image_nbr
@@ -535,6 +516,8 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
   (<a href="%sm=SRC;v=plan-pointe-du-phare">Le Phare</a> et
   <a href="%sm=SRC;v=plan-blainvillais">Blainvillais</a>) ou la
   <a href="%sm=SRC;v=grande-ile">carte de l’île</a>.
+  <a mode="wide" caption="Légende de l'image"
+     href="%sm=SRC;v=grande-ile">carte de l’île</a>.
   *)
   let tag_a _name attributes children =
     (* if p <> "" or n <> "" we have a person *)
@@ -653,10 +636,14 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             content
         | "h1" ->
             let content = get_child children in
-            if content <> "" then Format.sprintf "\n\\par{\\Large %s}\\par\n" content else ""
+            if content <> "" then
+              Format.sprintf "\n\\par{\\Large %s}\\par\n" content
+            else ""
         | "h2" ->
             let content = get_child children in
-            if content <> "" then Format.sprintf "\n\\par{\\large %s}\\par\n" content else ""
+            if content <> "" then
+              Format.sprintf "\n\\par{\\large %s}\\par\n" content
+            else ""
         | "h3" ->
             let content = get_child children in
             (* TODO parametrer ce comportement *)
@@ -691,6 +678,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             let content = get_child children in
             (* TODO compute the number of columns and their style *)
             (* Ignore <tables> for the time being *)
+            content
+        | "th" ->
+            let content = get_child children in
             content
         | "tr" ->
             let content = get_child children in
@@ -962,18 +952,19 @@ let one_command conf och line =
   | "Arbres" | "Trees" ->
       let arbres = param = "on" || param = "On" in
       if arbres then
-      {
-        conf with
-        imgwidth = (if arbres then 1.5 else imgwidth_default);
-        portraitwidth = (if arbres then 1.5 else portraitwidth_default);
-        arbres;
-      } else
-      {
-        conf with
-        imgwidth = imgwidth_default;
-        portraitwidth = portraitwidth_default;
-        arbres;
-      }
+        {
+          conf with
+          imgwidth = (if arbres then 1.5 else imgwidth_default);
+          portraitwidth = (if arbres then 1.5 else portraitwidth_default);
+          arbres;
+        }
+      else
+        {
+          conf with
+          imgwidth = imgwidth_default;
+          portraitwidth = portraitwidth_default;
+          arbres;
+        }
   (* TODO recode using make_conf *)
   | "Chapter" ->
       out "chapter" param;
