@@ -31,6 +31,10 @@ The process is decomposed as follows
 - run gw/gwu on base to create base.gw
 - run gw2l/mkNewGw to create base-new.gw containing images reference data
 - run gw/gwc on base-new.gw to create new temporary base
+
+if the file family-inputs/who_is_where.txt does not exist, those three 
+steps are not executed and the process continues whit base rather than base-new.
+
 - run gw2l/mkTex on base-new and family to create family.tex file
 - run pdflatex on family.tex
 - run tweekIndex on family.ind to adjust/merge index entries
@@ -180,50 +184,56 @@ let main () =
   let gw2l_options = if !verbose then "-v" :: gw2l_options else gw2l_options in
   let gw2l_options = String.concat " " gw2l_options in
 
-  (* Create base.gw file *)
-  if !verbose then Printf.eprintf "Create %s.gw file\n" !base;
-  let gwu = Filename.concat !gw_dir "gwu" in
-  let out = Filename.concat "." !base ^ ".gw" in
-  let make_gw_file = Format.sprintf "%s -o %s %s" gwu out !base in
-  if !verbose then Printf.eprintf "Commd: %s\n" make_gw_file;
-  flush stderr;
-  let error = Sys.command make_gw_file in
-  if error > 0 then (
-    Printf.eprintf "Error while creating .gw file (%d)\n" error;
-    exit 0);
-  flush stderr;
-
-  (* make new .gw file *)
-  if !verbose then Printf.eprintf "Make new %s-new.gw file\n" !base;
-  let make_new_gw = Filename.concat !dist_dir "mkNewGw" in
-  let make_new_gw_file = Format.sprintf "%s %s\n" make_new_gw gw2l_options in
-  if !verbose then Printf.eprintf "Commd: %s\n" make_new_gw_file;
-  flush stderr;
-  let error = Sys.command make_new_gw_file in
-  if error > 0 then (
-    Printf.eprintf "Error while creating new gw file (%d)\n\n" error;
-    exit 0);
-  flush stderr;
-
-  (* make new base from base-new.gw *)
-  if !verbose then Printf.eprintf "Make new base: %s-new.gw\n" !base;
-  flush stderr;
-  let gwc = Filename.concat !gw_dir "gwc" in
-  let in_file = String.concat Filename.dir_sep [ "."; base_new ^ ".gw" ] in
-  let log_file = String.concat Filename.dir_sep [ "."; "tmp"; "gwc.log" ] in
-  let make_new_base =
-    Format.sprintf "%s -f -o %s %s > %s" gwc base_new in_file log_file
+  let who_is_where_file =
+    String.concat Filename.dir_sep
+      [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
   in
-  if !verbose then Printf.eprintf "Commd: %s\n" make_new_base;
-  flush stderr;
-  let error = Sys.command make_new_base in
-  if error > 0 then (
-    Printf.eprintf
-      {|Error while creating new base (%d)
+  let who = Sys.file_exists who_is_where_file in
+  if who then (
+    (* Create base.gw file *)
+    if !verbose then Printf.eprintf "Create %s.gw file\n" !base;
+    let gwu = Filename.concat !gw_dir "gwu" in
+    let out = Filename.concat "." !base ^ ".gw" in
+    let make_gw_file = Format.sprintf "%s -o %s %s" gwu out !base in
+    if !verbose then Printf.eprintf "Commd: %s\n" make_gw_file;
+    flush stderr;
+    let error = Sys.command make_gw_file in
+    if error > 0 then (
+      Printf.eprintf "Error while creating .gw file (%d)\n" error;
+      exit 0);
+    flush stderr;
+
+    (* make new .gw file *)
+    if !verbose then Printf.eprintf "Make new %s-new.gw file\n" !base;
+    let make_new_gw = Filename.concat !dist_dir "mkNewGw" in
+    let make_new_gw_file = Format.sprintf "%s %s\n" make_new_gw gw2l_options in
+    if !verbose then Printf.eprintf "Commd: %s\n" make_new_gw_file;
+    flush stderr;
+    let error = Sys.command make_new_gw_file in
+    if error > 0 then (
+      Printf.eprintf "Error while creating new gw file (%d)\n\n" error;
+      exit 0);
+    flush stderr;
+
+    (* make new base from base-new.gw *)
+    if !verbose then Printf.eprintf "Make new base: %s-new.gw\n" !base;
+    flush stderr;
+    let gwc = Filename.concat !gw_dir "gwc" in
+    let in_file = String.concat Filename.dir_sep [ "."; base_new ^ ".gw" ] in
+    let log_file = String.concat Filename.dir_sep [ "."; "tmp"; "gwc.log" ] in
+    let make_new_base =
+      Format.sprintf "%s -f -o %s %s > %s" gwc base_new in_file log_file
+    in
+    if !verbose then Printf.eprintf "Commd: %s\n" make_new_base;
+    flush stderr;
+    let error = Sys.command make_new_base in
+    if error > 0 then (
+      Printf.eprintf
+        {|Error while creating new base (%d)
 Inspect %s/tmp/gwc.log for possible errors.|}
-      error !bases;
-    exit 0);
-  flush stderr;
+        error !bases;
+      exit 0);
+    flush stderr);
 
   (* run mkTex *)
   (* output and aux files are in ./tmp  (mkdir ./tmp if needed) *)
@@ -233,7 +243,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   let gw2l_options =
     Str.global_replace
       (Str.regexp ("-base " ^ !base))
-      ("-base " ^ !base ^ "-new")
+      ("-base " ^ !base ^ if who then "-new" else "")
       gw2l_options
   in
   let out_file =

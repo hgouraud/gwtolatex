@@ -476,28 +476,32 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
   *)
   let read_src_file v content =
     let src_dir =
-      String.concat Filename.dir_sep [ conf.bases; "src"; conf.basename ]
+      String.concat Filename.dir_sep [ "."; "src"; conf.basename ]
     in
     let ic =
       try Some (open_in (Filename.concat src_dir (v ^ ".txt"))) with _ -> None
     in
     match ic with
-    | None -> Format.sprintf " (Missing file %s.txt) " v
+    | None ->
+        Format.sprintf " (Missing file %s) "
+          (Filename.concat src_dir (v ^ ".txt"))
     | Some ic ->
         let file = really_input_string ic (in_channel_length ic) in
-        if not (Sutil.contains file "<!-- mapped image -->") then
-          Format.sprintf "{\\it %s}\\footnote{SRC or DOC file}" content
+        if not (Sutil.contains file "usemap=") then
+          Format.sprintf
+            "{\\it %s}\\footnote{Fichier SRC ou DOC. tbd plus-tard}" content
         else
           (* TODO use lower!! *)
           let i0 = Sutil.contains_index file "<img src=" in
           let i1 = Sutil.contains_index file "<img SRC=" in
-          let i = match (i1, i1) with -1, -1 -> -1 | _, _ -> max i0 i1 in
-          let j = String.index_from file i '>' in
-          if j = -1 then
+          let i = match (i0, i1) with -1, -1 -> -1 | _, _ -> max i0 i1 in
+          let j = if i >= 0 then String.index_from file i '>' else -1 in
+          if i = -1 || j = -1 || i + 9 >= String.length file || j - i - 9 < 0
+          then
             Format.sprintf "Funny SRC content %s"
-              (String.sub file i (min 40 (String.length file - i)))
+              (Filename.concat src_dir (v ^ ".txt"))
           else
-            let href = String.sub file i (j - i) in
+            let href = String.sub file (i + 9) (j - i - 9) in
             let href_attrl = Hutil.split_href href in
             let k = Hutil.get_href_attr "k" href_attrl in
             let s = Hutil.get_href_attr "s" href_attrl in
@@ -1026,14 +1030,15 @@ let one_command conf och line =
         String.concat Filename.dir_sep [ !gw_dir; "etc"; "version.txt" ]
       in
       let ic = open_in file in
-      let _line = input_line ic in
-      (* get second line *)
-      let line = input_line ic in
-      let i = try String.index_from line 0 ':' with Not_found -> -1 in
-      if i > 0 then
+      let line = really_input_string ic (in_channel_length ic) in
+      let i =
+        try String.rindex_from line (String.length line - 6) '>'
+        with Not_found -> -1
+      in
+      if i > 0 && String.length line - i - 7 >= 0 then
         output_string och
           ("\\par\nGeneWeb version : "
-          ^ String.sub line (i + 3) (String.length line - i - 6))
+          ^ String.sub line (i + 1) (String.length line - i - 7))
       else output_string och "GeneWeb version not found\n";
       conf
   | "HighLight" ->
@@ -1267,7 +1272,7 @@ let print_images conf och images_list =
           in
           let img_label =
             if image_id <> "" then Format.sprintf "\\label{img_ref_%s}" image_id
-            else ""
+            else "img id absent"
           in
           (* list of persons present on this image *)
           (* TODO les personnes /z ont été éliminées!! *)

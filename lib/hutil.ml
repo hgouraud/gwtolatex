@@ -131,13 +131,16 @@ let show_attr attributes =
 (* <a href="base?m=IM;s=test/filaname.jpg"> *)
 (* <a href="base_token?m=IM;s=test/filaname.jpg"> *)
 (* Chausey\_{}qnnvsntxq?templ=tex\&{}m=IM *)
+(* Href: "%sm=IM;s=famille-charnace.jpg" border="0" usemap="#Famille-Charnace" *)
 
 let split_href href =
+  let href = List.nth (String.split_on_char ' ' href) 0 in
   let href = Sutil.convert_html href |> Sutil.decode in
   let parts = String.split_on_char '?' href in
   let href =
     Sutil.replace ';' '&'
       (List.nth parts (if List.length parts = 2 then 1 else 0))
+    |> Sutil.replace '"' ' ' |> String.trim
   in
   let evars = String.split_on_char '&' href in
   let evars =
