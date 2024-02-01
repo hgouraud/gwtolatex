@@ -59,7 +59,6 @@ type config = {
   split : int;
   (* mkTex *)
   arbres : bool;
-  sub : bool;
   collectimages : bool;
   sectiononatag : bool;
   highlights : string list;

@@ -95,7 +95,6 @@ let make_conf xbases xbasename xpasswd xfamily xdebug xverbose xtreemode =
       split = 0;
       (* mkTex *)
       arbres = true;
-      sub = false;
       collectimages = true;
       sectiononatag = true;
       highlights = [];
@@ -135,15 +134,15 @@ let dump_conf conf =
   Printf.eprintf "    portraitwidth = %1.2f\n" conf.portraitwidth;
   Printf.eprintf "  Other params :\n";
   Printf.eprintf "    collectimages = %s\n"
-    (if conf.verbose then "true" else "false");
+    (if conf.collectimages then "true" else "false");
   Printf.eprintf "    sectiononatag = %s\n"
-    (if conf.verbose then "true" else "false");
+    (if conf.sectiononatag then "true" else "false");
   Printf.eprintf "    nbimgperline = %d\n" conf.nbimgperline;
   Printf.eprintf "    sideways = %s\n"
-    (if conf.verbose then "true" else "false");
+    (if conf.sideways then "true" else "false");
   Printf.eprintf "    twopages = %s\n"
-    (if conf.verbose then "true" else "false");
-  Printf.eprintf "    double = %s\n" (if conf.verbose then "true" else "false");
+    (if conf.twopages then "true" else "false");
+  Printf.eprintf "    double = %s\n" (if conf.double then "true" else "false");
   Printf.eprintf "    arbres =  %s\n" (if conf.arbres then "true" else "false");
   Printf.eprintf "    split =  %d\n" conf.split
 
@@ -173,16 +172,16 @@ let print_conf conf =
       Format.sprintf "    portraitwidth = %1.2f\n" conf.portraitwidth;
       Format.sprintf "  Other params :\n";
       Format.sprintf "    collectimages = %s\n"
-        (if conf.verbose then "true" else "false");
+        (if conf.collectimages then "true" else "false");
       Format.sprintf "    sectiononatag = %s\n"
-        (if conf.verbose then "true" else "false");
+        (if conf.sectiononatag then "true" else "false");
       Format.sprintf "    nbimgperline = %d\n" conf.nbimgperline;
       Format.sprintf "    sideways = %s\n"
-        (if conf.verbose then "true" else "false");
+        (if conf.sideways then "true" else "false");
       Format.sprintf "    twopages = %s\n"
-        (if conf.verbose then "true" else "false");
+        (if conf.twopages then "true" else "false");
       Format.sprintf "    double = %s\n"
-        (if conf.verbose then "true" else "false");
+        (if conf.double then "true" else "false");
       Format.sprintf "    arbres =  %s\n"
         (if conf.arbres then "true" else "false");
       Format.sprintf "    split =  %d\n" conf.split;
@@ -400,7 +399,6 @@ let dummy_tags_3 =
 (* as well as captions, labels and fig numbers *)
 (* obsolete *)
 
-
 let skip_m_cmd = [ "MOD_NOTES" ]
 let one_page och line = output_string och line
 
@@ -426,6 +424,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     if k = "" && (not vignette) && not (mode = "wide") then incr image_nbr;
     match mode with
     | "wide" ->
+        (* TODO rework. Do not use figure. Has its own numbering scheme! *)
         let minipage_b = Format.sprintf "\\begin{figure}" in
         let minipage_e = Format.sprintf "\\end{figure}" in
         let caption =
@@ -970,7 +969,7 @@ let one_command conf och line =
       out "chapter" param;
       incr chapter;
       image_nbr := if conf.imagelabels > 1 then 0 else conf.imagelabels;
-      current_level := 0;
+      current_level := 1;
       section := 0;
       subsection := 0;
       subsubsection := 0;
@@ -1000,7 +999,6 @@ let one_command conf och line =
         split = 0;
         (* mkTex *)
         arbres = true;
-        sub = false;
         collectimages = true;
         sectiononatag = true;
         highlights = [];
@@ -1058,6 +1056,28 @@ let one_command conf och line =
           (if param = "off" || param = "Off" then imgwidth_default
           else Float.of_string param);
       }
+  | "Incr" -> (
+      let param = String.trim param in
+      match param with
+      | "Chapter" ->
+          incr chapter;
+          section := 0;
+          subsection := 0;
+          subsubsection := 0;
+          conf
+      | "Section" ->
+          incr section;
+          subsection := 0;
+          subsubsection := 0;
+          conf
+      | "SubSection" ->
+          incr subsection;
+          subsubsection := 0;
+          conf
+      | "SubSubSection" ->
+          incr subsubsection;
+          conf
+      | _ -> conf)
   | "Input" ->
       (let param = Sutil.replace_str "%%%LIVRES%%%" !livres param in
        let param = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist param in
@@ -1086,12 +1106,6 @@ let one_command conf och line =
   | "NewPage" ->
       output_string och "\\newpage";
       conf
-  | "NewLevel" ->
-      {
-        conf with
-        sub = param = "on" || param = "On";
-        sectiononatag = param = "on" || param = "On";
-      }
   | "OffsetOff" -> { conf with offset = false; hoffset = 0.0; voffset = 0.0 }
   | "PortraitWidth" ->
       {
@@ -1106,11 +1120,33 @@ let one_command conf och line =
   | "PrintConfig" ->
       output_string och (print_conf conf);
       conf
+  | "Reset" -> (
+      let param = String.trim param in
+      match param with
+      | "Chapter" ->
+          chapter := 0;
+          section := 0;
+          subsection := 0;
+          subsubsection := 0;
+          conf
+      | "Section" ->
+          section := 0;
+          subsection := 0;
+          subsubsection := 0;
+          conf
+      | "SubSection" ->
+          subsection := 0;
+          subsubsection := 0;
+          conf
+      | "SubSubSection" ->
+          subsubsection := 0;
+          conf
+      | _ -> conf)
   | "Section" ->
       out "section" param;
       incr section;
       image_nbr := if conf.imagelabels > 2 then 0 else !image_nbr;
-      current_level := 1;
+      current_level := 2;
       subsection := 0;
       subsubsection := 0;
       conf
@@ -1120,14 +1156,14 @@ let one_command conf och line =
       out "subsection" param;
       incr subsection;
       image_nbr := if conf.imagelabels > 3 then 0 else !image_nbr;
-      current_level := 2;
+      current_level := 3;
       subsubsection := 0;
       conf
   | "SubSubSection" ->
       out "subsubsection" param;
       incr subsubsection;
       image_nbr := if conf.imagelabels > 4 then 0 else !image_nbr;
-      current_level := 3;
+      current_level := 4;
       conf
   | "TextHeight" -> { conf with textheight = Float.of_string param }
   | "TextWidth" -> { conf with textwidth = Float.of_string param }
@@ -1289,29 +1325,22 @@ let process_one_line conf base _dict1 _dict2 och line =
             let sec =
               (* -> chapter, 1-> section, ... *)
               match !current_level with
-              | 0 ->
-                  if conf.sub then (
-                    incr section;
-                    "")
-                  else ""
+              | 0 -> ""
               | 1 ->
-                  if conf.sub then (
-                    incr subsection;
-                    "sub")
-                  else (
-                    incr section;
-                    "")
+                  incr section;
+                  ""
               | 2 ->
-                  if conf.sub then (
-                    incr subsubsection;
-                    "subsub")
-                  else (
-                    incr subsection;
-                    "sub")
-              | _ -> "subsub"
+                  incr subsection;
+                  "sub"
+              | 3 ->
+                  incr subsubsection;
+                  "subsub"
+              | _ -> "subsubsub"
             in
+            (* TODO review numbering and reset to 0 *)
             image_nbr :=
               if conf.imagelabels > !current_level + 1 then 0 else !image_nbr;
+            image_nbr := if conf.imagelabels = 4 then 0 else !image_nbr;
             let index =
               if Sutil.contains line "\\index" then "" (* index manually done *)
               else Format.sprintf "\\index{%s}" content (* automatic index *)
@@ -1319,8 +1348,6 @@ let process_one_line conf base _dict1 _dict2 och line =
             if line.[1] = 'a' then
               output_string och
                 (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
-
-            image_nbr := if conf.imagelabels = 4 then 0 else !image_nbr;
 
             one_http_call conf base och line;
 

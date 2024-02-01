@@ -171,6 +171,14 @@ peut introduire des décalages dans les lignes horizontales des arbres.
 \item[Hoffset] Décale la page à droite/gauche. Ne s'applique que pendant les arbres.
 \item[Hrule] Ajouter une ligne horizontale de la largeur du texte à la fin
 des pages produites par «\,<a\,» ou «\,<b\,».
+\item[Incr] Afin de numéroter correctement les images, \gwtol{} a besoin de
+connaître les numéros de chapitre, section, etc. Si une commande
+\verb|\chapter{xxx}|, \verb|\section{xxx}|, ... est insérée directement
+dans le document, il convient d'en informer \gwtol{} en incrémentant
+le niveau de section approprié. Cette commande remet à zéro les sections de
+niveau supérieur. On regardera l'exemple des fiches individuelles
+page \pageref{fiches}. Sans cette commande, les images de la section
+{\bf Dupont, Léon} auraient été numérotées 3.1.x.
 \item[ImageLabel] Précise le nombre d'éléments pris en compte dans
 la numérotation des images (ch, sec, ssec, img-nbr).
 \item[ImgWidth] Définit la largeur des images (float).
@@ -181,15 +189,11 @@ remplacer les occurrences de \verb|%%%LIVRES%%%|, \verb|%%%BASE%%%| et
 \item[NbImgPerLine] Définit le nombre d'images par ligne (defaut 3) et en
 déduit la largeur.
 \item[Newpage] Passer à la page suivante.
-\item[NewLevel] A l'intérieur d'un chapitre, lorsque ce paramètre est «\,on\,»,
-les commandes «\,<a\,» qui suivent ouvrent une section d'un niveau
-supplémentaire. On comparera le cas des fiches individuelles
-page \pageref{fiches} à celui des pages liées \pageref{pageliee}.
-Sans ce paramètre à «\,on\,», la section {\bf Page liée test} aurait été
-numérotée 4.2. (TODO voir si on peut "automatiser" ce processus).
 \item[OffsetOff] Annule le décalage horizontal et vertical de la page.
 \item[PortraitWidth] Définit la largeur des portraits (float).
 \item[Print] Imprimer la valeur du paramètre.
+\item[Reset] remet à zéro les numéros de chapitre, section, etc.
+voir la commande «\,Incr\,» ci-dessus.
 \item[Sideways] Imprime la page en mode paysage (utile pour les arbres
 qui peuvent être larges).\label{sideways}
 \item[TreeMode] 0 imprime l'arbre comme une liste de liste de cellules

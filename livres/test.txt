@@ -53,8 +53,10 @@ Pourrait être le contenu d'une note.
 
 <x Chapter Fiches individuelles de personnes>
 <x CollectImages on>
-<x NewLevel on>
 <x LaTeX \label{fiches}>
+\section{Dupont, Maurice}
+Le fiche de Maurice n'est pas disponible (pour démonstration)!!
+<x Incr Section>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Léon\label{leondupont}</a>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Lucien\index{Dupont, Lucien dit Le Frère}\label{luciendupont}</a>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?p=georges;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Georges</a>
@@ -63,7 +65,6 @@ Pourrait être le contenu d'une note.
 <x Chapter Pages liées et arbres généalogiques>
 
 <x Section Pages liées>
-<x NewLevel on>
 <x LaTeX \label{pageliee}>
 <x WideImages on>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES&f=page-liee-test;templ=tex;w=%%%PASSWD%%%">Page liée test\label{pageliee}</a>
