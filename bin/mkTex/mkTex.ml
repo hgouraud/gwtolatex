@@ -925,6 +925,29 @@ let bad_code c = c >= 400
 (* <x Cmd param>remain *)
 (*       i     j       *)
 let one_command conf och line =
+  let get_float_value line param default =
+    let on_off = param = "off" || param = "Off" in
+    match on_off with
+    | true -> (true, default)
+    | false -> (
+        ( false,
+          try Float.of_string param
+          with Failure _ ->
+            Printf.eprintf "Bad param %s\n" line;
+            default ))
+  in
+  let get_int_value line param default =
+    let on_off = param = "off" || param = "Off" in
+    match on_off with
+    | true -> (true, default)
+    | false -> (
+        ( false,
+          try int_of_string param
+          with Failure _ ->
+            Printf.eprintf "Bad param %s\n" line;
+            default ))
+  in
+
   let len = String.length line in
   let line, len =
     if line.[len - 1] = '\n' then (String.sub line 0 (len - 1), len - 1)
@@ -980,8 +1003,12 @@ let one_command conf och line =
       conf
   | "CollectImages" ->
       { conf with collectimages = param = "on" || param = "On" }
-  | "ColSep" -> { conf with colsep = Float.of_string param }
-  | "Debug" -> { conf with debug = int_of_string param }
+  | "ColSep" ->
+      let _off, value = get_float_value line param colsep_default in
+      { conf with colsep = value }
+  | "Debug" ->
+      let _off, value = get_int_value line param 0 in
+      { conf with debug = value }
   | "Defaults" ->
       {
         conf with
@@ -1018,7 +1045,9 @@ let one_command conf och line =
   | "DumpConfig" ->
       dump_conf conf;
       conf
-  | "Expand" -> { conf with expand = int_of_string param }
+  | "Expand" ->
+      let _off, value = get_int_value line param 0 in
+      { conf with expand = value }
   | "FontSize" ->
       {
         conf with
@@ -1050,17 +1079,11 @@ let one_command conf och line =
       }
   | "Hrule" -> { conf with hrule = param = "on" || param = "On" }
   | "ImageLabels" ->
-      {
-        conf with
-        imagelabels = (try int_of_string param with Failure _ -> 3);
-      }
+      let _off, value = get_int_value line param 3 in
+      { conf with imagelabels = value }
   | "ImgWidth" ->
-      {
-        conf with
-        imgwidth =
-          (if param = "off" || param = "Off" then imgwidth_default
-          else Float.of_string param);
-      }
+      let _off, value = get_float_value line param imgwidth_default in
+      { conf with imgwidth = value }
   | "Incr" -> (
       let param = String.trim param in
       match param with
@@ -1082,7 +1105,9 @@ let one_command conf och line =
       | "SubSubSection" ->
           incr subsubsection;
           conf
-      | _ -> conf)
+      | _ ->
+          Printf.eprintf "Bad param: %s\n" line;
+          conf)
   | "Input" ->
       (let param = Sutil.replace_str "%%%LIVRES%%%" !livres param in
        let param = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist param in
@@ -1102,23 +1127,21 @@ let one_command conf och line =
       output_string och param;
       conf
   | "NbImgPerLine" ->
-      let nb = try int_of_string param with Failure _ -> 3 in
+      let _off, value = get_int_value line param 3 in
       {
         conf with
-        nbimgperline = nb;
-        imgwidth = conf.textwidth /. Float.of_int nb;
+        nbimgperline = value;
+        imgwidth = conf.textwidth /. Float.of_int value;
       }
   | "NewPage" ->
       output_string och "\\newpage";
       conf
-  | "OffsetOff" -> { conf with offset = false; hoffset = 0.0; voffset = 0.0 }
+  | "Offset" ->
+      let off, value = get_float_value line param 0.0 in
+      { conf with offset = off; hoffset = value; voffset = 0.0 }
   | "PortraitWidth" ->
-      {
-        conf with
-        portraitwidth =
-          (if param = "off" || param = "Off" then imgwidth_default
-          else Float.of_string param);
-      }
+      let _off, value = get_float_value line param imgwidth_default in
+      { conf with portraitwidth = value }
   | "Print" ->
       output_string och param;
       conf
@@ -1155,8 +1178,16 @@ let one_command conf och line =
       subsection := 0;
       subsubsection := 0;
       conf
-  | "Sideways" -> { conf with sideways = param = "on" || param = "On" }
-  | "Split" -> { conf with split = int_of_string param }
+  | "Sideways" ->
+      {
+        conf with
+        sideways = param = "on" || param = "On";
+        textwidth = textwidth_default;
+        textheight = textheight_default;
+      }
+  | "Split" ->
+      let _off, value = get_int_value line param 0 in
+      { conf with split = value }
   | "SubSection" ->
       out "subsection" param;
       incr subsection;
@@ -1170,21 +1201,23 @@ let one_command conf och line =
       image_nbr := if conf.imagelabels > 4 then 0 else !image_nbr;
       current_level := 4;
       conf
-  | "TextHeight" -> { conf with textheight = Float.of_string param }
-  | "TextWidth" -> { conf with textwidth = Float.of_string param }
-  | "TreeMode" -> { conf with treemode = int_of_string param }
+  | "TextHeight" ->
+      let _off, value = get_float_value line param textheight_default in
+      { conf with textheight = value }
+  | "TextWidth" ->
+      let _off, value = get_float_value line param textwidth_default in
+      { conf with textwidth = value }
+  | "TreeMode" ->
+      let _off, value = get_int_value line param 0 in
+      { conf with treemode = value }
   | "TwoPages" -> { conf with twopages = param = "on" || param = "On" }
   | "Unit" -> { conf with unit = param }
   | "Version" ->
       output_string och (Sutil.version ^ "\n");
       conf
   | "VignWidth" ->
-      {
-        conf with
-        vignwidth =
-          (if param = "off" || param = "Off" then 1.0
-          else Float.of_string param);
-      }
+      let _off, value = get_float_value line param vignwidth_default in
+      { conf with vignwidth = value }
   | "WideImages" ->
       {
         conf with
@@ -1193,8 +1226,12 @@ let one_command conf och line =
           else imgwidth_default);
         wide = param = "on" || param = "On";
       }
-  | "Hoffset" -> { conf with offset = true; hoffset = Float.of_string param }
-  | "Voffset" -> { conf with offset = true; voffset = Float.of_string param }
+  | "Hoffset" ->
+      let off, value = get_float_value line param vignwidth_default in
+      { conf with offset = off; hoffset = value }
+  | "Voffset" ->
+      let off, value = get_float_value line param vignwidth_default in
+      { conf with offset = off; voffset = value }
   | _ ->
       output_string och (Format.sprintf "%%%s%s\n" cmd remain);
       conf

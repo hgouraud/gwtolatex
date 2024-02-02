@@ -107,18 +107,14 @@ let print_tree (conf : Config.config) tree =
 
     let offset_b =
       if conf.hoffset <> 0. then
-        Format.sprintf "\\hspace{%1.2f%s}\n" conf.hoffset conf.unit
+        Format.sprintf "\\hspace*{%1.2f%s}\n" conf.hoffset conf.unit
       else ""
     in
-    let offset_e =
-      if conf.hoffset <> 0. then
-        Format.sprintf "\\hspace{-%1.2f%s}\n" conf.hoffset conf.unit
-      else ""
-    in
+    let offset_e = "" in
     let tabular_b =
       Format.sprintf
         "%s\\nohyphens\\newcolumntype{P}[1]{>{\\centering\\arraybackslash}p{#1}}\n\
-         \\renewcommand*{\\arraystretch}{0}\\renewcommand*{\\tabcolsep}{%1.2f%s}%s\\begin{tabular}{%s}\n"
+         \\renewcommand*{\\arraystretch}{0.1}\\renewcommand*{\\tabcolsep}{%1.2f%s}%s\\begin{tabular}{%s}\n"
         (if conf.sideways then "\\begin{sideways}" else "")
         conf.colsep conf.unit offset_b tabular_env
     in
