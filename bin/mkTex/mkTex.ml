@@ -4,7 +4,7 @@ open Config
 
 type name = string * string
 
-(* TODO suppress (pages liées) and (modifier) in m=NOTES *)
+(* TODO suppress (pages li√©es) and (modifier) in m=NOTES *)
 (* TODO suppress "base chausey ..." *)
 
 let new_tree = ref [ [] ]
@@ -470,7 +470,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
   (* for more complex SRC files, see later!! *)
   (*
   <!-- mapped image -->
-  <h1>La Grande Île</h1>
+  <h1>La Grande √éle</h1>
   <img SRC="%sm=IM;s=grande-ile-aerien.jpg" border="0" usemap="#Grande-Ile-Aerien">
   <map name="Grande-Ile-Aerien">
   *)
@@ -515,12 +515,12 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
   (*
   <a href="%sm=SRC;v=grande-ile-aerien">
   permet de localiser presque toutes les maisons.<br>
-  Pour plus de détails, voir les plans cadastraux
+  Pour plus de d√©tails, voir les plans cadastraux
   (<a href="%sm=SRC;v=plan-pointe-du-phare">Le Phare</a> et
   <a href="%sm=SRC;v=plan-blainvillais">Blainvillais</a>) ou la
-  <a href="%sm=SRC;v=grande-ile">carte de l’île</a>.
-  <a mode="wide" caption="Légende de l'image"
-     href="%sm=SRC;v=grande-ile">carte de l’île</a>.
+  <a href="%sm=SRC;v=grande-ile">carte de l‚Äô√Æle</a>.
+  <a mode="wide" caption="L√©gende de l'image"
+     href="%sm=SRC;v=grande-ile">carte de l‚Äô√Æle</a>.
   *)
   let tag_a _name attributes children =
     (* if p <> "" or n <> "" we have a person *)
@@ -650,9 +650,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         | "h3" ->
             let content = get_child children in
             (* TODO parametrer ce comportement *)
-            (* TODO revoir comportement côté LaTeX *)
+            (* TODO revoir comportement c√¥t√© LaTeX *)
             (* TODO this is language dependant !! *)
-            (* généraliser aux autres <hn>  </hn> *)
+            (* g√©n√©raliser aux autres <hn>  </hn> *)
             let str =
               if Sutil.contains content "Bateaux" then
                 "\n\\par\\hgbato{Bateaux}"
@@ -904,6 +904,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
   in
   cumul ^ element
 
+let guillemets_latex content =
+  Str.global_replace (Str.regexp {|¬´ |}) "¬´\\," content
+  |> Str.global_replace (Str.regexp {| ¬ª|}) "\\,¬ª"
+
 let process_html conf base och body =
   let open Markup in
   let tree =
@@ -918,7 +922,8 @@ let process_html conf base och body =
     | Some tree -> process_tree_cumul conf base och "" tree (0, 0)
     | _ -> "bad tree"
   in
-  output_string och content
+  let content = guillemets_latex content in
+  output_string och ("aa" ^ content ^ "bb")
 
 let bad_code c = c >= 400
 
@@ -1300,6 +1305,8 @@ let print_images conf och images_list =
             | Some id -> id
             | None -> ""
           in
+
+          (*if image_id = "" then Printf.eprintf "Name1: (%s)\n" name1;*)
           let img_number =
             match conf.imagelabels with
             | 1 -> Format.sprintf "\n\\hglabxsa{%d}{%d}{%d}" ch sec nbr
@@ -1309,10 +1316,10 @@ let print_images conf och images_list =
           in
           let img_label =
             if image_id <> "" then Format.sprintf "\\label{img_ref_%s}" image_id
-            else "img id absent"
+            else ""
           in
           (* list of persons present on this image *)
-          (* TODO les personnes /z ont été éliminées!! *)
+          (* TODO les personnes /z ont √©t√© √©limin√©es!! *)
           let index_list =
             match Hashtbl.find_opt !dict1 image_id with
             | Some (anx_page, _desc, _fname, key_l) when image_id <> "" ->

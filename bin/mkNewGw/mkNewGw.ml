@@ -258,7 +258,7 @@ let print_img_list oc images_l dict1 =
     List.fold_left
       (fun acc image_id ->
         let anx_page, desc, _fname, _index_l = Hashtbl.find dict1 image_id in
-        Format.sprintf {|"%s" (%s)|} desc
+        Format.sprintf {|« %s » (%s)|} desc
           (if anx_page <> "0" then Format.sprintf "page %s en annexe" anx_page
           else
             Format.sprintf "\\ref[img_ref_%s] page \\pageref[img_ref_%s]"

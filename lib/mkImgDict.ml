@@ -242,4 +242,9 @@ let create_images_dicts img_file =
       (fun (_name1, id1) (_name2, id2) -> int_of_string id1 - int_of_string id2)
       img_name_l
   in
+  (*
+  List.iter
+    (fun (name, id) -> Printf.eprintf "Id: %s, name: (%s)\n" id name)
+    img_name_l;
+  *)
   (!dict1, dict2, img_name_l)
