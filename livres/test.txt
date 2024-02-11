@@ -98,7 +98,7 @@ Le fiche de Maurice n'est pas disponible (pour démonstration)!!
 \newpage
 {\huge {\bf Notes}}
 \par
-Run mkBook du : {\ddmmyyyydate\today} at \currenttime
+Run mkBook du : \today{} à \DTMcurrenttime{}
 <x GeneWebCommit on>
 \par
 GwTo\LaTeX{} version :
