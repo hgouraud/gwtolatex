@@ -102,13 +102,13 @@ Install and test
 Make distrib will create a folder "gw2l_dist" containing the necessary components.
 Copy or move this folder into your bases folder.
 Create a folder "livres" containing the main family description file "Family.txt",
-and a folder Family-inputs containng
+and a folder Family-inputs containg
 possible supplemental files associated to <x Input file> commands that
 may appear in Family.txt.
 In those files, the macro %%%LIVRES%%% will be replaced by the value of
-the -livres start parameter, and %%%BASE%%% by the valur of the -base parameter.
+the -livres start parameter, and %%%BASE%%% by the value of the -base parameter.
 
-- in your "bases" folder, run
+- cd to your "bases" folder, and run
 ./gw2l_dist/mkBook -base "Base" -livres "livres" -family "Family"
 
 One of the first steps of mkBook is to create a new copy of the base with

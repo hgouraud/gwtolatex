@@ -9,6 +9,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{ae,lmodern} % ou seulement l'un, ou l'autre, ou times etc.
+\usepackage[useregional,showdow]{datetime2}
 %\usepackage[pdftex, final]{graphicx}
 \usepackage{makeidx}
 \usepackage[figuresright]{rotating}
@@ -17,7 +18,6 @@
 \usepackage{url}
 \usepackage{amssymb}
 \usepackage{tabularx}
-\usepackage{rotating}
 \usepackage{calc}
 \usepackage{fp}
 \usepackage{adjustbox}
@@ -85,7 +85,7 @@
 \newcommand{\hgindex}[1]{({\it #1}\index{#1})}
 
 \newcommand{\base}{base}
-\newcommand{\apercu}{aperÁu}
+\newcommand{\apercu}{aperçu}
 \newcommand{\gwd}{{\bf Gwd}}
 \newcommand{\serveur}{serveur}
 \newcommand{\navigateur}{navigateur}
@@ -205,7 +205,7 @@
     \setlength{\topsep}{\parskip}
     \setlength{\itemsep}{\parskip}
     \setlength{\parsep}{\parskip}
-	%+ \setlength{\labelwidth}{0bp}
+    %+ \setlength{\labelwidth}{0bp}
     %+ \setlength{\leftmargin}{0.1\linewidth}
     %+ \setlength{\itemindent}{0bp}
     }
@@ -221,7 +221,7 @@
     \setlength{\topsep}{\parskip}
     \setlength{\itemsep}{\parskip}
     \setlength{\parsep}{\parskip}
-	%+ \setlength{\labelwidth}{0bp}
+    %+ \setlength{\labelwidth}{0bp}
     \newcounter{item}
     \setcounter{item}{1}
     }

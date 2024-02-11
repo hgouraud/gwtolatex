@@ -3,7 +3,14 @@
 
 let version =
   let ic =
-    open_in (String.concat Filename.dir_sep [ "."; "gw2l_dist"; "version.txt" ])
+    try
+      open_in
+        (String.concat Filename.dir_sep [ "."; "gw2l_dist"; "version.txt" ])
+    with Sys_error _ ->
+      Printf.eprintf
+        {|You are not in the right directory.
+You should be in the bases directory and should execute ./gwd2l_dist/mkBook [params]|};
+      exit 1
   in
   input_line ic
 
