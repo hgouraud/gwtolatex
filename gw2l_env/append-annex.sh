@@ -10,7 +10,7 @@ if [ -f cpdf ]; then
   {
     echo "appending $FAMILY-inputs/Annexes.pdf"
     cd tmp
-    LINE=`grep "Output written on ./tmp/$FAMILY.pdf" $FAMILY.log`
+    LINE=`grep "Output written on " $FAMILY.log`
     export PAGES=`echo $LINE | sed 's/[^0-9]*\([0-9]\+\).*/\1/'`
     export ODDEVEN=`expr $PAGES % 2`
     if test $ODDEVEN -eq 1
