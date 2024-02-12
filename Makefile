@@ -62,6 +62,8 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	echo ", commit: " >> ./tmp
 	echo $(COMMIT_ID) >> ./tmp
 	cp ./tmp $(DISTRIB_DIR)/version.txt
+	cp ./livres/test.pdf $(DISTRIB_DIR)/Gw2L-user-manuel.pdf
+	cp ./livres/test.txt $(DISTRIB_DIR)/template.txt
 	$(RM) ./tmp
 
 install: distrib

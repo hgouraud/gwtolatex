@@ -143,10 +143,9 @@ let main () =
   flush stderr;
 
   if !verbose then Printf.eprintf "Create temp dir\n";
-  let tmp = String.concat Filename.dir_sep [ "."; "tmp" ] in
-  (if not (Sys.file_exists tmp) then
+  (if not (Sys.file_exists "tmp") then
    try
-     let _ = Sys.command (Format.sprintf "mkdir %s" tmp) in
+     let _ = Sys.command (Format.sprintf "mkdir tmp") in
      ()
    with Sys_error _ -> Printf.eprintf "Failed to create tmp dir\n");
   flush stderr;
@@ -193,7 +192,7 @@ let main () =
     (* Create base.gw file *)
     if !verbose then Printf.eprintf "Create %s.gw file\n" !base;
     let gwu = Filename.concat !gw_dir "gwu" in
-    let out = Filename.concat "." !base ^ ".gw" in
+    let out = Filename.concat !bases !base ^ ".gw" in
     let make_gw_file = Format.sprintf "%s -o %s %s" gwu out !base in
     if !verbose then Printf.eprintf "Commd: %s\n" make_gw_file;
     flush stderr;
@@ -219,8 +218,8 @@ let main () =
     if !verbose then Printf.eprintf "Make new base: %s-new.gw\n" !base;
     flush stderr;
     let gwc = Filename.concat !gw_dir "gwc" in
-    let in_file = String.concat Filename.dir_sep [ "."; base_new ^ ".gw" ] in
-    let log_file = String.concat Filename.dir_sep [ "."; "tmp"; "gwc.log" ] in
+    let in_file = String.concat Filename.dir_sep [ !bases; base_new ^ ".gw" ] in
+    let log_file = String.concat Filename.dir_sep [ "tmp"; "gwc.log" ] in
     let make_new_base =
       Format.sprintf "%s -f -o %s %s > %s" gwc base_new in_file log_file
     in
@@ -236,7 +235,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
     flush stderr);
 
   (* run mkTex *)
-  (* output and aux files are in ./tmp  (mkdir ./tmp if needed) *)
+  (* output and aux files are in ./tmp *)
   if !verbose then Printf.eprintf "Run MkTeX\n";
   flush stderr;
   let mkTex_exe = Filename.concat !gw2l_dir "mkTex" in
@@ -246,9 +245,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
       ("-base " ^ !base ^ if who then "-new" else "")
       gw2l_options
   in
-  let out_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".tex" ]
-  in
+  let out_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".tex" ] in
   let make_tex_file =
     Format.sprintf "%s -o %s %s" mkTex_exe out_file gw2l_options
   in
@@ -262,16 +259,13 @@ Inspect %s/tmp/gwc.log for possible errors.|}
 
   (* run pdflatex *)
   if !verbose then Printf.eprintf "Run pdflatex\n";
-  let aux_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".aux" ]
-  in
+  let aux_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".aux" ] in
   let do_rm_aux = Printf.sprintf "rm %s" aux_file in
   let _ = Sys.command do_rm_aux in
   let mode = if !verbose then "" else "-interaction=batchmode" in
   let make_pdf_file =
-    Printf.sprintf "pdflatex -output-directory=%s %s %s"
-      (String.concat Filename.dir_sep [ "."; "tmp" ])
-      mode (!family ^ ".tex")
+    Printf.sprintf "pdflatex -output-directory=%s %s %s" "tmp" mode
+      (!family ^ ".tex")
   in
   if !verbose then Printf.eprintf "Commd: %s\n" make_pdf_file;
   flush stderr;
@@ -285,9 +279,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
 
   (* run makeindex *)
   if !verbose then Printf.eprintf "Run makeindex\n";
-  let idx_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".idx" ]
-  in
+  let idx_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".idx" ] in
   (* makeindex does not like absolute paths! *)
   let make_index = Printf.sprintf "makeindex %s" idx_file in
   if !verbose then Printf.eprintf "Commd: %s\n" make_index;
@@ -342,9 +334,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
 
   (* move pdf to livres *)
   if !verbose then Printf.eprintf "Move .pdf file to Livres\n";
-  let pdf_file =
-    String.concat Filename.dir_sep [ "."; "tmp"; !family ^ ".pdf" ]
-  in
+  let pdf_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".pdf" ] in
   let final_pdf_file =
     String.concat Filename.dir_sep [ !livres; !family ^ ".pdf" ]
   in
