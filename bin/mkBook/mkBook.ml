@@ -2,7 +2,7 @@
 open Gwtolatex
 
 (* execution context *)
-let dist_dir = ref "./gw2l_dist"
+let dist_dir = ref "gw2l_dist"
 let base = ref ""
 let passwd = ref ""
 let family = ref ""
@@ -17,8 +17,8 @@ let verbose = ref false
 (* Assumes we are running in bases folder because of GeneWeb security constraint *)
 let livres = ref "../livres"
 let bases = ref "."
-let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
-let gw2l_dir = ref "./gw2l_dist"
+let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "")
+let gw2l_dir = ref "gw2l_dist"
 let test = ref false
 let test_nb = ref 0
 
