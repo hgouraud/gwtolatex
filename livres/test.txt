@@ -104,7 +104,7 @@ Run mkBook du : \today{} à \DTMcurrenttime{}
 GwTo\LaTeX{} version :
 <x Input ./gw2l_dist/version.txt>
 \par
-<y \hgbaseversion{}
+<x BaseVersion on>
 \par
 \pdftexbanner{}
 % Additionnal Notes page

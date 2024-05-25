@@ -998,6 +998,30 @@ let one_command conf och line =
           portraitwidth = portraitwidth_default;
           arbres;
         }
+  | "BaseVersion" ->
+      let bname =
+        if String.sub !basename (String.length !basename - 4) 4 = "-new" then
+          String.sub !basename 0 (String.length !basename - 4)
+        else !basename
+      in
+      let bdir = Filename.concat !bases (bname ^ ".gwb") in
+      (* Fonction pour convertir le temps en un format lisible *)
+      let format_time time =
+        let tm = Unix.localtime time in
+        Printf.sprintf "%04d-%02d-%02d à %02dh%02d" (tm.tm_year + 1900)
+          (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
+      in
+      (try
+         let stats = Unix.stat bdir in
+         let access_time = stats.st_atime in
+         output_string och
+           (Format.sprintf
+              "Le dernier accès à la base \\textbf{%s} a eu lieu le: %s" bname
+              (format_time access_time))
+       with Unix.Unix_error (err, _, _) ->
+         output_string och
+           (Format.sprintf "Erreur: %s\n" (Unix.error_message err)));
+      conf
   (* TODO recode using make_conf *)
   | "Chapter" ->
       out "chapter" param;
@@ -1078,14 +1102,14 @@ let one_command conf och line =
       output_string och
         (Format.sprintf
            {|
-GeneWeb data:
-\begin{description}
-\item [branch] %s
-\item [src] %s
-\item [commit id] %s
-\item [commit date] %s
-\item [compil date] %s
-\end{description}
+\textbf{GeneWeb} data:
+\begin{itemize}
+\item branch: %s
+\item src: %s
+\item commit id: %s
+\item commit date: %s
+\item compil date: %s
+\end{itemize}
 |}
            branch src commit_id commit_date compil_date);
       conf
@@ -1252,7 +1276,7 @@ GeneWeb data:
       let off, value = get_float_value line param vignwidth_default in
       { conf with offset = off; voffset = value }
   | _ ->
-      output_string och (Format.sprintf "%%%s%s\n" cmd remain);
+      output_string och (Format.sprintf "%s%s ???\n" cmd remain);
       conf
 
 let one_http_call conf base och line =
