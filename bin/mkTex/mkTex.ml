@@ -21,6 +21,8 @@ let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
 let passwd = ref ""
 let out_file = ref ""
 let dev = ref false
+let dry_run = ref false
+let gwtest = ref false
 let second = ref false
 let index = ref 0
 let dict1 = ref (Hashtbl.create 100)
@@ -1064,16 +1066,28 @@ let one_command conf och line =
         String.concat Filename.dir_sep [ !gw_dir; "etc"; "version.txt" ]
       in
       let ic = open_in file in
-      let line = really_input_string ic (in_channel_length ic) in
-      let i =
-        try String.rindex_from line (String.length line - 6) '>'
-        with Not_found -> -1
+      let branch = List.nth (input_line ic |> String.split_on_char ' ') 3 in
+      let src = List.nth (input_line ic |> String.split_on_char ' ') 3 in
+      let commit_id = List.nth (input_line ic |> String.split_on_char ' ') 3 in
+      let commit_date =
+        List.nth (input_line ic |> String.split_on_char ' ') 3
       in
-      if i > 0 && String.length line - i - 7 >= 0 then
-        output_string och
-          ("\\par\nGeneWeb version : "
-          ^ String.sub line (i + 1) (String.length line - i - 7))
-      else output_string och "GeneWeb version not found\n";
+      let compil_date =
+        List.nth (input_line ic |> String.split_on_char ' ') 3
+      in
+      output_string och
+        (Format.sprintf
+           {|
+GeneWeb data:
+\begin{description}
+\item [branch] %s
+\item [src] %s
+\item [commit id] %s
+\item [commit date] %s
+\item [compil date] %s
+\end{description}
+|}
+           branch src commit_id commit_date compil_date);
       conf
   | "HighLight" ->
       {
@@ -1270,12 +1284,12 @@ let one_http_call conf base och line =
       | Ok { Ezcurl.code; body; _ } ->
           if bad_code code then (
             Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
-            output_string och
-              (Format.sprintf "Bad code when fetching %s: %d!\n"
-                 (Lutil.escape url) code))
-          else
-            let _ = process_html conf base och body in
-            ()
+            if not !gwtest then
+              output_string och
+                (Format.sprintf "Bad code when fetching %s: %d!\n"
+                   (Lutil.escape url) code))
+          else if not (!dry_run || !gwtest) then process_html conf base och body
+          else ()
       | Error (_, msg) ->
           Printf.eprintf "error when fetching %s\n %s\n%!" url
             (Lutil.escape msg);
@@ -1352,72 +1366,76 @@ let print_images conf och images_list =
 
 let process_one_line conf base _dict1 _dict2 och line =
   (*Printf.eprintf "process_one_line: %s, base: %s\n" line conf.basename;*)
-  let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
-  let line = Sutil.replace_str "%%%BASE%%%" conf.basename line in
-  let line = Sutil.replace_str "%%%PASSWD%%%" conf.passwd line in
-  let conf =
-    match line.[0] with
-    | '<' -> (
-        match line.[1] with
-        | 'a' | 'b' ->
-            let content = get_a_content line in
-            let href = Hutil.get_href line in
-            let href_attrl = Hutil.split_href href in
-            let i = Hutil.get_href_attr "i" href_attrl in
-            let p = Hutil.get_href_attr "p" href_attrl in
-            let n = Hutil.get_href_attr "n" href_attrl in
-            let oc = Hutil.get_href_attr "oc" href_attrl in
-            (* get_real_person builds \index if any *)
-            let _fn, _sn, _ocn, _sp, _index_s =
-              Hutil.get_real_person base i p n oc content
-            in
-            let sec =
-              (* -> chapter, 1-> section, ... *)
-              match !current_level with
-              | 0 -> ""
-              | 1 ->
-                  incr section;
-                  ""
-              | 2 ->
-                  incr subsection;
-                  "sub"
-              | 3 ->
-                  incr subsubsection;
-                  "subsub"
-              | _ -> "subsubsub"
-            in
-            (* TODO review numbering and reset to 0 *)
-            image_nbr :=
-              if conf.imagelabels > !current_level + 1 then 0 else !image_nbr;
-            image_nbr := if conf.imagelabels = 4 then 0 else !image_nbr;
-            let index =
-              if Sutil.contains line "\\index" then "" (* index manually done *)
-              else Format.sprintf "\\index{%s}" content (* automatic index *)
-            in
-            if line.[1] = 'a' then
-              output_string och
-                (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
+  if line <> "" then
+    let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
+    let line = Sutil.replace_str "%%%BASE%%%" conf.basename line in
+    let line = Sutil.replace_str "%%%PASSWD%%%" conf.passwd line in
+    let conf =
+      match line.[0] with
+      | '<' -> (
+          match line.[1] with
+          | 'a' | 'b' ->
+              let content = get_a_content line in
+              let href = Hutil.get_href line in
+              let href_attrl = Hutil.split_href href in
+              let i = Hutil.get_href_attr "i" href_attrl in
+              let p = Hutil.get_href_attr "p" href_attrl in
+              let n = Hutil.get_href_attr "n" href_attrl in
+              let oc = Hutil.get_href_attr "oc" href_attrl in
+              (* get_real_person builds \index if any *)
+              let _fn, _sn, _ocn, _sp, _index_s =
+                Hutil.get_real_person base i p n oc content
+              in
+              let sec =
+                (* -> chapter, 1-> section, ... *)
+                match !current_level with
+                | 0 -> ""
+                | 1 ->
+                    incr section;
+                    ""
+                | 2 ->
+                    incr subsection;
+                    "sub"
+                | 3 ->
+                    incr subsubsection;
+                    "subsub"
+                | _ -> "subsubsub"
+              in
+              (* TODO review numbering and reset to 0 *)
+              image_nbr :=
+                if conf.imagelabels > !current_level + 1 then 0 else !image_nbr;
+              image_nbr := if conf.imagelabels = 4 then 0 else !image_nbr;
+              let index =
+                if Sutil.contains line "\\index" then ""
+                  (* index manually done *)
+                else Format.sprintf "\\index{%s}" content (* automatic index *)
+              in
+              if line.[1] = 'a' && not !gwtest then
+                output_string och
+                  (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
 
-            one_http_call conf base och line;
+              one_http_call conf base och line;
 
-            if conf.collectimages && !images_in_page <> [] then
-              print_images conf och !images_in_page;
-            images_in_page := [];
-            if conf.hrule then
-              output_string och (Format.sprintf "\\par\\vspace{0.5cm}\\hrule\n");
-            conf
-        | 'x' -> one_command conf och line
-        | 'y' ->
-            output_string och "";
-            conf
-        | _ ->
-            output_string och (line ^ "\n");
-            conf)
-    | _ ->
-        output_string och (line ^ "\n");
-        conf
-  in
-  conf
+              if conf.collectimages && !images_in_page <> [] then
+                print_images conf och !images_in_page;
+              images_in_page := [];
+              if conf.hrule && not !gwtest then
+                output_string och
+                  (Format.sprintf "\\par\\vspace{0.5cm}\\hrule\n");
+              conf
+          | 'x' -> one_command conf och line
+          | 'y' ->
+              if not !gwtest then output_string och "";
+              conf
+          | _ ->
+              if not !gwtest then output_string och (line ^ "\n");
+              conf)
+      | _ ->
+          if not !gwtest then output_string och (line ^ "\n");
+          conf
+    in
+    conf
+  else conf
 
 (* current version reads family.txt and runs pdflatex and makeindex *)
 (* in a short future makeBook will handle the whole process including  *)
@@ -1446,6 +1464,8 @@ let main () =
         " Number of times makeindex is done." );
       ("-second", Arg.Set second, " Run Pdflatex a second time.");
       ("-dev", Arg.Set dev, " Run in the GitHub repo.");
+      ("-dry_run", Arg.Set dry_run, " Don't process output.");
+      ("-gwtest", Arg.Set gwtest, " GeneWeb test mode.");
       ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
       ("-treemode", Arg.Int (fun x -> treemode := x), " Print tree mode.");
       ( "-pass",
@@ -1478,10 +1498,11 @@ let main () =
 
   (* build images dictionnaries *)
   if !verbose then Printf.printf "Build images dicts\n";
-  let dict1_t, dict2_t, img_name_l = MkImgDict.create_images_dicts img_file in
-  dict1 := dict1_t;
-  dict2 := dict2_t;
-  img_name_list := img_name_l;
+  if not !gwtest then (
+    let dict1_t, dict2_t, img_name_l = MkImgDict.create_images_dicts img_file in
+    dict1 := dict1_t;
+    dict2 := dict2_t;
+    img_name_list := img_name_l);
 
   let fname_txt, _family_out =
     ( (if !family <> "" then Filename.concat !livres (!family ^ ".txt")
@@ -1497,17 +1518,21 @@ let main () =
     else if Sys.file_exists fname_htm then ("html", fname_htm)
     else ("", fname_all)
   in
-
   (* TODO find a way to open base remotely *)
   let base = Hutil.open_base (Filename.concat "." !basename) in
 
-  let och = open_out fname_out in
+  let och = if !gwtest then Stdlib.stderr else open_out fname_out in
   let ic = open_in_bin fname_in in
   if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  Printf.eprintf
-    "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
-    Sutil.version conf.family conf.basename fname_out conf.debug;
+  if !gwtest then
+    Printf.eprintf
+      "This is \027[32mmkTeX\027[0m version %s running GW-test on base %s\n"
+      Sutil.version conf.basename
+  else
+    Printf.eprintf
+      "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
+      Sutil.version conf.family conf.basename fname_out conf.debug;
   flush stderr;
 
   let tmp = ref conf in
