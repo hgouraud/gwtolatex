@@ -164,12 +164,12 @@ let read_notes ic =
         | l -> l ^ "\n" ^ loop (input_a_line ic)
       in
       loop (input_a_line ic)
-    with End_of_file -> failwith "end of file"
+    with End_of_file -> failwith "end of file, read_notes"
   in
   strip_all_trailing_spaces notes
 
 let get_name str l =
-  match l with surname :: l -> (surname, l) | _ -> failwith str
+  match l with surname :: l -> (surname, l) | _ -> failwith (str ^ " get_name")
 
 let get_fst_name str l =
   match l with
@@ -192,15 +192,15 @@ let get_fst_name str l =
             | None -> (x, 0)
           in
           (x, occ, l')
-      | _ -> failwith str)
-  | _ -> failwith str
+      | _ -> failwith (str ^ "get_fst_name 1"))
+  | _ -> failwith (str ^ "get_fst_name 2")
 
 let read_family ic = function
   (* Notes block *)
   | Some (str, "notes" :: l) -> (
       let surname, l = get_name str l in
       let first_name, occ, l = get_fst_name str l in
-      if l <> [] then failwith "str"
+      if l <> [] then failwith (str ^ "read_family 1")
       else
         match read_line ic with
         | Some (_, [ "beg" ]) ->
@@ -209,8 +209,8 @@ let read_family ic = function
               { pk_first_name = first_name; pk_surname = surname; pk_occ = occ }
             in
             F_notes (key, notes)
-        | Some (str, _) -> failwith str
-        | None -> failwith "end of file")
+        | Some (str, _) -> failwith (str ^ " read_family 2")
+        | None -> failwith "end of file, read_family")
   | Some (str, line) -> F_other (str, line)
   (* End of the file *)
   | None -> F_none

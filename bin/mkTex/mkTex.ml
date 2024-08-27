@@ -192,10 +192,13 @@ let print_conf conf =
   Format.sprintf "\\begin{verbatim}\n%s\\end{verbatim}"
     (String.concat "" config_str)
 
-let _strip_nl s =
+let strip_nl s =
   let b = Buffer.create 10 in
   String.iter
-    (fun c -> if c = '\n' then Buffer.add_char b ' ' else Buffer.add_char b c)
+    (fun c ->
+      match c with
+      | '\n' | '\r' -> Buffer.add_char b ' '
+      | _ -> Buffer.add_char b c)
     s;
   Buffer.contents b
 
@@ -510,7 +513,8 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             if s <> "" then
               (* TODO see if wide/caption can be used here *)
               make_image_str s k content "" ""
-              ^ "\\footnote{Image cliquable sur la version Internet}"
+              ^ "\\footnote{Image (peut être) cliquable sur la version \
+                 Internet}"
             else Format.sprintf "Funny SRC content %s" href
   in
 
@@ -925,7 +929,7 @@ let process_html conf base och body =
     | _ -> "bad tree"
   in
   let content = guillemets_latex content in
-  output_string och ("aa" ^ content ^ "bb")
+  output_string och content
 
 let bad_code c = c >= 400
 
@@ -1086,19 +1090,11 @@ let one_command conf och line =
           (if param = "off" || param = "Off" || param = "" then "" else param);
       }
   | "GeneWebCommit" ->
-      let file =
-        String.concat Filename.dir_sep [ !gw_dir; "etc"; "version.txt" ]
-      in
-      let ic = open_in file in
-      let branch = List.nth (input_line ic |> String.split_on_char ' ') 3 in
-      let src = List.nth (input_line ic |> String.split_on_char ' ') 3 in
-      let commit_id = List.nth (input_line ic |> String.split_on_char ' ') 3 in
-      let commit_date =
-        List.nth (input_line ic |> String.split_on_char ' ') 3
-      in
-      let compil_date =
-        List.nth (input_line ic |> String.split_on_char ' ') 3
-      in
+      let branch = Gwversion.branch in
+      let src = Gwversion.src in
+      let commit_id = Gwversion.commit_id in
+      let commit_date = Gwversion.commit_date in
+      let compil_date = Gwversion.compil_date in
       output_string och
         (Format.sprintf
            {|
@@ -1521,7 +1517,8 @@ let main () =
   in
 
   (* build images dictionnaries *)
-  if !verbose then Printf.printf "Build images dicts\n";
+  if !verbose then Printf.eprintf "Build images dicts\n";
+  flush stderr;
   if not !gwtest then (
     let dict1_t, dict2_t, img_name_l = MkImgDict.create_images_dicts img_file in
     dict1 := dict1_t;
@@ -1573,7 +1570,8 @@ let main () =
       tmp := conf;
       try
         while true do
-          let line = input_line ic in
+          let line = input_line ic |> strip_nl in
+          flush stderr;
           tmp := process_one_line !tmp base dict1 dict2 och line
         done
       with End_of_file ->
