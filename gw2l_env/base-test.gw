@@ -65,15 +65,21 @@ beg
 - h Sébastien 0
 end
 
+notes Durand Marie
+beg
+Une 
+<a href="%sm=IM;s=image-test-2.jpg">photo</a> avec son fils [[Léon/Dupont/Léon]].
+end notes
+
 notes Dupont Léon
 beg
 Note sur la vie de léon.
 
 Sur cette <a href="%sm=IM;s=image-test-1.jpg">photo-1</a>, en compagine de
-[[Geoages/Dupont/Georges]] et [[Lucien/Dupont/Lucien]].
+[[Georges/Dupont/Georges]] et [[Lucien/Dupont/Lucien]].
 
 Une autre
-<a href="%sm=IM;s=image-test-2.jpg"><img src="%sm=IM;s=image-test-2-vignette.jpg"></a> avec sa mère [[Marie/Durand]]
+<a href="%sm=IM;s=image-test-2.jpg"><img src="%sm=IM;s=image-test-2-vignette.jpg" width="40pt"></a> avec sa mère [[Marie/Durand]]
 
 Une troisième
 <a href="%sm=IM;s=image-test-3.jpg">photo</a> (souvenir de Tahiti)

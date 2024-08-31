@@ -257,12 +257,25 @@ let print_img_list oc images_l dict1 =
   let img_l =
     List.fold_left
       (fun acc image_id ->
-        let anx_page, desc, _fname, _index_l = Hashtbl.find dict1 image_id in
+        let anx_page, desc, _fname, _key_l, _key_l_2, image_occ =
+          Hashtbl.find dict1 image_id
+        in
+        Printf.eprintf "Print_img_list: %s, %d\n" desc image_occ;
         Format.sprintf {|« %s » (%s)|} desc
           (if anx_page <> "0" then Format.sprintf "page %s en annexe" anx_page
           else
-            Format.sprintf "\\ref[img_ref_%s] page \\pageref[img_ref_%s]"
-              image_id image_id)
+            let rec loop acc1 n =
+              if n > image_occ then acc1
+              else
+                loop
+                  (acc1
+                  ^ Format.sprintf
+                      "\\ref[img_ref_%s.%d].%d page \\pageref[img_ref_%s.%d]"
+                      image_id n n image_id n
+                  ^ if n < image_occ then ", " else "")
+                  (n + 1)
+            in
+            loop "" image_occ)
         :: acc)
       [] images_l
   in
@@ -384,9 +397,10 @@ let main () =
     String.concat Filename.dir_sep
       [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
   in
+  let fname_all = Filename.concat !livres (!family ^ ".txt") in
 
   (* build images dictionnaries *)
-  let dict1, dict2, _dict3 = MkImgDict.create_images_dicts img_file in
+  let dict1, dict2, _dict3 = MkImgDict.create_images_dicts img_file fname_all in
   (* Printf.eprintf "Done creating images dictionaries (%d images, %d persons)\n"
       (Hashtbl.length dict1) (Hashtbl.length dict2) ;*)
   comp_families ic oc in_file out_file dict1 dict2;

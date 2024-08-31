@@ -190,7 +190,7 @@ let process dict1 ic line =
           in
           loop line []
         in
-        Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l)
+        Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], 0)
   with
   | Failure _ -> Printf.eprintf "Bad image definition %s\n" line
   | End_of_file -> ()
@@ -198,13 +198,44 @@ let process dict1 ic line =
 let print_key key =
   Printf.eprintf "(%s) (%s) (%d)\n" key.pk_surname key.pk_first_name key.pk_occ
 
-(** dict1 image_id, (annex_page, description, file_name, person_list)
+(** dict1 image_id, (annex_page, description, file_name, person_list, occ)
     dict2 person_key, images_id list
     dict3 file_name, image_id *)
-let create_images_dicts img_file =
+let create_images_dicts img_file fam_file =
   let dict1 = ref (Hashtbl.create 100) in
   let dict2 = Hashtbl.create 100 in
   let dict3 = Hashtbl.create 100 in
+
+  let ic = open_in fam_file in
+  let rec loop acc line =
+    match line with
+    | Some line ->
+        if Sutil.start_with "<a href" 0 line then
+          if Sutil.contains line "&p" && Sutil.contains line "&n" then
+            let parts1 = String.split_on_char '&' line in
+            let parts2 =
+              List.fold_left
+                (fun acc p ->
+                  let kv = String.split_on_char '=' p in
+                  if List.length kv = 2 then
+                    (List.nth kv 0, List.nth kv 1) :: acc
+                  else acc)
+                [] parts1
+            in
+            let fn = List.assoc "p" parts2 in
+            let sn = List.assoc "n" parts2 in
+            let oc = try List.assoc "oc" parts2 with Not_found -> "0" in
+            let (key : key) =
+              { pk_first_name = fn; pk_surname = sn; pk_occ = int_of_string oc }
+            in
+            loop (key :: acc) (Sutil.read_line ic)
+          else loop acc (Sutil.read_line ic)
+        else loop acc (Sutil.read_line ic)
+    | None ->
+        close_in ic;
+        acc
+  in
+  let list4 = loop [] (Sutil.read_line ic) in
 
   let ic = open_in img_file in
   let rec loop line =
@@ -216,9 +247,19 @@ let create_images_dicts img_file =
   in
   loop (Sutil.read_line ic);
 
+  Hashtbl.filter_map_inplace
+    (fun _image_id (anx_page, desc, fname, key_l, _key_l_2, occ) ->
+      let key_l_2 =
+        List.fold_left
+          (fun acc key -> if List.mem key list4 then key :: acc else acc)
+          [] key_l
+      in
+      Some (anx_page, desc, fname, key_l, key_l_2, occ))
+    !dict1;
+
   (* dict1 has been built, now we build the inverse indexes *)
   Hashtbl.iter
-    (fun image_id (_anx_page, _desc, fname, key_l) ->
+    (fun image_id (_anx_page, _desc, fname, key_l, _key_l_2, _occ) ->
       Hashtbl.add dict3 fname image_id;
       let rec loop key_l =
         match key_l with
@@ -233,18 +274,18 @@ let create_images_dicts img_file =
       in
       loop key_l)
     !dict1;
-  let img_name_l =
-    Hashtbl.fold (fun name id acc -> (name, id) :: acc) dict3 []
+  let img_fname_l =
+    Hashtbl.fold (fun fname id acc -> (fname, id) :: acc) dict3 []
   in
-  let img_name_l = List.sort_uniq compare img_name_l in
-  let img_name_l =
+  let img_fname_l =
     List.sort_uniq
-      (fun (_name1, id1) (_name2, id2) -> int_of_string id1 - int_of_string id2)
-      img_name_l
+      (fun (_fname1, id1) (_fname2, id2) ->
+        int_of_string id1 - int_of_string id2)
+      img_fname_l
   in
   (*
   List.iter
-    (fun (name, id) -> Printf.eprintf "Id: %s, name: (%s)\n" id name)
-    img_name_l;
+    (fun (fname, id) -> Printf.eprintf "Id: %s, fname: (%s)\n" id fname)
+    img_fname_l;
   *)
-  (!dict1, dict2, img_name_l)
+  (!dict1, dict2, img_fname_l)

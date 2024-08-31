@@ -359,13 +359,23 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
         | Some id -> id
         | None -> ""
       in
+      let anx_page, desc, fname, key_l, key_l_2, image_occ =
+        match Hashtbl.find_opt !dict1 image_id with
+        | Some (anx_page, desc, fname, key_l, key_l_2, image_occ) ->
+            (anx_page, desc, fname, key_l, key_l_2, image_occ)
+        | None ->
+            Printf.eprintf "Print image: %s non existant (2)!\n" image_id;
+            ("0", "dummy", "", [], [], 0)
+      in
+      Printf.eprintf "Print image: %s, occ: %d, %s\n" fname image_occ desc;
+
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\n"
         conf.imgwidth conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "src"; conf.basename; "images" ])
         Filename.dir_sep name
         (if image_id <> "" && false then
-         Format.sprintf "\\newcommand{ref_%s}{%d.%d.%d.%d}" image_id ch sec ssec
-           nb
+         Format.sprintf "\\newcommand{ref_%s.%d}{%d.%d.%d.%d}" image_id
+           image_occ ch sec ssec nb
         else "")
       (* TODO deal with !caption here, possibly \begin{image}...\end{image} *)
   | Vignette ->
@@ -742,7 +752,6 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                     if String.length content > 3 then
                       let content = Sutil.replace '[' '{' content in
                       let content = Sutil.replace ']' '}' content in
-                      (* TODO in includegraphics replace {width=xxyy} by [width=xxyy] *)
                       let reg1 = Str.regexp {|{width=\(.*\)}|} in
                       let content =
                         if Str.string_match reg1 content 0 then
@@ -1339,24 +1348,37 @@ let print_images conf och images_list =
             | Some id -> id
             | None -> ""
           in
-
+          let anx_page, desc, fname, key_l, key_l_2, image_occ =
+            match Hashtbl.find_opt !dict1 image_id with
+            | Some (anx_page, desc, fname, key_l, key_l_2, image_occ) ->
+                (anx_page, desc, fname, key_l, key_l_2, image_occ)
+            | None ->
+                Printf.eprintf "Image_id %s non existant!\n" image_id;
+                ("0", "dummy", "", [], [], 0)
+          in
+          Printf.eprintf "Print all images: %s, occ: %d, %s\n" fname
+            (image_occ + 1) desc;
+          Hashtbl.replace !dict1 image_id
+            (anx_page, desc, fname, key_l, key_l_2, image_occ + 1);
           (*if image_id = "" then Printf.eprintf "Name1: (%s)\n" name1;*)
           let img_number =
             match conf.imagelabels with
             | 1 -> Format.sprintf "\n\\hglabxsa{%d}{%d}{%d}" ch sec nbr
             | 3 -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
             | 4 -> Format.sprintf "\n\\hglabxb{%d}{%d}{%d}{%d}" ch sec ssec nbr
-            | _ -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}" ch sec nbr
+            | _ -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}{%d}" ch sec ssec nbr
           in
           let img_label =
-            if image_id <> "" then Format.sprintf "\\label{img_ref_%s}" image_id
+            if image_id <> "" then
+              Format.sprintf "\\label{img_ref_%s.%d}" image_id image_occ
             else ""
           in
           (* list of persons present on this image *)
           (* TODO les personnes /z ont été éliminées!! *)
           let index_list =
             match Hashtbl.find_opt !dict1 image_id with
-            | Some (anx_page, _desc, _fname, key_l) when image_id <> "" ->
+            | Some (anx_page, _desc, _fname, key_l, key_l_2, _occ)
+              when image_id <> "" ->
                 let index_l =
                   List.fold_left
                     (fun acc (key : MkImgDict.key) ->
@@ -1516,29 +1538,29 @@ let main () =
       [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
   in
 
+  let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
+  let fname_txt = Filename.concat !livres (!family ^ ".txt") in
+  let fname_out =
+    if !test_nb <> 0 then Printf.sprintf "gwtolatex-test%d" !test_nb
+    else !out_file
+  in
+  let mode, fname_in =
+    if Sys.file_exists fname_txt then ("txt", fname_txt)
+    else if Sys.file_exists fname_htm then ("html", fname_htm)
+    else ("", fname_txt)
+  in
+
   (* build images dictionnaries *)
   if !verbose then Printf.eprintf "Build images dicts\n";
   flush stderr;
   if not !gwtest then (
-    let dict1_t, dict2_t, img_name_l = MkImgDict.create_images_dicts img_file in
+    let dict1_t, dict2_t, img_name_l =
+      MkImgDict.create_images_dicts img_file fname_txt
+    in
     dict1 := dict1_t;
     dict2 := dict2_t;
     img_name_list := img_name_l);
 
-  let fname_txt, _family_out =
-    ( (if !family <> "" then Filename.concat !livres (!family ^ ".txt")
-      else Printf.sprintf "test/gwtolatex-test%d.txt" !test_nb),
-      if !family <> "" then !family
-      else Printf.sprintf "gwtolatex-test%d" !test_nb )
-  in
-  let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
-  let fname_all = Filename.concat !livres (!family ^ ".txt") in
-  let fname_out = !out_file in
-  let mode, fname_in =
-    if Sys.file_exists fname_txt then ("txt", fname_txt)
-    else if Sys.file_exists fname_htm then ("html", fname_htm)
-    else ("", fname_all)
-  in
   (* TODO find a way to open base remotely *)
   let base = Hutil.open_base (Filename.concat "." !basename) in
 
