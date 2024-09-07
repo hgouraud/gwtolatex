@@ -40,7 +40,7 @@ Version :
 <x HighLight Dupont, Léon>
 <x HighLight Dupont, Maurice>
 
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+françois;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Dupont</a>Dupont (Famille)
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=lucien;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Lucien Dupont</a>Dupont, Lucien (Famille)
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Léon Dupont</a>Dupont, Léon (Famille)
 <x Section Famille Maurice Dupont>
 \index{Famille Maurice Dupont}
@@ -57,9 +57,11 @@ Pourrait être le contenu d'une note.
 \section{Dupont, Maurice}
 Le fiche de Maurice n'est pas disponible (pour démonstration)!!
 <x Incr Section>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Léon\label{leondupont}</a>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Lucien\index{Dupont, Lucien dit Le Frère}\label{luciendupont}</a>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=georges;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Georges</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Léon\label{leondupont}</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=jean;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Jean</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=jacques;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Jacques</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=emile;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Emile</a>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?p=marie;n=durand;templ=tex;w=%%%PASSWD%%%">Durand, Marie</a>
 
 <x Chapter Pages liées et arbres généalogiques>
@@ -75,14 +77,13 @@ Le fiche de Maurice n'est pas disponible (pour démonstration)!!
 <x Hrule off>
 <x Unit cm>
 <x Arbres on>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=3;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=lucien;n=dupont;v=3;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Lucien Dupont</a>
 <x Split 1>
 <x TwoPages on>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon+francois;n=dupont;v=3;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Léon François Dupont (2 pages)</a>
+<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=Lucien;n=dupont;v=3;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Lucien (2 pages)</a>
 <x TwoPages off>
 <x LaTeX \newpage>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?m=A&p=alexandre&n=dupont&v=3&siblings=on&notes=on&t=T&after=&before=&dag=on&templ=tex&w=%%%PASSWD%%%">Arbre ascendant d'Alexandre Dupont</a>
-<x NewSection off>
 <x LaTeX \label{relation}>
 <x Sideways on>
 <a href="http://127.0.0.1:2317/%%%BASE%%%?em=R;ep=alexandre;en=dupont;m=NG;select=input;fn=;sn=;n=sebastien+durand;bd=0;color=;et=S;image=off;w=%%%PASSWD%%%;dag=on;templ=tex">Chemin entre Alexandre Dupont et Sébastien Durand</a>

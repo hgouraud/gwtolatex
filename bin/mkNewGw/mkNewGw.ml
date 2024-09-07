@@ -26,9 +26,11 @@ let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
 let family = ref ""
 let out_file = ref ""
 let debug = ref 0
+let pass = ref 0
 let dev = ref false
 let verbose = ref false
 let no_fail = ref false
+let dict4 = Hashtbl.create 100
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
 let livres = ref ""
@@ -60,7 +62,7 @@ let cut_space x =
     if start = 0 && stop = len then x else String.sub x start (stop - start)
 
 (** from Geneweb.Mutil *)
-let strip_all_trailing_spaces s =
+let strip_tr_sp s =
   let b = Buffer.create (String.length s) in
   let len =
     let rec loop i =
@@ -166,7 +168,7 @@ let read_notes ic =
       loop (input_a_line ic)
     with End_of_file -> failwith "end of file, read_notes"
   in
-  strip_all_trailing_spaces notes
+  strip_tr_sp notes
 
 let get_name str l =
   match l with surname :: l -> (surname, l) | _ -> failwith (str ^ " get_name")
@@ -246,7 +248,11 @@ let notes_header oc (key : MkImgDict.key) =
     à partir du nom de fichier
 *)
 
-let print_img_list oc images_l dict1 =
+(* TODO image_id -> int rather than string !! *)
+let print_img_list oc (key : MkImgDict.key) images_l dict1 =
+  let _key_str =
+    Format.sprintf "%s.%d+%s" key.pk_first_name key.pk_occ key.pk_surname
+  in
   output_string oc
     ((Format.sprintf
         {|
@@ -254,36 +260,65 @@ let print_img_list oc images_l dict1 =
 \medskip
 \textit[Présent(e) aussi sur %s |})
        (if List.length images_l = 1 then "la photo" else "les photos"));
-  let img_l =
-    List.fold_left
-      (fun acc image_id ->
+  let rec loop images_l =
+    match images_l with
+    | [] -> ()
+    | image_id :: images_l ->
         let anx_page, desc, _fname, _key_l, _key_l_2, image_occ =
           Hashtbl.find dict1 image_id
         in
         Printf.eprintf "Print_img_list: %s, %d\n" desc image_occ;
-        Format.sprintf {|« %s » (%s)|} desc
-          (if anx_page <> "0" then Format.sprintf "page %s en annexe" anx_page
-          else
-            let rec loop acc1 n =
-              if n > image_occ then acc1
-              else
-                loop
-                  (acc1
-                  ^ Format.sprintf
-                      "\\ref[img_ref_%s.%d].%d page \\pageref[img_ref_%s.%d]"
-                      image_id n n image_id n
-                  ^ if n < image_occ then ", " else "")
-                  (n + 1)
-            in
-            loop "" image_occ)
-        :: acc)
-      [] images_l
+        output_string oc
+          (Format.sprintf {|« %s » (%s)|} desc
+             (if anx_page <> "0" then
+              Format.sprintf "page %s en annexe" anx_page
+             else Format.sprintf "IMG_ID=%s" image_id));
+        if List.length images_l > 0 then output_string oc ",";
+        loop images_l
   in
-  output_string oc (String.concat ",\n" img_l);
-  output_string oc "]</span>\n"
+  loop images_l;
+  output_string oc "]</span>\n\\par\n"
+
+let update_img_list oc _key notes _dict1 dict2 _dict4 =
+  Printf.eprintf "update img list\n";
+  let lines = String.split_on_char '\n' notes in
+  let rec loop lines =
+    match lines with
+    | [] -> ()
+    | line :: lines ->
+        if Sutil.start_with "%%%IMG_L" 0 line then (
+          let parts = String.split_on_char ',' line in
+          match List.length parts with
+          | n when n < 2 ->
+              Printf.eprintf "bad IMG_L format\n";
+              exit 2
+          | n ->
+              let _key_str = List.nth parts 1 in
+              let rec loop1 acc n =
+                if n = List.length parts then acc
+                else
+                  let img = List.nth parts n in
+                  let img = String.split_on_char '.' img in
+                  let image_id = int_of_string (List.nth img 0) in
+                  let occ = int_of_string (List.nth img 1) in
+                  let desc = "aaa" in
+                  loop1
+                    (acc
+                    ^ Format.sprintf
+                        {| [%s] (\\ref{img_ref_%d.%d}.%d page \\pageref{{img_ref_%d.%d}}) |}
+                        desc image_id occ occ image_id occ)
+                    (n + 1)
+              in
+              output_string_nl oc (loop1 "" 2);
+              loop lines)
+        else (
+          output_string_nl oc line;
+          loop lines)
+  in
+  loop lines
 
 (** add image information at end of notes *)
-let print_notes oc key notes dict1 dict2 cnt =
+let print_notes oc key notes dict1 dict2 dict4 cnt =
   notes_header oc key;
   output_string_nl oc notes;
   let key_str =
@@ -291,7 +326,7 @@ let print_notes oc key notes dict1 dict2 cnt =
   in
   if Hashtbl.mem dict2 key then (
     incr cnt;
-    print_img_list oc (Hashtbl.find dict2 key) dict1;
+    print_img_list oc key (Hashtbl.find dict2 key) dict1;
     has_notes := key_str :: !has_notes);
   output_string oc "end notes\n"
 
@@ -308,14 +343,14 @@ let create_new_notes oc has_notes dict1 dict2 =
       if (not (List.mem key_str has_notes)) && key.pk_occ <> -1 then (
         incr cnt1;
         notes_header oc key;
-        print_img_list oc (Hashtbl.find dict2 key) dict1;
+        print_img_list oc key (Hashtbl.find dict2 key) dict1;
         output_string oc "end notes\n\n")
       else if key.pk_occ = -1 then incr cnt2)
     dict2;
   if !verbose then
     Printf.eprintf "%d new notes created (%d ignored)\n" !cnt1 !cnt2
 
-let comp_families ic oc in_file out_file dict1 dict2 =
+let comp_families ic oc in_file out_file dict1 dict2 _dict4 =
   has_notes := [];
   line_cnt := 0;
   let cnt = ref 0 in
@@ -323,7 +358,7 @@ let comp_families ic oc in_file out_file dict1 dict2 =
      let rec loop line =
        match read_family_1 ic line with
        | F_notes (key, notes) ->
-           print_notes oc key notes dict1 dict2 cnt;
+           print_notes oc key notes dict1 dict2 dict4 cnt;
            loop (read_line ic)
        | F_other (str, _) ->
            output_string_nl oc str;
@@ -401,11 +436,23 @@ let main () =
 
   (* build images dictionnaries *)
   let dict1, dict2, _dict3 = MkImgDict.create_images_dicts img_file fname_all in
+
+  let out_channel = open_out_bin "dict1.dat" in
+  Marshal.to_channel out_channel dict1 [];
+  close_out out_channel;
+  let out_channel = open_out_bin "dict2.dat" in
+  Marshal.to_channel out_channel dict2 [];
+  close_out out_channel;
+
   (* Printf.eprintf "Done creating images dictionaries (%d images, %d persons)\n"
       (Hashtbl.length dict1) (Hashtbl.length dict2) ;*)
-  comp_families ic oc in_file out_file dict1 dict2;
+  comp_families ic oc in_file out_file dict1 dict2 dict4;
   Printf.eprintf "\n";
   close_in ic;
-  close_out oc
+  close_out oc;
+
+  let out_channel = open_out_bin "dict4.dat" in
+  Marshal.to_channel out_channel dict4 [];
+  close_out out_channel
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

@@ -1,7 +1,7 @@
 encoding: utf-8
 gwplus
 
-fam Dupont Léon_François 0 + Durand Marie {Marie_Léonie} #src Chambergeot 1843 #bp Donville_(Manche) 1928
+fam Dupont Lucien 0 + Durand Marie {Marie_Léonie} #src Chambergeot 1843 #bp Donville_(Manche) 1928
 fevt
 #marr 
 end fevt
@@ -10,9 +10,9 @@ beg
 - f Marie 1872 1945
 - h Léon #occu capitaine_au_long_cours #src Chambergeot,_Alain_Hervé 1874 25/2/1939
 - h Henri 1876 10/1/1969 #dp Granville_(Manche) #ds Tombe,_cimetière_Notre_Dame,_Granville
-- h Lucien #occu capitaine_au_Long_Cours #src Chambergeot,_JMT 1878 1955
-- h Georges 1883 1960
-- h Maurice {Maurice_Pierre} 13/11/1886 #bp Granville_(Manche) #bs AD_p79/301 13/10/1971 #dp Caen_(Calvados) #ds AD_p79/301
+- h Emile #occu capitaine_au_Long_Cours #src Chambergeot,_JMT 1878 1955
+- h Jacques 1883 1960
+- h Jean {Maurice_Pierre} 13/11/1886 #bp Granville_(Manche) #bs AD_p79/301 13/10/1971 #dp Caen_(Calvados) #ds AD_p79/301
 end
 
 fam Dupont Léon + Durand Alice 0
@@ -68,24 +68,26 @@ end
 notes Durand Marie
 beg
 Une 
-<a href="%sm=IM;s=image-test-2.jpg">photo</a> avec son fils [[Léon/Dupont/Léon]].
+<a href="%sm=IM;s=marie-emile.jpg">photo</a> avec son fils [[Emile/Dupont/Emile]].
+
+Comment.
 end notes
 
-notes Dupont Léon
+notes Dupont Emile
 beg
-Note sur la vie de léon.
+Note sur la vie de Emile.
 
-Sur cette <a href="%sm=IM;s=image-test-1.jpg">photo-1</a>, en compagine de
-[[Georges/Dupont/Georges]] et [[Lucien/Dupont/Lucien]].
+Sur cette <a href="%sm=IM;s=jean-jacques-emile.jpg">photo-1</a>, en compagine de
+[[Jean/Dupont/Jean]] et [[Jacques/Dupont/Jacques]].
 
 Une autre
-<a href="%sm=IM;s=image-test-2.jpg"><img src="%sm=IM;s=image-test-2-vignette.jpg" width="40pt"></a> avec sa mère [[Marie/Durand]]
+<a href="%sm=IM;s=marie-emile.jpg"><img src="%sm=IM;s=marie-emile-vignette.jpg" width="40pt"></a> avec sa mère [[Marie/Durand]]
 
 Une troisième
-<a href="%sm=IM;s=image-test-3.jpg">photo</a> (souvenir de Tahiti)
+<a href="%sm=IM;s=haddock.jpg">photo</a> (souvenir de Tahiti)
 
 Et enfin une dernière du
-<a href="%sm=IM;s=image-test-4.jpg">Diplodocus</a> (années 60, barrage de la baie du Mt St Michel)
+<a href="%sm=IM;s=diplodocus.jpg">Diplodocus</a> (années 60, barrage de la baie du Mt St Michel)
 
 Test pour index :
 <span style="display:none" mode="tex">\index[Dupont, Jean, voir Aaa, Bbb, Ccc, Ddd]</span>
@@ -98,7 +100,11 @@ A participé au [[[page-liee-test/projet de barrage]]] de la baie du Mt St Miche
 Test guillemets : "classiques", « classiques », «\,classiques\,»
 end notes
 
-
+notes Dupont Jacques
+beg
+Sur cette <a href="%sm=IM;s=jean-jacques-emile.jpg">photo-1</a>, en compagine de
+[[Emile/Dupont/Emile]] et [[Jean/Dupont/Jean]].
+end notes
 
 pevt Dupont Marie_Marguerite
 #birt <1871
@@ -110,7 +116,7 @@ pevt Dupont Marie
 #deat 1945
 end pevt
 
-pevt Dupont Léon
+pevt Dupont Emile
 #birt 1874
 #deat 25/2/1939
 end pevt
@@ -120,13 +126,13 @@ pevt Dupont Henri
 #deat 10/1/1969 #p Granville_(Manche) #s Tombe,_cimetière_Notre_Dame,_Granville
 end pevt
 
-pevt Dupont Lucien
+pevt Dupont Jean
 #birt 1878
 #deat 1955
 note Je lis 1955 sur sa tombe
 end pevt
 
-pevt Dupont Georges
+pevt Dupont Jacques
 #birt 1883
 #deat 1960
 end pevt
@@ -145,7 +151,7 @@ page-ext page-liee-test
   TITLE=Page liée test
     
   Contenu d'une page test
-  <img SRC="%sm=IM;s=image-test-4.jpg">
+  <img SRC="%sm=IM;s=diplodocus.jpg">
 
   Le Diplodocus.<br>
   Dans les années 60, l'ingénieur des mines Albert Caquot<span
@@ -153,7 +159,7 @@ page-ext page-liee-test
   imagine un gigantesque projet de barrage sur l'ensemble de la baie du
   Mont Saint Michel utilisant l'énergie marée-motrice. Le Diplodocus participe
   aux travaux de sondage de ce projet.<br>
-  (<small>source photo [[Léon/Dupont]]</small>).
+  (<small>source photo [[Emile/Dupont]]</small>).
 end page-ext
 
 

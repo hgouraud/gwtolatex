@@ -121,6 +121,8 @@ let read_or_create_channel ?magic ?(wait = false) fname read write =
 (* # voir ... *)
 (* \index{X, Y}/z  ;z indique N° d'occurrence, "z" si ?? *)
 
+(* construit dict1 :
+   Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], 0) *)
 let process dict1 ic line =
   try
     let parts = String.split_on_char ';' line in
@@ -235,6 +237,7 @@ let create_images_dicts img_file fam_file =
         close_in ic;
         acc
   in
+  (*liste des personnes ayant une page perso *)
   let list4 = loop [] (Sutil.read_line ic) in
 
   let ic = open_in img_file in
@@ -247,6 +250,7 @@ let create_images_dicts img_file fam_file =
   in
   loop (Sutil.read_line ic);
 
+  (* filtre key_l pour ne garder que ceux présents -> key_l_2 *)
   Hashtbl.filter_map_inplace
     (fun _image_id (anx_page, desc, fname, key_l, _key_l_2, occ) ->
       let key_l_2 =
@@ -258,6 +262,9 @@ let create_images_dicts img_file fam_file =
     !dict1;
 
   (* dict1 has been built, now we build the inverse indexes *)
+  (* liste des images sur lesquelles apparait une personne *)
+  (* en passant dict3 : fname -> image_id *)
+  (* dict2 -> key image_id list *)
   Hashtbl.iter
     (fun image_id (_anx_page, _desc, fname, key_l, _key_l_2, _occ) ->
       Hashtbl.add dict3 fname image_id;
@@ -274,6 +281,8 @@ let create_images_dicts img_file fam_file =
       in
       loop key_l)
     !dict1;
+
+  (* create list_assoc [fname, image_id] *)
   let img_fname_l =
     Hashtbl.fold (fun fname id acc -> (fname, id) :: acc) dict3 []
   in

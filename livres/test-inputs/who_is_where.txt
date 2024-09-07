@@ -9,17 +9,13 @@
 #\index{X, Y}/z  ;z indique N° d'occurrence, "z" si ??
 #
 #
-1;1;trois marins;image-test-1.jpg
-\index{Marin, Emile}/z
-\index{Dupont, Lucien}
-\index{Dupont, Georges}
 
-2;0;Léon, Lucien et Georges;image-test-1.jpg
-\index{Dupont, Léon}
-\index{Dupont, Lucien}
-\index{Dupont, Georges}
+1;0;Jean, Jacques, Emile;jean-jacques-emile.jpg
+\index{Dupont, Jean}
+\index{Dupont, Jacques}
+\index{Dupont, Emile}
 
-3;0;Léon et Marie;image-test-2.jpg
-\index{Dupont, Léon}
+2;0;Marie et Emile;marie-emile.jpg
+\index{Dupont, Emile}
 \index{Durand, Marie}
 

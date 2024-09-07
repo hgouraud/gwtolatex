@@ -46,11 +46,13 @@ OCAMLRUNPARAM=b "$GW_BIN_DIR"/gwd \
   > "$GW_BIN_DIR"/gwd.log 2>&1 &
 
 if [ $? -eq 0 ]; then
-  read -p "Do you whish to proceed with ./run-test.sh: [Y/n]" response
+  read -p "Do you whish to proceed with ./run-test.sh: [Y/v/n]" response
   response=${response:-y}
   response=$(echo "$response" | tr '[:upper:]' '[:lower:]')
   if [ "$response" == "y" ]; then
       ./run-test.sh
+  elif [ "$response" == "v" ]; then
+      ./run-test.sh -v
   elif [ "$response" == "n" ]; then
       echo "Ready for test."
       # Add your logic here for the "no" case

@@ -2,7 +2,7 @@
 open Gwtolatex
 open Config
 
-type name = string * string
+type _name = string * string
 
 (* TODO suppress (pages liées) and (modifier) in m=NOTES *)
 (* TODO suppress "base chausey ..." *)
@@ -18,7 +18,7 @@ let c_img = ref ""
 
 (* execution context *)
 let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
-let passwd = ref ""
+let _passwd = ref ""
 let out_file = ref ""
 let dev = ref false
 let dry_run = ref false
@@ -37,7 +37,7 @@ let follow = ref false
 let test_nb = ref 0
 
 (* current values *)
-let treemode = ref 0
+let _treemode = ref 0
 let passe = ref 0
 let caption = ref ""
 
@@ -111,7 +111,7 @@ let make_conf xbases xbasename xpasswd xfamily xdebug xverbose xtreemode =
   in
   conf
 
-type p_type = Str | Int | Bool
+type _p_type = Str | Int | Bool
 
 let dump_conf conf =
   Printf.eprintf "Configuration\n";
@@ -202,7 +202,7 @@ let strip_nl s =
     s;
   Buffer.contents b
 
-let _strip_all_trailing_spaces s =
+let strip_tr_sp s =
   let b = Buffer.create (String.length s) in
   let len =
     let rec loop i =
@@ -359,7 +359,7 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
         | Some id -> id
         | None -> ""
       in
-      let anx_page, desc, fname, key_l, key_l_2, image_occ =
+      let _anx_page, desc, fname, _key_l, _key_l_2, image_occ =
         match Hashtbl.find_opt !dict1 image_id with
         | Some (anx_page, desc, fname, key_l, key_l_2, image_occ) ->
             (anx_page, desc, fname, key_l, key_l_2, image_occ)
@@ -415,7 +415,7 @@ let dummy_tags_3 =
 (* obsolete *)
 
 let skip_m_cmd = [ "MOD_NOTES" ]
-let one_page och line = output_string och line
+let _one_page och line = output_string och line
 
 (** process_tree_cumul accumulates results in a string
     each tag is processed according to its role
@@ -1163,11 +1163,11 @@ let one_command conf och line =
        let ic = open_in param in
        try
          while true do
-           let line = input_line ic in
+           let line = input_line ic |> strip_nl in
            let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
            let line = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist line in
            let line = Sutil.replace_str "%%%PASSWD%%%" !passwd line in
-           output_string och (line ^ "\n")
+           output_string och (strip_tr_sp line ^ "\n")
          done
        with End_of_file -> close_in ic);
       conf
@@ -1370,14 +1370,14 @@ let print_images conf och images_list =
           in
           let img_label =
             if image_id <> "" then
-              Format.sprintf "\\label{img_ref_%s.%d}" image_id image_occ
+              Format.sprintf "\\label{img_ref_%s.%d}" image_id (image_occ + 1)
             else ""
           in
           (* list of persons present on this image *)
           (* TODO les personnes /z ont été éliminées!! *)
           let index_list =
             match Hashtbl.find_opt !dict1 image_id with
-            | Some (anx_page, _desc, _fname, key_l, key_l_2, _occ)
+            | Some (anx_page, _desc, _fname, key_l, _key_l_2, _occ)
               when image_id <> "" ->
                 let index_l =
                   List.fold_left

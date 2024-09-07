@@ -232,12 +232,12 @@ let replace x y str =
     str;
   Buffer.contents b
 
-let replace_str2 line sub1 sub2 =
+let replace_str sub1 sub2 line =
   if String.length sub1 > 0 && String.length line > 0 then
     Str.global_replace (Str.regexp sub1) sub2 line
   else line
 
-let replace_str sub1 sub2 line =
+let replace_str2 sub1 sub2 line =
   if String.length sub1 > 0 && String.length line > 0 then
     let i = try String.index line sub1.[0] with Not_found -> -1 in
     if i >= 0 && String.length line > String.length sub1 then
