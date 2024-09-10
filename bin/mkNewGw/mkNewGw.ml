@@ -233,11 +233,11 @@ let has_notes = ref []
 let notes_header oc (key : MkImgDict.key) =
   let sn = Sutil.replace ' ' '_' key.pk_surname in
   let fn = Sutil.replace ' ' '_' key.pk_first_name in
-  if sn = "Guerin" || fn = "Guérin" then
-    Printf.eprintf "notes for %s %s\n" fn sn;
   output_string oc
     (Format.sprintf "notes %s %s%sbeg\n" sn fn
        (if key.pk_occ <> 0 then Format.sprintf ".%d\n" key.pk_occ else "\n"))
+
+(* TODO image_id -> int rather than string !! *)
 
 (** prints the list of images on which person appears
     images x.y.z.w on page ppp, or image in annex page n
@@ -247,11 +247,27 @@ let notes_header oc (key : MkImgDict.key) =
     \label{label_img_image_id}
     à partir du nom de fichier
 *)
-
-(* TODO image_id -> int rather than string !! *)
-let print_img_list oc (key : MkImgDict.key) images_l dict1 =
-  let _key_str =
+let print_img_list oc (key : MkImgDict.key) images_l dict1 dict2 =
+  let key_str =
     Format.sprintf "%s.%d+%s" key.pk_first_name key.pk_occ key.pk_surname
+  in
+  let anx_img_list =
+    match Hashtbl.find_opt dict2 key with
+    | Some anx_img_list -> anx_img_list
+    | None -> []
+  in
+  let anx_img_list =
+    let rec loop acc anx_img_list =
+      match anx_img_list with
+      | [] -> List.sort_uniq compare acc
+      | image_id :: anx_img_list ->
+          let anx_page, desc, _fname, _key_l, _key_l_2, _image_occ =
+            Hashtbl.find dict1 image_id
+          in
+          if anx_page <> 0 then loop (anx_page :: acc) anx_img_list
+          else loop acc anx_img_list
+    in
+    loop [] anx_img_list
   in
   output_string oc
     ((Format.sprintf
@@ -262,25 +278,30 @@ let print_img_list oc (key : MkImgDict.key) images_l dict1 =
        (if List.length images_l = 1 then "la photo" else "les photos"));
   let rec loop images_l =
     match images_l with
-    | [] -> ()
+    | [] ->
+        if anx_img_list <> [] then (
+          output_string oc
+            (Format.sprintf "\net en annexe %s "
+               (if List.length anx_img_list > 1 then "pages" else "page"));
+          List.iter
+            (fun p -> output_string oc (Format.sprintf "%d, " p))
+            anx_img_list)
+        else ()
     | image_id :: images_l ->
-        let anx_page, desc, _fname, _key_l, _key_l_2, image_occ =
+        let anx_page, desc, _fname, _key_l, _key_l_2, _image_occ =
           Hashtbl.find dict1 image_id
         in
-        Printf.eprintf "Print_img_list: %s, %d\n" desc image_occ;
-        output_string oc
-          (Format.sprintf {|« %s » (%s)|} desc
-             (if anx_page <> "0" then
-              Format.sprintf "page %s en annexe" anx_page
-             else Format.sprintf "IMG_ID=%s" image_id));
-        if List.length images_l > 0 then output_string oc ",";
+        if anx_page = 0 || true then (
+          output_string oc
+            (Format.sprintf "« %s »\n(%s)" desc
+               (Format.sprintf "IMGID %d %s" image_id key_str));
+          if List.length images_l > 0 then output_string oc ";\n");
         loop images_l
   in
   loop images_l;
-  output_string oc "]</span>\n\\par\n"
+  output_string oc "\n]</span>\n"
 
 let update_img_list oc _key notes _dict1 dict2 _dict4 =
-  Printf.eprintf "update img list\n";
   let lines = String.split_on_char '\n' notes in
   let rec loop lines =
     match lines with
@@ -326,7 +347,7 @@ let print_notes oc key notes dict1 dict2 dict4 cnt =
   in
   if Hashtbl.mem dict2 key then (
     incr cnt;
-    print_img_list oc key (Hashtbl.find dict2 key) dict1;
+    print_img_list oc key (Hashtbl.find dict2 key) dict1 dict2;
     has_notes := key_str :: !has_notes);
   output_string oc "end notes\n"
 
@@ -343,7 +364,7 @@ let create_new_notes oc has_notes dict1 dict2 =
       if (not (List.mem key_str has_notes)) && key.pk_occ <> -1 then (
         incr cnt1;
         notes_header oc key;
-        print_img_list oc key (Hashtbl.find dict2 key) dict1;
+        print_img_list oc key (Hashtbl.find dict2 key) dict1 dict2;
         output_string oc "end notes\n\n")
       else if key.pk_occ = -1 then incr cnt2)
     dict2;
@@ -444,10 +465,7 @@ let main () =
   Marshal.to_channel out_channel dict2 [];
   close_out out_channel;
 
-  (* Printf.eprintf "Done creating images dictionaries (%d images, %d persons)\n"
-      (Hashtbl.length dict1) (Hashtbl.length dict2) ;*)
   comp_families ic oc in_file out_file dict1 dict2 dict4;
-  Printf.eprintf "\n";
   close_in ic;
   close_out oc;
 

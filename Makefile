@@ -50,6 +50,7 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	cp $(BUILD_DIR)default/bin/mkTex/mkTex.exe $(DISTRIB_DIR)/mkTex$(EXT)
 	cp $(BUILD_DIR)default/bin/mkTweekInd/mkTweekInd.exe $(DISTRIB_DIR)/mkTweekInd$(EXT)
 	cp $(BUILD_DIR)default/bin/mkNewGw/mkNewGw.exe $(DISTRIB_DIR)/mkNewGw$(EXT)
+	cp $(BUILD_DIR)default/bin/mkUpdImgl/mkUpdImgl.exe $(DISTRIB_DIR)/mkUpdImgl$(EXT)
 	cp $(BUILD_DIR)default/bin/mkBook/mkBook.exe $(DISTRIB_DIR)/mkBook$(EXT)
 	cp -R $(ENV_DIR)/tex $(BASES)/etc
 	cp -R $(ENV_DIR)/tex $(DISTRIB_DIR)

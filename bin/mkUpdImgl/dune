@@ -1,0 +1,11 @@
+(executable
+ (public_name mkUpdImgl)
+ (name mkUpdImgl)
+ (libraries
+  gwtolatex
+  ezcurl
+  markup
+  unidecode
+  geneweb.gwdb-legacy
+  geneweb.sosa_zarith
+  geneweb))

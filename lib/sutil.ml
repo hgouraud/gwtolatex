@@ -301,6 +301,35 @@ let suppress_leading_sp str =
   in
   loop true 0
 
+let strip_nl s =
+  let b = Buffer.create 10 in
+  String.iter
+    (fun c ->
+      match c with
+      | '\n' | '\r' -> Buffer.add_char b ' '
+      | _ -> Buffer.add_char b c)
+    s;
+  Buffer.contents b
+
+let strip_c c str =
+  let start =
+    let rec loop i =
+      if i = String.length str then i
+      else if str.[i] = c then loop (i + 1)
+      else i
+    in
+    loop 0
+  in
+  let stop =
+    let rec loop i =
+      if i = -1 then i + 1 else if str.[i] = c then loop (i - 1) else i + 1
+    in
+    loop (String.length str - 1)
+  in
+  if start = 0 && stop = String.length str then str
+  else if start >= stop then ""
+  else String.sub str start (stop - start)
+
 (** Removes spaces at the begining and at the end of string. *)
 let cut_space x =
   let len = String.length x in

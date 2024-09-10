@@ -14,6 +14,37 @@ let test_nb = ref 0
 type key = { pk_first_name : string; pk_surname : string; pk_occ : int }
 (** Key to refer a person's definition *)
 
+let print_key key =
+  Printf.eprintf "%s.%d+%s\n" key.pk_first_name key.pk_occ key.pk_surname
+
+let print_dict1_entry image_id dict1 =
+  let anx_page, desc, fname, key_l, _key_l_2, _image_occ =
+    Hashtbl.find dict1 image_id
+  in
+  Printf.eprintf "%d;%d;%s;%s\n" image_id anx_page desc fname;
+  List.iter
+    (fun (key : key) ->
+      Printf.eprintf "\\index{%s, %s}%s\n" key.pk_surname key.pk_first_name
+        (if key.pk_occ = 0 then "" else string_of_int key.pk_occ))
+    key_l
+
+let print_dict1 dict1 =
+  Hashtbl.iter (fun image_id _ -> print_dict1_entry image_id dict1) dict1
+
+let print_dict2_entry (key : key) dict1 dict2 =
+  let img_list = Hashtbl.find dict2 key in
+  print_key key;
+  List.iter
+    (fun image_id ->
+      let anx_page, desc, fname, _key_l, _key_l_2, _image_occ =
+        Hashtbl.find dict1 image_id
+      in
+      Printf.eprintf "%d;%d;%s;%s\n" image_id anx_page desc fname)
+    img_list
+
+let print_dict2 dict1 dict2 =
+  Hashtbl.iter (fun key _ -> print_dict2_entry key dict1 dict2) dict2
+
 let undo_particle sn =
   let i = try String.index sn '(' with Not_found -> -1 in
   let j = try String.index sn ')' with Not_found -> -1 in
@@ -45,78 +76,6 @@ Read Livres/family-input/who_is_where.tex
 #
 *)
 
-(* POSIX lockf(3), and fcntl(2), releases its locks when the process
-   that holds the locks closes ANY file descriptor that was open on that file.
-*)
-let _executable_magic =
-  match Sys.getenv_opt "GW_EXECUTABLE_MAGIC" with
-  | Some x -> x
-  | None -> Digest.file Sys.executable_name
-
-let _random_magic =
-  Random.self_init ();
-  Random.bits () |> string_of_int
-
-let check_magic magic ic =
-  let len = String.length magic in
-  let pos = pos_in ic in
-  if in_channel_length ic - pos < len then false
-  else if magic = really_input_string ic len then true
-  else (
-    seek_in ic pos;
-    false)
-
-let read_or_create_channel ?magic ?(wait = false) fname read write =
-  if Sys.os_type = "Win32" then (
-    let _ = wait in
-    ();
-    assert (Secure.check fname);
-    let fd = Unix.openfile fname [ Unix.O_RDWR; Unix.O_CREAT ] 0o666 in
-    if Sys.os_type <> "Win32" then (
-      try Unix.lockf fd (if wait then Unix.F_LOCK else Unix.F_TLOCK) 0
-      with e ->
-        Unix.close fd;
-        raise e);
-    let ic = Unix.in_channel_of_descr fd in
-    let read () =
-      seek_in ic 0;
-      try
-        match magic with
-        | Some m when check_magic m ic ->
-            let r = Some (read ic) in
-            let _ = seek_in ic (in_channel_length ic - String.length m) in
-            assert (check_magic m ic);
-            r
-        | Some _ -> None
-        | None -> Some (read ic)
-      with _ -> None
-    in
-    match read () with
-    | Some v ->
-        if Sys.os_type <> "Win32" then Unix.lockf fd Unix.F_ULOCK 0;
-        close_in ic;
-        v
-    | None ->
-        Unix.ftruncate fd 0;
-        let oc = Unix.out_channel_of_descr fd in
-        seek_out oc 0;
-        (match magic with
-        | Some m -> seek_out oc (String.length m)
-        | None -> ());
-        let v = write oc in
-        flush oc;
-        let _ = seek_out oc (out_channel_length oc) in
-        (match magic with Some m -> output_string oc m | None -> ());
-        (match magic with
-        | Some m ->
-            seek_out oc 0;
-            output_string oc m
-        | None -> ());
-        flush oc;
-        if Sys.os_type <> "Win32" then Unix.lockf fd Unix.F_ULOCK 0;
-        close_out oc;
-        v)
-
 (* # image_id;n;texte descriptif;nom-de-fichier.jpg *)
 (* # voir ... *)
 (* \index{X, Y}/z  ;z indique N° d'occurrence, "z" si ?? *)
@@ -130,12 +89,12 @@ let process dict1 ic line =
     else if List.length parts <> 4 then
       Printf.eprintf "Bad image definition %s\n" line
     else
-      let image_id = List.nth parts 0 in
-      let anx_page = List.nth parts 1 in
+      let image_id = int_of_string (List.nth parts 0) in
+      let anx_page = int_of_string (List.nth parts 1) in
       let desc = List.nth parts 2 in
       let fname = List.nth parts 3 in
       if Hashtbl.mem !dict1 image_id then
-        Printf.eprintf "Duplicate image definition %s, %s\n" image_id desc
+        Printf.eprintf "Duplicate image definition %d, %s\n" image_id desc
       else
         let line = Sutil.input_real_line ic in
         let key_l =
@@ -186,24 +145,22 @@ let process dict1 ic line =
                   }
                 in
                 if sn = "" && fn = "" then loop (input_line ic) key_l
-                else loop (input_line ic) (key :: key_l)
+                else loop (Sutil.input_real_line ic) (key :: key_l)
               else key_l
             else key_l
           in
           loop line []
         in
-        Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], 0)
+        Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], [])
   with
   | Failure _ -> Printf.eprintf "Bad image definition %s\n" line
   | End_of_file -> ()
-
-let print_key key =
-  Printf.eprintf "(%s) (%s) (%d)\n" key.pk_surname key.pk_first_name key.pk_occ
 
 (** dict1 image_id, (annex_page, description, file_name, person_list, occ)
     dict2 person_key, images_id list
     dict3 file_name, image_id *)
 let create_images_dicts img_file fam_file =
+  Printf.eprintf "Create images dicts\n";
   let dict1 = ref (Hashtbl.create 100) in
   let dict2 = Hashtbl.create 100 in
   let dict3 = Hashtbl.create 100 in
@@ -250,7 +207,7 @@ let create_images_dicts img_file fam_file =
   in
   loop (Sutil.read_line ic);
 
-  (* filtre key_l pour ne garder que ceux présents -> key_l_2 *)
+  (* filtre key_l pour ne garder que ceux presents -> key_l_2 *)
   Hashtbl.filter_map_inplace
     (fun _image_id (anx_page, desc, fname, key_l, _key_l_2, occ) ->
       let key_l_2 =
@@ -261,6 +218,8 @@ let create_images_dicts img_file fam_file =
       Some (anx_page, desc, fname, key_l, key_l_2, occ))
     !dict1;
 
+  Printf.eprintf "Dict1 (%d)\n" (Hashtbl.length !dict1);
+
   (* dict1 has been built, now we build the inverse indexes *)
   (* liste des images sur lesquelles apparait une personne *)
   (* en passant dict3 : fname -> image_id *)
@@ -268,33 +227,21 @@ let create_images_dicts img_file fam_file =
   Hashtbl.iter
     (fun image_id (_anx_page, _desc, fname, key_l, _key_l_2, _occ) ->
       Hashtbl.add dict3 fname image_id;
-      let rec loop key_l =
-        match key_l with
-        | [] -> ()
-        | key :: key_l -> (
-            if !verbose then print_key key;
-            match Hashtbl.find_opt dict2 key with
-            | Some x -> Hashtbl.replace dict2 key (image_id :: x)
-            | None ->
-                Hashtbl.add dict2 key [ image_id ];
-                loop key_l)
-      in
-      loop key_l)
+      List.iter
+        (fun key ->
+          match Hashtbl.find_opt dict2 key with
+          | Some x -> Hashtbl.replace dict2 key (image_id :: x)
+          | None -> Hashtbl.add dict2 key [ image_id ])
+        key_l)
     !dict1;
+
+  Printf.eprintf "Dict2 (%d)\n" (Hashtbl.length dict2);
 
   (* create list_assoc [fname, image_id] *)
   let img_fname_l =
-    Hashtbl.fold (fun fname id acc -> (fname, id) :: acc) dict3 []
+    Hashtbl.fold (fun fname image_id acc -> (fname, image_id) :: acc) dict3 []
   in
   let img_fname_l =
-    List.sort_uniq
-      (fun (_fname1, id1) (_fname2, id2) ->
-        int_of_string id1 - int_of_string id2)
-      img_fname_l
+    List.sort_uniq (fun (_fname1, id1) (_fname2, id2) -> id1 - id2) img_fname_l
   in
-  (*
-  List.iter
-    (fun (fname, id) -> Printf.eprintf "Id: %s, fname: (%s)\n" id fname)
-    img_fname_l;
-  *)
   (!dict1, dict2, img_fname_l)

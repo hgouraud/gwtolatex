@@ -19,3 +19,15 @@
 \index{Dupont, Emile}
 \index{Durand, Marie}
 
+3;1;Diplodocus 1;diplodocus.jpg
+\index{Dupont, Emile}
+\index{Dupont, Lucien}
+
+4;2;Diplodocus 2;diplodocus.jpg
+\index{Dupont, Emile}
+\index{Dupont, Lucien}
+
+5;3;Diplodocus 3;diplodocus.jpg
+\index{Dupont, Emile}
+\index{Dupont, Lucien}
+

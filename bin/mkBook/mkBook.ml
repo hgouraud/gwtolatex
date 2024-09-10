@@ -257,6 +257,32 @@ Inspect %s/tmp/gwc.log for possible errors.|}
     exit 0);
   flush stderr;
 
+  (* run mkUpdImgl *)
+  (* output and aux files are in ./tmp *)
+  if !verbose then Printf.eprintf "Run MkUpdImgl\n";
+  flush stderr;
+  let mkUpdImgl_exe = Filename.concat !gw2l_dir "mkUpdImgl" in
+  let gw2l_options =
+    Str.global_replace
+      (Str.regexp ("-base " ^ !base))
+      ("-base " ^ !base ^ if who then "-new" else "")
+      gw2l_options
+  in
+  let upd_tex_file = Format.sprintf "%s  %s" mkUpdImgl_exe gw2l_options in
+  if !verbose then Printf.eprintf "Commd: %s\n" upd_tex_file;
+  flush stderr;
+  let error = Sys.command upd_tex_file in
+  if error > 0 then (
+    Printf.eprintf "Error while updating .tex file (%d)\n" error;
+    exit 0);
+  flush stderr;
+  let out_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".tmp" ] in
+  let out_file2 = String.concat Filename.dir_sep [ "tmp"; !family ^ ".tex" ] in
+  (try Sys.rename out_file out_file2
+   with Failure e ->
+     let _ = Printf.eprintf "Error while renaming .tmp file (%s)\n" e in
+     exit 0);
+
   (* run pdflatex *)
   if !verbose then Printf.eprintf "Run pdflatex\n";
   let aux_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".aux" ] in

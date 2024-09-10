@@ -28,6 +28,8 @@ let index = ref 0
 let dict1 = ref (Hashtbl.create 100)
 let dict2 = ref (Hashtbl.create 100)
 let img_name_list = ref []
+let img_ok_list = ref []
+let missing_tags = ref []
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
 let gw2l_dist = ref "./gw2l_dist"
@@ -192,16 +194,6 @@ let print_conf conf =
   Format.sprintf "\\begin{verbatim}\n%s\\end{verbatim}"
     (String.concat "" config_str)
 
-let strip_nl s =
-  let b = Buffer.create 10 in
-  String.iter
-    (fun c ->
-      match c with
-      | '\n' | '\r' -> Buffer.add_char b ' '
-      | _ -> Buffer.add_char b c)
-    s;
-  Buffer.contents b
-
 let strip_tr_sp s =
   let b = Buffer.create (String.length s) in
   let len =
@@ -357,26 +349,21 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
       let image_id =
         match List.assoc_opt name !img_name_list with
         | Some id -> id
-        | None -> ""
+        | None -> 0
       in
-      let _anx_page, desc, fname, _key_l, _key_l_2, image_occ =
+      let _anx_page, _desc, _fname, _key_l, _key_l_2, _image_occ =
         match Hashtbl.find_opt !dict1 image_id with
         | Some (anx_page, desc, fname, key_l, key_l_2, image_occ) ->
             (anx_page, desc, fname, key_l, key_l_2, image_occ)
         | None ->
-            Printf.eprintf "Print image: %s non existant (2)!\n" image_id;
-            ("0", "dummy", "", [], [], 0)
+            Printf.eprintf "Print image: %d non existant (2)!\n" image_id;
+            (0, "dummy", "", [], [], [])
       in
-      Printf.eprintf "Print image: %s, occ: %d, %s\n" fname image_occ desc;
-
-      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}%s\n"
+      img_ok_list := image_id :: !img_ok_list;
+      Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n"
         conf.imgwidth conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "src"; conf.basename; "images" ])
         Filename.dir_sep name
-        (if image_id <> "" && false then
-         Format.sprintf "\\newcommand{ref_%s.%d}{%d.%d.%d.%d}" image_id
-           image_occ ch sec ssec nb
-        else "")
       (* TODO deal with !caption here, possibly \begin{image}...\end{image} *)
   | Vignette ->
       Format.sprintf "\\includegraphics[width=%1.2f%s]{%s%s%s}\n" conf.vignwidth
@@ -587,7 +574,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         else if Sutil.contains content "includegraphics" then
           "{\\bf " ^ content ^ "}"
         else if List.mem test_hl conf.highlights then
-          "{\\hl {\\bf " ^ content ^ "}}"
+          "{\\hl {\\bf " ^ content ^ " xxx}}"
         else "{\\bf " ^ content ^ "}" ^ index_s
       in
       str
@@ -778,8 +765,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                     else content
                 | "highlight" ->
                     (* highlight content *)
+                    (* attention, \\textbf{{\\hl xxxx}} ne fonctionne pas *)
                     if List.mem content conf.highlights then
-                      Format.sprintf "{\\hl{\\bf %s}}" content
+                      Format.sprintf "\\bf {{\\hl %s}}" content
                     else content
                 | "caption" ->
                     caption := content;
@@ -914,7 +902,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         | "a" -> tag_a name attributes children
         | "img" -> tag_img name attributes children
         | _ ->
-            Printf.eprintf "Missing tag: %s\n" name;
+            if not (List.mem name !missing_tags) then (
+              Printf.eprintf "Missing tag: %s\n" name;
+              missing_tags := name :: !missing_tags);
             "")
   in
   cumul ^ element
@@ -1163,7 +1153,7 @@ let one_command conf och line =
        let ic = open_in param in
        try
          while true do
-           let line = input_line ic |> strip_nl in
+           let line = input_line ic |> Sutil.strip_nl in
            let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
            let line = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist line in
            let line = Sutil.replace_str "%%%PASSWD%%%" !passwd line in
@@ -1327,7 +1317,7 @@ let one_http_call conf base och line =
                (Lutil.escape msg))
 
 (** print all images mentioned in the notes of a person *)
-let print_images conf och images_list =
+let print_images conf och images_list _key_str =
   output_string och (Format.sprintf "\\par\n");
   (* TODO manage Wide *)
   List.iter
@@ -1346,21 +1336,27 @@ let print_images conf och images_list =
           let image_id =
             match List.assoc_opt name1 !img_name_list with
             | Some id -> id
-            | None -> ""
+            | None -> 0
           in
           let anx_page, desc, fname, key_l, key_l_2, image_occ =
             match Hashtbl.find_opt !dict1 image_id with
             | Some (anx_page, desc, fname, key_l, key_l_2, image_occ) ->
                 (anx_page, desc, fname, key_l, key_l_2, image_occ)
             | None ->
-                Printf.eprintf "Image_id %s non existant!\n" image_id;
-                ("0", "dummy", "", [], [], 0)
+                Printf.eprintf "Image_id (%d) (%s) non existant!\n" image_id
+                  name1;
+                (0, "dummy", "", [], [], [])
           in
-          Printf.eprintf "Print all images: %s, occ: %d, %s\n" fname
-            (image_occ + 1) desc;
+          let img_number0 =
+            match conf.imagelabels with
+            | 1 -> Format.sprintf "%d.%d.%d" ch sec nbr
+            | 3 -> Format.sprintf "%d.%d.%d" ch sec nbr
+            | 4 -> Format.sprintf "%d.%d.%d.%d" ch sec ssec nbr
+            | _ -> Format.sprintf "%d.%d.%d.%d" ch sec ssec nbr
+          in
           Hashtbl.replace !dict1 image_id
-            (anx_page, desc, fname, key_l, key_l_2, image_occ + 1);
-          (*if image_id = "" then Printf.eprintf "Name1: (%s)\n" name1;*)
+            (anx_page, desc, fname, key_l, key_l_2, img_number0 :: image_occ);
+          (*if image_id = 0 then Printf.eprintf "Name1: (%s)\n" name1;*)
           let img_number =
             match conf.imagelabels with
             | 1 -> Format.sprintf "\n\\hglabxsa{%d}{%d}{%d}" ch sec nbr
@@ -1369,8 +1365,8 @@ let print_images conf och images_list =
             | _ -> Format.sprintf "\n\\hglabxa{%d}{%d}{%d}{%d}" ch sec ssec nbr
           in
           let img_label =
-            if image_id <> "" then
-              Format.sprintf "\\label{img_ref_%s.%d}" image_id (image_occ + 1)
+            if image_id <> 0 then
+              Format.sprintf "\\label{img_ref_%d.%s}" image_id img_number0
             else ""
           in
           (* list of persons present on this image *)
@@ -1378,7 +1374,8 @@ let print_images conf och images_list =
           let index_list =
             match Hashtbl.find_opt !dict1 image_id with
             | Some (anx_page, _desc, _fname, key_l, _key_l_2, _occ)
-              when image_id <> "" ->
+              when image_id <> 0 ->
+                img_ok_list := image_id :: !img_ok_list;
                 let index_l =
                   List.fold_left
                     (fun acc (key : MkImgDict.key) ->
@@ -1389,9 +1386,9 @@ let print_images conf och images_list =
                         (if key.pk_occ <> 0 then
                          Format.sprintf " (%d)" key.pk_occ
                         else "")
-                        (if anx_page <> "0" then
-                         Format.sprintf "%s/%s" image_id anx_page
-                        else image_id)
+                        (if anx_page <> 0 then
+                         Format.sprintf "%d/%d" image_id anx_page
+                        else string_of_int image_id)
                       :: acc)
                     [] key_l
                 in
@@ -1407,7 +1404,6 @@ let print_images conf och images_list =
   output_string och (Format.sprintf "\\par\n")
 
 let process_one_line conf base _dict1 _dict2 och line =
-  (*Printf.eprintf "process_one_line: %s, base: %s\n" line conf.basename;*)
   if line <> "" then
     let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
     let line = Sutil.replace_str "%%%BASE%%%" conf.basename line in
@@ -1428,6 +1424,7 @@ let process_one_line conf base _dict1 _dict2 och line =
               let _fn, _sn, _ocn, _sp, _index_s =
                 Hutil.get_real_person base i p n oc content
               in
+              let key_str = Format.sprintf "%s.%s+%s" p oc n in
               let sec =
                 (* -> chapter, 1-> section, ... *)
                 match !current_level with
@@ -1459,7 +1456,7 @@ let process_one_line conf base _dict1 _dict2 och line =
               one_http_call conf base och line;
 
               if conf.collectimages && !images_in_page <> [] then
-                print_images conf och !images_in_page;
+                print_images conf och !images_in_page key_str;
               images_in_page := [];
               if conf.hrule && not !gwtest then
                 output_string och
@@ -1592,7 +1589,7 @@ let main () =
       tmp := conf;
       try
         while true do
-          let line = input_line ic |> strip_nl in
+          let line = input_line ic |> Sutil.strip_nl in
           flush stderr;
           tmp := process_one_line !tmp base dict1 dict2 och line
         done
@@ -1600,6 +1597,13 @@ let main () =
         close_in ic;
         close_out och));
   Printf.eprintf "\n";
-  flush stderr
+  flush stderr;
+  let out_channel = open_out_bin "dict1.dat" in
+  Marshal.to_channel out_channel !dict1 [];
+  close_out out_channel;
+  img_ok_list := List.sort_uniq compare !img_ok_list;
+  let out_channel = open_out_bin "list1.dat" in
+  Marshal.to_channel out_channel !img_ok_list [];
+  close_out out_channel
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

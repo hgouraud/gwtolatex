@@ -150,15 +150,16 @@ end pevt
 page-ext page-liee-test
   TITLE=Page liée test
     
-  Contenu d'une page test
+  Contenu d'une page test<br>
   <img SRC="%sm=IM;s=diplodocus.jpg">
 
   Le Diplodocus.<br>
-  Dans les années 60, l'ingénieur des mines Albert Caquot<span
+  Dans les années 60, l'ingénieur des mines <b>Albert Caquot</b><span
   style="display:none" mode="tex">\index[Caquot, Albert]</span>
   imagine un gigantesque projet de barrage sur l'ensemble de la baie du
   Mont Saint Michel utilisant l'énergie marée-motrice. Le Diplodocus participe
   aux travaux de sondage de ce projet.<br>
+  [[Lucien/Dupont]] participe au projet.<br>
   (<small>source photo [[Emile/Dupont]]</small>).
 end page-ext
 

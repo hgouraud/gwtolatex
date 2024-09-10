@@ -8,15 +8,15 @@
 %define;hgref(which, snxx, fnxx, ocxx, alxx)
   <span mode="a_ref" gw2w="which" gw2sn="snxx" gw2fn="fnxx" gw2oc="ocxx" gw2al="alxx">%nn;
     %if;("which"="name")
-      {\bf snxx fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end;}%nn;
+      \textbf{snxx fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end;}%nn;
     %elseif;("which"="name2")
-      {\bf fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end; snxx}%nn;
+      \textbf{fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end; snxx}%nn;
     %elseif;("which"="first_name")
-      {\bf fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end;}%nn;
+      \textbf{fnxx%if;(ocxx != "0")&nbsp;(ocxx)%end;}%nn;
     %elseif;("which"="surname")
-      {\bf snxx}%nn;
+      \textbf{snxx}%nn;
     %elseif;("which"="alias")
-      {\bf alxx}%nn;
+      \textbf{alxx}%nn;
     %end;
   </span>%nn;
 %end;
