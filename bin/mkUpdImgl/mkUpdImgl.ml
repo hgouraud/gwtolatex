@@ -97,15 +97,17 @@ let process ich och dict1 dict2 dict4 img_ok_list =
         else
           let image_id = int_of_string (List.nth parts 1) in
           let _key_str = List.nth parts 2 |> Sutil.strip_c ')' in
-          let _anx_page, desc, _fname, _key_l, _key_l_2, image_occ =
+          let anx_page, desc, _fname, _key_l, _key_l_2, image_occ =
             Hashtbl.find dict1 image_id
           in
           let rec loop image_occ =
             match image_occ with
             | [] ->
                 if not (List.mem image_id img_ok_list) then
-                  output_string och "(???)"
-                  (* empty string is not acceptable for LaTeX *)
+                  output_string och
+                    (if anx_page <> 0 then
+                     Format.sprintf "annexe page %d" anx_page
+                    else "(???)") (* empty string is not acceptable for LaTeX *)
             | occ :: image_occ ->
                 let parts = String.split_on_char '.' occ in
                 let nbr =
