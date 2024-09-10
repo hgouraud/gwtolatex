@@ -932,6 +932,10 @@ let process_html conf base och body =
 
 let bad_code c = c >= 400
 
+let mark_section och =
+  output_string och
+    (Format.sprintf "\nsectionmark %d.%d.%d\n" !chapter !section !subsection)
+
 (* <x Cmd param>remain *)
 (*       i     j       *)
 let one_command conf och line =
@@ -1034,6 +1038,7 @@ let one_command conf och line =
       section := 0;
       subsection := 0;
       subsubsection := 0;
+      mark_section och;
       conf
   | "CollectImages" ->
       { conf with collectimages = param = "on" || param = "On" }
@@ -1215,6 +1220,7 @@ let one_command conf och line =
       current_level := 2;
       subsection := 0;
       subsubsection := 0;
+      mark_section och;
       conf
   | "Sideways" ->
       {
@@ -1232,12 +1238,14 @@ let one_command conf och line =
       image_nbr := if conf.imagelabels > 3 then 0 else !image_nbr;
       current_level := 3;
       subsubsection := 0;
+      mark_section och;
       conf
   | "SubSubSection" ->
       out "subsubsection" param;
       incr subsubsection;
       image_nbr := if conf.imagelabels > 4 then 0 else !image_nbr;
       current_level := 4;
+      mark_section och;
       conf
   | "TextHeight" ->
       let _off, value = get_float_value line param textheight_default in
@@ -1431,12 +1439,15 @@ let process_one_line conf base _dict1 _dict2 och line =
                 | 0 -> ""
                 | 1 ->
                     incr section;
+                    mark_section och;
                     ""
                 | 2 ->
                     incr subsection;
+                    mark_section och;
                     "sub"
                 | 3 ->
                     incr subsubsection;
+                    mark_section och;
                     "subsub"
                 | _ -> "subsubsub"
               in

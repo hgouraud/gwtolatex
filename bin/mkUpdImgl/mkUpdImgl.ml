@@ -19,6 +19,7 @@ let verbose = ref false
 let no_fail = ref false
 let dict4 = Hashtbl.create 100
 let line_cnt = ref 0
+let section_mark = ref ""
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
 let livres = ref ""
@@ -89,7 +90,9 @@ let process ich och dict1 dict2 dict4 img_ok_list =
   try
     while true do
       let line = input_real_line ich |> Sutil.strip_nl in
-      if Sutil.start_with "(IMGID" 0 line then (
+      if Sutil.start_with "sectionmark" 0 line then
+        section_mark := String.sub line 12 (String.length line - 12)
+      else if Sutil.start_with "(IMGID" 0 line then (
         let parts = String.split_on_char ' ' line in
         if List.length parts <> 3 then (
           Printf.eprintf "Bad IMGID syntax: %s\n" line;
@@ -113,10 +116,25 @@ let process ich och dict1 dict2 dict4 img_ok_list =
                 let nbr =
                   int_of_string (List.nth parts (List.length parts - 1))
                 in
+                let p1 = String.split_on_char '.' occ in
+                let l1 = List.length p1 in
+                let p1 =
+                  let rec loop n acc p1 =
+                    match p1 with
+                    | p :: p1 when n > 0 -> loop (n - 1) (p :: acc) p1
+                    | p :: p1 -> List.rev acc
+                    | _ -> assert false
+                  in
+                  loop (l1 - 1) [] p1
+                in
+                let occ2 = String.concat "." p1 in
                 output_string och
-                  (Format.sprintf
-                     "\\ref{img_ref_%d.%s}.%d page \\pageref{img_ref_%d.%s}"
-                     image_id occ nbr image_id occ);
+                  (if Sutil.start_with occ2 0 !section_mark then
+                   Format.sprintf "image %s.%d ci-dessous" occ2 nbr
+                  else
+                    Format.sprintf
+                      "\\ref{img_ref_%d.%s}.%d page \\pageref{img_ref_%d.%s}"
+                      image_id occ nbr image_id occ);
                 if image_occ <> [] then output_string och ", ";
                 loop image_occ
           in
