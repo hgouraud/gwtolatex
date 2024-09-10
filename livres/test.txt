@@ -99,15 +99,18 @@ Le fiche de Maurice n'est pas disponible (pour démonstration)!!
 \newpage
 {\huge {\bf Notes}}
 \par
-Run mkBook du : \today{} à \DTMcurrenttime{}
+Run \textbf{mkBook} du : \today{} à \DTMcurrenttime{}
+\par
 <x GeneWebCommit on>
 \par
-GwTo\LaTeX{} version :
+\textbf{GwTo\LaTeX{}} version :
 <x Input ./gw2l_dist/version.txt>
 \par
 <x BaseVersion on>
 \par
-\pdftexbanner{}
+This is \textbf{pdfTeX}, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) kpathsea version 6.3.5
+\par
+This is \textbf{makeindex}, version 2.17 [TeX Live 2023] (kpathsea + Thai support).
 % Additionnal Notes page
 \newpage
 {\huge {\bf Notes}}

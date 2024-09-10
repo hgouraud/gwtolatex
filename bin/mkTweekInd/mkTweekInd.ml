@@ -415,7 +415,8 @@ let main () =
                   [] entry.numbers_annex
               in
               Format.sprintf "%sen annexe %s" et
-                (String.concat ", " (List.rev photos_annex))
+                (String.concat ", "
+                   (List.rev photos_annex |> List.sort_uniq compare))
             else ""
           in
           let numbers =
@@ -429,6 +430,16 @@ let main () =
         (* TODO filter page numbers across several lists avoiding duplicates *)
         (entry.surname, entry.first_name, numbers) :: acc)
       entries []
+  in
+
+  let new_entries =
+    List.map
+      (fun (sn, fn, data) ->
+        if sn = "\\item X" || sn = "\\item x" then (
+          if !verbose then Printf.eprintf "Adjust: %s\n" fn;
+          ("\\item " ^ fn, "", data))
+        else (sn, fn, data))
+      new_entries
   in
 
   let new_entries =
@@ -449,7 +460,7 @@ let main () =
       let comma = if first_name <> "" then ", " else "" in
       output_string oc
         (Format.sprintf "%s%s%s%s :%s\n"
-           (* account for "\item Surname ..." *)
+           (* account for "surname = \item Surname ..." *)
            (let head =
               if String.length (Name.lower surname) > 6 then
                 (Name.lower surname).[6]
