@@ -385,15 +385,18 @@ let main () =
                 in
                 loop "" [] [] photos |> List.rev
               in
+              (* collect list of photos and for each list of pages *)
               let photos =
                 List.map
                   (fun (n, p_l) ->
                     let plural = if List.length p_l > 1 then "s" else "" in
-                    Format.sprintf " photo %s page%s %s" n plural
+                    Format.sprintf "%s page%s %s" n plural
                       (String.concat ", " p_l))
                   photos
               in
-              Format.sprintf "%s" (String.concat ", " photos)
+              let plural = if List.length photos > 1 then "s" else "" in
+              Format.sprintf "photo%s %s" plural
+                (String.concat ", " (List.sort_uniq compare photos))
             else ""
           in
           let et =
@@ -403,6 +406,7 @@ let main () =
             then "et "
             else " "
           in
+          (* collect list of photos and pages *)
           let annex =
             if List.length entry.numbers_annex > 0 then
               let photos_annex =
@@ -432,6 +436,7 @@ let main () =
       entries []
   in
 
+  (* suppress X entries *)
   let new_entries =
     List.map
       (fun (sn, fn, data) ->
@@ -439,6 +444,23 @@ let main () =
           if !verbose then Printf.eprintf "Adjust: %s\n" fn;
           ("\\item " ^ fn, "", data))
         else (sn, fn, data))
+      new_entries
+  in
+
+  (* suppress N entries *)
+  let new_entries =
+    List.filter_map
+      (fun (sn, fn, data) ->
+        if sn <> "\\item N" then Some (sn, fn, data) else None)
+      new_entries
+  in
+
+  (* suppress data for "voir" entries *)
+  let new_entries =
+    List.map
+      (fun (sn, fn, data) ->
+        let data = if Sutil.start_with "voir" 0 fn then "" else data in
+        (sn, fn, data))
       new_entries
   in
 
@@ -475,6 +497,7 @@ let main () =
   output_string oc "\n\\end{theindex}\n";
   close_in ic;
   close_out oc;
+  Printf.eprintf "mkTweekIndex done\n";
   let move_index_back = Printf.sprintf "mv %s %s" out_file in_file in
   if !verbose then Printf.eprintf "Commd: %s\n" move_index_back;
   let _ = Sys.command move_index_back in

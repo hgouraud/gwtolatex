@@ -1390,13 +1390,19 @@ let print_images conf och images_list _key_str =
                       let sn = Sutil.replace '_' ' ' key.pk_surname in
                       let sn = Sutil.particles sn in
                       let fn = Sutil.replace '_' ' ' key.pk_first_name in
+                      if sn = "Dupontxxx" && fn = "Jeanxxx" then
+                        Printf.eprintf "%s, %s, photo %s\n" sn fn
+                          (if anx_page <> 0 then
+                           Format.sprintf "%d/%d" image_id anx_page
+                          else Format.sprintf "%s" img_number0);
+
                       Format.sprintf "\\index{%s, %s%s, photo %s}" sn fn
                         (if key.pk_occ <> 0 then
                          Format.sprintf " (%d)" key.pk_occ
                         else "")
                         (if anx_page <> 0 then
                          Format.sprintf "%d/%d" image_id anx_page
-                        else string_of_int image_id)
+                        else Format.sprintf "%s" img_number0)
                       :: acc)
                     [] key_l
                 in
