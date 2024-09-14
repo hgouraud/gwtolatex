@@ -6,9 +6,9 @@ let simple_tag_1 t str =
     [
       ("i", "textit");
       ("u", "underline");
-      ("b", "bf");
+      ("b", "textbf");
       ("em", "it");
-      ("strong", "bf");
+      ("strong", "textbf");
       ("big", "large");
       ("small", "small");
       ("tiny", "tiny");
@@ -21,19 +21,7 @@ let simple_tag_1 t str =
       Printf.eprintf "funny tag 1 %s\n" t;
       "underline"
   in
-  if str <> "" then Format.sprintf "{\\%s %s}" cmd str else ""
-
-let _simple_tag_2 t str =
-  let tags =
-    [ ("b", "bf"); ("small", "scriptsize"); ("tiny", "tiny"); ("tt", "tt") ]
-  in
-  let cmd =
-    try List.assoc t tags
-    with Not_found ->
-      Printf.eprintf "funny tag 2 %s\n" t;
-      "underline"
-  in
-  if str <> "" then Format.sprintf "{\\%s %s}" cmd str else ""
+  if str <> "" then Format.sprintf "\\%s{%s}" cmd str else ""
 
 let escape_aux str =
   let special =
