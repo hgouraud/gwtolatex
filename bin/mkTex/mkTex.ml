@@ -94,6 +94,7 @@ let make_conf xbases xbasename xpasswd xfamily xdebug xverbose xtreemode =
       portraitwidth = imgwidth_default;
       sideways = false;
       twopages = false;
+      samepage = false;
       double = false;
       expand = 0;
       split = 0;
@@ -115,42 +116,7 @@ let make_conf xbases xbasename xpasswd xfamily xdebug xverbose xtreemode =
 
 type _p_type = Str | Int | Bool
 
-let dump_conf conf =
-  Printf.eprintf "Configuration\n";
-  Printf.eprintf "  Launch parameters:\n";
-  Printf.eprintf "    bases = %s\n" conf.bases;
-  Printf.eprintf "    basename = %s\n" conf.basename;
-  Printf.eprintf "    passwd = %s\n" conf.passwd;
-  Printf.eprintf "    family = %s\n" conf.family;
-  Printf.eprintf "    debug = %d\n" conf.debug;
-  Printf.eprintf "    verbose = %s\n" (if conf.verbose then "true" else "false");
-  Printf.eprintf "    treemode = %d\n" conf.treemode;
-  Printf.eprintf "  Formatting:\n";
-  Printf.eprintf "    unit = %s\n" conf.unit;
-  Printf.eprintf "    textwidth = %1.2f\n" conf.textwidth;
-  Printf.eprintf "    textheight = %1.2f\n" conf.textheight;
-  Printf.eprintf "    margin = %1.2f\n" conf.margin;
-  Printf.eprintf "    colsep = %1.2f\n" conf.colsep;
-  Printf.eprintf "    rulethickns = %1.2f\n" conf.rulethickns;
-  Printf.eprintf "    fontsize = %s\n" conf.fontsize;
-  Printf.eprintf "    imgwidth = %1.2f\n" conf.imgwidth;
-  Printf.eprintf "    vignwidth = %1.2f\n" conf.vignwidth;
-  Printf.eprintf "    portraitwidth = %1.2f\n" conf.portraitwidth;
-  Printf.eprintf "  Other params :\n";
-  Printf.eprintf "    collectimages = %s\n"
-    (if conf.collectimages then "true" else "false");
-  Printf.eprintf "    sectiononatag = %s\n"
-    (if conf.sectiononatag then "true" else "false");
-  Printf.eprintf "    nbimgperline = %d\n" conf.nbimgperline;
-  Printf.eprintf "    sideways = %s\n"
-    (if conf.sideways then "true" else "false");
-  Printf.eprintf "    twopages = %s\n"
-    (if conf.twopages then "true" else "false");
-  Printf.eprintf "    double = %s\n" (if conf.double then "true" else "false");
-  Printf.eprintf "    arbres =  %s\n" (if conf.arbres then "true" else "false");
-  Printf.eprintf "    split =  %d\n" conf.split
-
-let print_conf conf =
+let string_conf conf =
   let config_str =
     [
       Format.sprintf "Configuration\n";
@@ -184,6 +150,8 @@ let print_conf conf =
         (if conf.sideways then "true" else "false");
       Format.sprintf "    twopages = %s\n"
         (if conf.twopages then "true" else "false");
+      Format.sprintf "    samepage = %s\n"
+        (if conf.samepage then "true" else "false");
       Format.sprintf "    double = %s\n"
         (if conf.double then "true" else "false");
       Format.sprintf "    arbres =  %s\n"
@@ -191,8 +159,15 @@ let print_conf conf =
       Format.sprintf "    split =  %d\n" conf.split;
     ]
   in
-  Format.sprintf "\\begin{verbatim}\n%s\\end{verbatim}"
-    (String.concat "" config_str)
+  String.concat "" config_str
+
+let dump_conf conf =
+  let config_str = string_conf conf in
+  Printf.eprintf "%s" config_str
+
+let print_conf conf =
+  let config_str = string_conf conf in
+  Format.sprintf "\\begin{verbatim}\n%s\\end{verbatim}" config_str
 
 let strip_tr_sp s =
   let b = Buffer.create (String.length s) in
@@ -322,9 +297,11 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
       | Portrait -> "Portrait"
       | Images -> "Images"
       | Imagek -> "Imagek"
-      | Vignette -> "Vignette")
+      | Vignette -> "Vignette"
+      | Wide -> "Wide")
       name ch sec ssec sssec nb
   in
+  let wide = Sutil.contains name "-wide" in
   match im_type with
   | Portrait ->
       (* TODO manage images location *)
@@ -345,7 +322,7 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
         (* GeneWeb replaces ' ' by '_' in key computations *)
         (Sutil.lower name |> Sutil.replace '-' '_' |> Sutil.replace ' ' '_')
         "jpg"
-  | Images ->
+  | Images | Wide ->
       let image_id =
         match List.assoc_opt name !img_name_list with
         | Some id -> id
@@ -361,7 +338,8 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
       in
       img_ok_list := image_id :: !img_ok_list;
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n"
-        conf.imgwidth conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
+        (if wide then conf.textwidth else conf.imgwidth)
+        conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
         (String.concat Filename.dir_sep [ "."; "src"; conf.basename; "images" ])
         Filename.dir_sep name
       (* TODO deal with !caption here, possibly \begin{image}...\end{image} *)
@@ -598,7 +576,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
       (* TODO lower?? *)
       let ocn = if ocn = 0 then "0" else string_of_int ocn in
       let image_label = Format.sprintf "%s.%s.%s" fn ocn sn in
-      let vignette = Sutil.contains s "-vignette" in
+      let vignette = Sutil.contains s "-vignette" || Sutil.contains s "-v." in
       if not vignette then incr image_nbr;
       let image =
         ( (if vignette then Vignette
@@ -1213,6 +1191,7 @@ let one_command conf och line =
           subsubsection := 0;
           conf
       | _ -> conf)
+  | "SamePage" -> { conf with samepage = param = "on" || param = "On" }
   | "Section" ->
       out "section" param;
       incr section;
@@ -1330,11 +1309,16 @@ let print_images conf och images_list _key_str =
   (* TODO manage Wide *)
   List.iter
     (fun (im_type, name, (ch, sec, ssec, _sssec), nbr) ->
-      (* let wide = Sutil.contains name "-wide" in *)
-      let width = Format.sprintf "%2.2f%s" conf.imgwidth conf.unit in
+      let width =
+        Format.sprintf "%2.2f%s"
+          (if Sutil.contains name "-wide" then conf.textwidth
+          else conf.imgwidth)
+          conf.unit
+      in
+      if Sutil.contains name "-wide" then Printf.eprintf "Wide image: %s\n" name;
       match im_type with
       | Imagek | Portrait | Vignette -> ()
-      | Images ->
+      | Images | Wide ->
           let name1 = Sutil.replace_str "\\_{}" "_" name in
           let name = Filename.remove_extension name in
           let images_dir =
@@ -1411,9 +1395,10 @@ let print_images conf och images_list _key_str =
           in
           output_string och
             (Format.sprintf
-               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\newline%s%s%s}\n"
+               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\newline%s%s%s}%s\n"
                width width images_dir Filename.dir_sep name img_number img_label
-               index_list))
+               index_list
+               (if Sutil.contains name "-wide" then "\n\\par\n" else "")))
     (List.rev images_list);
   output_string och (Format.sprintf "\\par\n")
 

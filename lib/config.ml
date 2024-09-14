@@ -9,7 +9,7 @@ type my_tree =
   | Element of string * (name * string) list * my_tree list
 
 (* TODO Imagek = Portrait ?? no *)
-type im_type = Portrait | Imagek | Images | Vignette
+type im_type = Portrait | Imagek | Images | Vignette | Wide
 
 type image = {
   im_type : im_type;
@@ -54,6 +54,7 @@ type config = {
   portraitwidth : float;
   sideways : bool;
   twopages : bool;
+  samepage : bool;
   double : bool;
   expand : int;
   split : int;
