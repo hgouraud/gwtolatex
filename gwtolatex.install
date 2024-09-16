@@ -48,6 +48,7 @@ libexec: [
 bin: [
   "_build/install/default/bin/minitest"
   "_build/install/default/bin/mkBook"
+  "_build/install/default/bin/mkIndex"
   "_build/install/default/bin/mkNewGw"
   "_build/install/default/bin/mkTex"
   "_build/install/default/bin/mkTweekInd"
