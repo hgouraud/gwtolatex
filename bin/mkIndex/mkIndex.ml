@@ -60,51 +60,80 @@ let label letter = Format.sprintf "<a name=\"%s\"></a>\n" letter
 let letters_list letters =
   let one_letter l = Format.sprintf {|<a href="#%s">%s</a>|} l l in
   let row = List.map (fun l -> one_letter l) letters in
-  String.concat ", " row ^ "\n"
+  String.concat ", " row ^ "<br>\n"
 
-let scan_person str =
+(* from Geneweb.Gutil *)
+let designation base p =
+  let first_name = Gwdb.p_first_name base p in
+  let nom = Gwdb.p_surname base p in
+  first_name ^ "." ^ string_of_int (Gwdb.get_occ p) ^ " " ^ nom
+
+(* Wiki format fn/sn/oc/tet *)
+let scan_person base str =
   let parts = String.split_on_char '/' str in
-  match List.length parts with
-  | 2 -> Some (Format.sprintf "%s.0+%s" (List.nth parts 0) (List.nth parts 1))
-  | 3 ->
-      Some
-        (Format.sprintf "%s.%s+%s" (List.nth parts 0) (List.nth parts 2)
-           (List.nth parts 1))
-  | 4 ->
-      Some
-        (Format.sprintf "%s.%s+%s" (List.nth parts 0) (List.nth parts 2)
-           (List.nth parts 1))
-  | _ ->
-      Printf.eprintf "Funny person ref: %s\n" str;
-      None
+  let fn, oc, sn =
+    match List.length parts with
+    | 2 -> (List.nth parts 0, 0, List.nth parts 1)
+    | 3 ->
+        (* si 2ns champ n'est pas numérique, c'est du texte *)
+        (List.nth parts 0, 0, List.nth parts 1)
+    | 4 -> (List.nth parts 0, int_of_string (List.nth parts 2), List.nth parts 1)
+    | _ ->
+        Printf.eprintf "Funny person ref: %s\n" str;
+        ("", 0, "")
+  in
+  Gwdb.person_of_key base fn sn oc
 
-let scan_notes notes key =
+(* Key format fn.oc+sn *)
+let scan_person2 base str =
+  let parts = String.split_on_char '.' str in
+  let fn = List.nth parts 0 in
+  let i =
+    try String.index_from (List.nth parts 1) 0 '_' with Not_found -> -1
+  in
+  if i = -1 then (
+    Printf.eprintf "Str: (%s)\n" str;
+    assert false);
+  if !debug = 5 then Printf.eprintf "Str: (%s)\n" str;
+  let oc = int_of_string (String.sub (List.nth parts 1) 0 i) in
+  let sn =
+    String.sub (List.nth parts 1) (i + 1)
+      (String.length (List.nth parts 1) - i - 1)
+  in
+  Gwdb.person_of_key base fn sn oc
+
+let scan_notes base notes key =
   let lines = String.split_on_char '\n' notes in
-  let trace = key = "wwwwwjean-christian.0_fresil" in
-  List.fold_left
-    (fun acc line ->
-      if trace then Printf.eprintf "Line: %s\n" line;
-      let rec loop i0 acc =
-        let i = try String.index_from line i0 '[' with Not_found -> -1 in
-        if i <> -1 && line.[i + 1] = '[' && line.[i + 2] <> '[' then (
-          let j = try String.index_from line i ']' with Not_found -> -1 in
-          if trace then Printf.eprintf "i, j: %d, %d\n" i j;
-          if j = -1 || line.[j + 1] <> ']' then (
-            Printf.eprintf "Bad line format: %s\n" line;
-            acc)
-          else
-            let person = String.sub line (i + 2) (j - i - 2) in
-            if trace then Printf.eprintf "Person: %s\n" person;
-            match scan_person person with
-            | None -> loop (j + 1) acc
-            | Some key ->
-                let key = Sutil.lower key |> Sutil.replace ' ' '_' in
-                if trace then Printf.eprintf "Key: %s\n" key;
-                loop (j + 1) (key :: acc))
-        else acc
-      in
-      loop 0 acc)
-    [] lines
+  let trace = key = "xxxxvictor.0_lepaisant" in
+  if trace then Printf.eprintf "\n\nNotes for %s\n" key;
+  let res =
+    List.fold_left
+      (fun acc line ->
+        if trace && false then Printf.eprintf "Line: %s\n" line;
+        let rec loop i0 acc =
+          let i = try String.index_from line i0 '[' with Not_found -> -1 in
+          if i <> -1 && line.[i + 1] = '[' && line.[i + 2] <> '[' then (
+            let j = try String.index_from line i ']' with Not_found -> -1 in
+            if trace && false then Printf.eprintf "i, j: %d, %d\n" i j;
+            if j = -1 || line.[j + 1] <> ']' then (
+              Printf.eprintf "Bad line format: %s\n" line;
+              acc)
+            else
+              let person = String.sub line (i + 2) (j - i - 2) in
+              if trace then Printf.eprintf "Person: %s\n" person;
+              match scan_person base person with
+              | Some ip when not (List.mem ip acc) -> loop (j + 1) (ip :: acc)
+              | _ -> loop (j + 1) acc)
+          else acc
+        in
+        loop 0 acc)
+      [] lines
+  in
+  if trace then
+    Printf.eprintf "List: %s\n"
+      (List.map (fun ip -> designation base (Gwdb.poi base ip)) res
+      |> String.concat ", ");
+  res
 
 let invert_table (person_ref : ('key1, 'key2 list) Hashtbl.t) :
     ('key2, 'key1 list) Hashtbl.t =
@@ -131,51 +160,93 @@ let header =
 </div>
 
 <h1>Index de la Généalogie chausiaise</h1>
-(Mise à jour du : %04d-%02d-%02d %02d:%02d:%02d)
+(Mise à jour du : %04d-%02d-%02d %02d:%02d)
 <br>
 |}
     (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
-    tm.tm_sec
 
-let print_one_item och base person_ref (iper, sn, fn, oc, aliases, kind, key_l)
-    =
-  (match kind with
-  | "std" ->
-      let key = Format.sprintf "%s.%d+%s" fn oc sn in
-      let key = Sutil.lower key |> Sutil.replace ' ' '_' in
-      output_string och
-        (Format.sprintf "<a href=\"%%sm=S;p=;n=%s\">%s, %s%s</a><br>\n"
-           (Format.sprintf "%s%s+%s" fn
-              (if oc <> 0 then Format.sprintf ".%d" oc else "")
-              sn)
-           (Sutil.particles sn) fn
-           (if oc <> 0 then Format.sprintf ".%d" oc else ""));
-      if List.length key_l > 0 then
+let print_one_item och base inv_person_ref
+    (iper, sn, fn, oc, aliases, kind, key_l) =
+  let fn1, oc1, sn1, sn2 =
+    match kind with
+    | "boat" -> (fn, oc, "X", "")
+    | "list" -> (fn, oc, ".", "")
+    | "alias" -> (fn, oc, sn, Sutil.particles sn)
+    | _ -> (fn, oc, sn, Sutil.particles sn ^ ", ")
+  in
+  let p = Gwdb.poi base iper in
+  let fn_a = Gwdb.sou base (Gwdb.get_first_name p) in
+  let sn_a = Gwdb.sou base (Gwdb.get_surname p) in
+  let oc_a = Gwdb.get_occ p in
+  let key1 =
+    Format.sprintf "%s%s%s" sn2 fn1
+      (if oc1 <> 0 then Format.sprintf ".%d" oc1 else "")
+  in
+  let key2 =
+    Format.sprintf "%s%s%s" sn_a fn_a
+      (if oc_a <> 0 then Format.sprintf ".%d" oc_a else "")
+  in
+
+  if key1 <> key2 then (
+    output_string och
+      (Format.sprintf "<b><a href=\"%%sm=S;p=;n=%s\">%s%s%s</a></b>\n"
+         (Format.sprintf "%s%s+%s" fn1
+            (if oc1 <> 0 then Format.sprintf ".%d" oc1 else "")
+            sn1)
+         sn2 fn1
+         (if oc1 <> 0 then Format.sprintf ".%d" oc1 else ""));
+
+    (match kind with
+    | "std" ->
+        if List.length key_l > 0 then
+          let person_ref_l = Hashtbl.find inv_person_ref iper in
+          let person_ref_l =
+            List.map
+              (fun key ->
+                match scan_person2 base key with
+                | Some ip ->
+                    let p = Gwdb.poi base ip in
+                    let fn = Gwdb.sou base (Gwdb.get_first_name p) in
+                    let sn = Gwdb.sou base (Gwdb.get_surname p) in
+                    let oc = Gwdb.get_occ p in
+                    let key =
+                      Format.sprintf "%s%s+%s" fn
+                        (if oc = 0 then "" else "." ^ string_of_int oc)
+                        sn
+                    in
+                    let sn = if sn = "X" || sn = "." then "" else sn in
+                    Format.sprintf "<a href=\"%%sm=S;p=;n=%s\">%s%s %s</a>" key
+                      fn
+                      (if oc = 0 then "" else "." ^ string_of_int oc)
+                      sn
+                | None -> Format.sprintf "%s" key)
+              person_ref_l
+          in
+          output_string och
+            (Format.sprintf
+               " <small>cité(e) %d fois dans&nbsp;:</small><br>\n\
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%s<br>\n"
+               (List.length person_ref_l)
+               (String.concat ", " person_ref_l))
+        else output_string och "<br>"
+    | "boat" -> output_string och " <small><em>(bateau)</em></small><br>\n"
+    | "list" -> output_string och " <small><em>(liste)</em></small><br>\n"
+    | "alias" ->
+        let key =
+          Format.sprintf "%s%s+%s" fn_a
+            (if oc_a = 0 then "" else "." ^ string_of_int oc_a)
+            sn_a
+        in
         output_string och
-          (Format.sprintf "<small>cité(e) %d fois dans&nbsp;:</small><br>\n%s\n"
-             (List.length key_l)
-             (String.concat ", " (Hashtbl.find person_ref key)))
-  | "boat" ->
-      output_string och
-        (Format.sprintf "<a href=\"%%sm=S;p=;n=%s\">%s%s%s</a>\n"
-           (Format.sprintf "%s%s+X" fn
-              (if oc <> 0 then Format.sprintf ".%d" oc else ""))
-           (Sutil.particles sn) ""
-           (if oc <> 0 then Format.sprintf ".%d" oc else ""));
-      output_string och "<small><em>(bateau)</em></small><br>\n"
-  | "alias" ->
-      let p = Gwdb.poi base iper in
-      let fn1 = Gwdb.sou base (Gwdb.get_first_name p) in
-      let sn1 = Gwdb.sou base (Gwdb.get_surname p) in
-      let oc1 = Gwdb.get_occ p in
-      output_string och (Format.sprintf "%s\n" (Sutil.particles sn));
-      output_string och
-        (Format.sprintf
-           "<small><em>(surnom ou alias de : %s%s %s)</em></small><br>\n" fn1
-           (if oc1 <> 0 then Format.sprintf ".%d" oc1 else "")
-           (if sn1 = "X" || sn1 = "x" then "" else sn1))
-  | s -> Printf.eprintf "Funny kind: %s\n" s);
-  output_string och "<p>\n"
+          (Format.sprintf
+             " <small><em>(surnom ou alias de : <a \
+              href=\"%%sm=S;p=;n=%s\">%s%s%s</a>)</em></small><br>\n"
+             key
+             (if sn_a = "X" || sn_a = "x" then "" else sn_a ^ ", ")
+             fn_a
+             (if oc_a <> 0 then Format.sprintf ".%d" oc_a else ""))
+    | s -> Printf.eprintf "Funny kind: %s\n" s);
+    output_string och "\n")
 
 let print_list_head n liste =
   let rec loop n = function
@@ -230,7 +301,7 @@ let main () =
   Arg.parse speclist anonfun usage;
 
   let fname_out =
-    if !out_file = "" then Filename.concat "." (!family ^ "full-index.txt")
+    if !out_file = "" then Filename.concat "." (!family ^ "-full-index.txt")
     else Filename.concat "." !out_file
   in
   Printf.eprintf
@@ -253,6 +324,8 @@ let main () =
       let oc = Gwdb.get_occ p in
       let aliases = Gwdb.get_aliases p in
       let notes = Gwdb.get_notes p in
+      if !debug = 4 && sn = "Marie" && fn = "Albert" then
+        Printf.eprintf "Found Albert\n";
       tmp := (iper, sn, fn, oc, aliases, notes) :: !tmp)
     (Gwdb.persons base);
   let full_list = !tmp in
@@ -272,7 +345,7 @@ let main () =
   let full_list =
     List.map
       (fun (iper, sn, fn, oc, aliases, kind, notes) ->
-        if sn = "." then (iper, fn, "", oc, aliases, kind, notes)
+        if sn = "." then (iper, fn, fn, oc, aliases, "list", notes)
         else (iper, sn, fn, oc, aliases, kind, notes))
       full_list
   in
@@ -287,13 +360,14 @@ let main () =
       [] full_list
   in
 
-  if !verbose then Printf.eprintf "Build hashtbl\n";
+  if !verbose then Printf.eprintf "Build person_ref hashtbl\n";
   let person_ref = Hashtbl.create 100 in
   List.iter
     (fun (iper, sn, fn, oc, aliases, kind, notes) ->
+      let sn = match kind with "boat" -> "X" | "list" -> "." | _ -> sn in
       let key = Format.sprintf "%s.%d+%s" fn oc sn in
       let key = Sutil.lower key |> Sutil.replace ' ' '_' in
-      Hashtbl.add person_ref key (scan_notes (Gwdb.sou base notes) key))
+      Hashtbl.add person_ref key (scan_notes base (Gwdb.sou base notes) key))
     full_list;
   if !verbose then
     Printf.eprintf "Full_list (%d), Hashtbl (%d)\n" (List.length full_list)
@@ -305,33 +379,64 @@ let main () =
       let key = Format.sprintf "%s.%d+%s" fn oc sn in
       let key = Sutil.lower key |> Sutil.replace ' ' '_' in
       Printf.eprintf "Hashtbl item: %s, (%s)\n" key
-        (String.concat ", " (Hashtbl.find person_ref key));
+        (List.map
+           (fun ip -> designation base (Gwdb.poi base ip))
+           (Hashtbl.find person_ref key)
+        |> String.concat ", ");
       loop (n - 1))
   in
   if !debug = 3 then loop 10;
+
+  (if !debug = 4 then
+   let key1 = "albert.0_marie" in
+   let key2 = "albert.1_marie" in
+   if Hashtbl.mem person_ref key1 || Hashtbl.mem person_ref key2 then
+     Printf.eprintf "Albert in person_ref\n"
+   else Printf.eprintf "Albert not person_ref\n");
+
+  if !debug = 4 then
+    List.iter
+      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
+        if sn = "Marie" && fn = "Albert" then
+          Printf.eprintf "Albert in full_list (%d)\n" oc;
+        if sn = "." then Printf.eprintf "Found in full_list %s.%d %s\n" fn oc sn)
+      full_list;
 
   if !verbose then
     Printf.eprintf "Build inverse hashtbl (%d)\n" (Hashtbl.length person_ref);
   let inv_person_ref = invert_table person_ref in
 
   if !verbose then
-    Printf.eprintf "Use inverse hashtbl (%d)\n" (Hashtbl.length inv_person_ref);
+    Printf.eprintf "Build ref lists (%d)\n" (Hashtbl.length inv_person_ref);
   let new_list =
     List.map
       (fun (iper, sn, fn, oc, aliases, kind, notes) ->
-        let key = Format.sprintf "%s.%d+%s" fn oc sn in
-        let key = Sutil.lower key |> Sutil.replace ' ' '_' in
-        let key_l =
-          match Hashtbl.find_opt inv_person_ref key with
-          | Some key_l ->
-              if !debug = 2 then
-                Printf.eprintf "Found %s (%d)\n" key (List.length key_l);
-              key_l
-          | None -> []
-        in
-        (iper, sn, fn, oc, aliases, kind, key_l))
+        let sn2 = if kind = "boat" then "X" else sn in
+        let sn2 = if kind = "list" then "." else sn2 in
+        match Gwdb.person_of_key base fn sn2 oc with
+        | Some ip ->
+            let key_l =
+              match Hashtbl.find_opt inv_person_ref ip with
+              | Some key_l ->
+                  if !debug = 2 then
+                    Printf.eprintf "Found %s (%d)\n" (Gwdb.string_of_iper ip)
+                      (List.length key_l);
+                  key_l
+              | None -> []
+            in
+            (iper, sn, fn, oc, aliases, kind, key_l)
+        | None ->
+            Printf.eprintf "Ip None %s, %s\n" fn sn;
+            (iper, sn, fn, oc, aliases, kind, []))
       full_list
   in
+
+  if !debug = 4 then
+    List.iter
+      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
+        if sn = "Marie" && fn = "Albert" then
+          Printf.eprintf "Albert in new_list (%d)\n" oc)
+      new_list;
 
   if !verbose then Printf.eprintf "Expand aliases (%d)\n" (List.length new_list);
   let new_list =
@@ -348,10 +453,13 @@ let main () =
                   0,
                   [],
                   "alias",
-                  [ Format.sprintf "voir %s, %s" sn fn ] ))
+                  [
+                    Format.sprintf "voir %s, %s.%s" sn fn
+                      (if oc = 0 then "" else "." ^ string_of_int oc);
+                  ] ))
               aliases
           in
-          al @ acc)
+          (iper, sn, fn, oc, aliases, kind, notes) :: (al @ acc))
       [] new_list
   in
 
@@ -360,6 +468,15 @@ let main () =
 
   if !debug = 3 then print_list_head 20 new_list;
 
+  if !debug = 4 then
+    List.iter
+      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
+        if sn = "Marie" && fn = "Albert" then
+          Printf.eprintf "Albert in new_list_2 (%d)\n" oc;
+        if sn = "." then
+          Printf.eprintf "Found in new_list_2 %s.%d %s\n" fn oc sn)
+      new_list;
+
   if !verbose then Printf.eprintf "Sort new_list\n";
 
   let compare (iper1, sn1, fn1, oc1, aliases1, kind1, notes1)
@@ -367,15 +484,27 @@ let main () =
     let sn1 = Sutil.particles sn1 in
     let sn2 = Sutil.particles sn2 in
     let key1 =
-      Sutil.lower (Format.sprintf "%s%s" sn1 fn1) |> Sutil.replace ' ' '_'
+      Sutil.lower (Format.sprintf "%s%s%d" sn1 fn1 oc1) |> Sutil.replace ' ' '_'
     in
     let key2 =
-      Sutil.lower (Format.sprintf "%s%s" sn2 fn2) |> Sutil.replace ' ' '_'
+      Sutil.lower (Format.sprintf "%s%s%d" sn2 fn2 oc2) |> Sutil.replace ' ' '_'
     in
+    if key1 = "MarieAlbert0" || key1 = "MarieAlbert1" then
+      Printf.eprintf "Sorted Albert\n";
     if key1 < key2 then -1 else if key1 = key2 then 0 else 1
   in
 
+  let old = List.length new_list in
   let new_list = List.sort_uniq compare new_list in
+  if !verbose then
+    Printf.eprintf "New list (sort uniq) %d -> %d\n" old (List.length new_list);
+
+  if !debug = 4 then
+    List.iter
+      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
+        if sn = "Marie" && fn = "Albert" then
+          Printf.eprintf "Albert in new_list_3 (%d)\n" oc)
+      new_list;
 
   let letters = build_letters new_list in
 
@@ -383,8 +512,10 @@ let main () =
 
   let print_index och base new_list person_ref letters =
     output_string och header;
+    output_string och "<p>";
     output_string och (label (List.hd letters));
     output_string och (letters_list letters);
+    output_string och "<dl>";
     let rec loop1 ltrs new_list =
       match ltrs with
       | [] -> ()
@@ -392,18 +523,20 @@ let main () =
           let ll = (Sutil.lower letter).[0] in
           let rec loop2 new_list =
             match new_list with
-            | [] -> ()
+            | [] -> output_string och "</dl>"
             | ((iper, sn, fn, oc, aliases, kind, key_l) as item) :: new_list
               when String.length sn > 0
                    && sn <> "?"
                    && (Sutil.lower (Sutil.particles sn)).[0] = ll ->
-                print_one_item och base person_ref item;
+                print_one_item och base inv_person_ref item;
                 loop2 new_list
             | ((iper, sn, fn, oc, aliases, kind, key_l) as item) :: new_list
               when List.length ltrs > 0 ->
+                output_string och "</dl><p>";
                 output_string och (label (List.hd ltrs));
                 output_string och (letters_list letters);
-                print_one_item och base person_ref item;
+                output_string och "<dl>";
+                print_one_item och base inv_person_ref item;
                 loop1 ltrs new_list
             | _ -> ()
           in
@@ -412,9 +545,40 @@ let main () =
     loop1 letters new_list
   in
 
+  (if !debug = 4 then
+   let key1 = "albert.0_marie" in
+   let key2 = "albert.1_marie" in
+   if Hashtbl.mem person_ref key1 || Hashtbl.mem person_ref key2 then
+     Printf.eprintf "Albert in person_ref (2)\n"
+   else Printf.eprintf "Albert not person_ref (2)\n");
+
+  let old = List.length new_list in
+  let new_list =
+    let rec loop acc prev new_list =
+      match new_list with
+      | [] -> acc
+      | ((iper, sn, fn, oc, aliases, kind, key_l) as item) :: new_list ->
+          let fn1, oc1, _sn1, sn2 =
+            match kind with
+            | "boat" -> (fn, oc, "X", "")
+            | "list" -> (fn, oc, ".", "")
+            | "alias" -> (fn, oc, sn, Sutil.particles sn)
+            | _ -> (fn, oc, sn, Sutil.particles sn ^ ", ")
+          in
+          let key =
+            Format.sprintf "%s%s%s" sn2 fn1
+              (if oc1 <> 0 then Format.sprintf ".%d" oc1 else "")
+          in
+          if key <> prev then loop (item :: acc) key new_list
+          else loop acc key new_list
+    in
+    loop [] "" (List.rev new_list)
+  in
+  if !verbose then
+    Printf.eprintf "New list (duplicates) %d -> %d\n" old (List.length new_list);
   let och = open_out fname_out in
   print_index och base new_list person_ref letters;
   close_out och;
-  Printf.eprintf "Done\n"
+  Printf.eprintf "Done (%d)\n" (List.length new_list)
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)
