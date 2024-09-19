@@ -38,14 +38,26 @@ let missing_tags = ref []
 (* TODO suppress (pages liées) and (modifier) in m=NOTES *)
 (* TODO suppress "base chausey ..." *)
 
+let nbc c =
+  if Char.code c < 0x80 then 1
+  else if Char.code c < 0xC0 then assert false
+  else if Char.code c < 0xE0 then 2
+  else if Char.code c < 0xF0 then 3
+  else if Char.code c < 0xF8 then 4
+  else if Char.code c < 0xFC then 5
+  else if Char.code c < 0xFE then 6
+  else assert false
+
 let build_letters list =
   let letters =
     let rec loop acc list =
       match list with
       | [] -> acc
       | (iper, sn, fn, oc, aliases, kind, key_l) :: list ->
-          let c = String.sub (Sutil.particles sn) 0 1 in
-          if List.mem c acc then loop acc list else loop (c :: acc) list
+          let n = nbc sn.[0] in
+          let c = String.sub (Sutil.particles sn) 0 n in
+          if List.mem c acc || n > 1 || c > "a" then loop acc list
+          else loop (c :: acc) list
     in
     loop [] list
   in
@@ -510,6 +522,7 @@ let main () =
       new_list;
 
   let letters = build_letters new_list in
+  if !verbose then Printf.eprintf "Letters: %d\n" (List.length letters);
 
   if !debug = 3 then print_list_head 20 new_list;
 
