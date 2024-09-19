@@ -167,6 +167,10 @@ let header =
 
 let print_one_item och base inv_person_ref
     (iper, sn, fn, oc, aliases, kind, key_l) =
+  let p = Gwdb.poi base iper in
+  let fn_a = Gwdb.sou base (Gwdb.get_first_name p) in
+  let sn_a = Gwdb.sou base (Gwdb.get_surname p) in
+  let oc_a = Gwdb.get_occ p in
   let fn1, oc1, sn1, sn2 =
     match kind with
     | "boat" -> (fn, oc, "X", "")
@@ -174,10 +178,6 @@ let print_one_item och base inv_person_ref
     | "alias" -> (fn, oc, sn, Sutil.particles sn)
     | _ -> (fn, oc, sn, Sutil.particles sn ^ ", ")
   in
-  let p = Gwdb.poi base iper in
-  let fn_a = Gwdb.sou base (Gwdb.get_first_name p) in
-  let sn_a = Gwdb.sou base (Gwdb.get_surname p) in
-  let oc_a = Gwdb.get_occ p in
   let key1 =
     Format.sprintf "%s%s%s" sn2 fn1
       (if oc1 <> 0 then Format.sprintf ".%d" oc1 else "")
@@ -186,13 +186,21 @@ let print_one_item och base inv_person_ref
     Format.sprintf "%s%s%s" sn_a fn_a
       (if oc_a <> 0 then Format.sprintf ".%d" oc_a else "")
   in
+  let p_a, n_a =
+    ( Format.sprintf "%s%s" fn_a
+        (if oc_a = 0 then "" else "." ^ string_of_int oc_a),
+      sn_a )
+  in
+  let p_1, n_1 =
+    ( Format.sprintf "%s%s" fn1 (if oc1 = 0 then "" else "." ^ string_of_int oc1),
+      sn1 )
+  in
 
   if key1 <> key2 then (
     output_string och
-      (Format.sprintf "<b><a href=\"%%sm=S;p=;n=%s\">%s%s%s</a></b>\n"
-         (Format.sprintf "%s%s+%s" fn1
-            (if oc1 <> 0 then Format.sprintf ".%d" oc1 else "")
-            sn1)
+      (Format.sprintf "<b><a href=\"%%sm=S;p=%s;n=%s\">%s%s%s</a></b>\n"
+         (if kind = "alias" then p_a else p_1)
+         (if kind = "alias" then n_a else n_1)
          sn2 fn1
          (if oc1 <> 0 then Format.sprintf ".%d" oc1 else ""));
 
@@ -209,17 +217,17 @@ let print_one_item och base inv_person_ref
                     let fn = Gwdb.sou base (Gwdb.get_first_name p) in
                     let sn = Gwdb.sou base (Gwdb.get_surname p) in
                     let oc = Gwdb.get_occ p in
-                    let key =
-                      Format.sprintf "%s%s+%s" fn
-                        (if oc = 0 then "" else "." ^ string_of_int oc)
-                        sn
+                    let p_0, n_0 =
+                      ( Format.sprintf "%s%s" fn
+                          (if oc = 0 then "" else "." ^ string_of_int oc),
+                        sn )
                     in
                     let sn = if sn = "X" || sn = "." then "" else sn in
-                    Format.sprintf "<a href=\"%%sm=S;p=;n=%s\">%s%s %s</a>" key
-                      fn
+                    Format.sprintf "<a href=\"%%sm=S;p=%s;n=%s\">%s%s %s</a>"
+                      p_0 n_0 fn
                       (if oc = 0 then "" else "." ^ string_of_int oc)
                       sn
-                | None -> Format.sprintf "%s" key)
+                | None -> Format.sprintf "%s.%d %s" fn oc sn)
               person_ref_l
           in
           output_string och
@@ -232,16 +240,11 @@ let print_one_item och base inv_person_ref
     | "boat" -> output_string och " <small><em>(bateau)</em></small><br>\n"
     | "list" -> output_string och " <small><em>(liste)</em></small><br>\n"
     | "alias" ->
-        let key =
-          Format.sprintf "%s%s+%s" fn_a
-            (if oc_a = 0 then "" else "." ^ string_of_int oc_a)
-            sn_a
-        in
         output_string och
           (Format.sprintf
              " <small><em>(surnom ou alias de : <a \
-              href=\"%%sm=S;p=;n=%s\">%s%s%s</a>)</em></small><br>\n"
-             key
+              href=\"%%sm=S;p=%s;n=%s\">%s%s%s</a>)</em></small><br>\n"
+             p_a n_a
              (if sn_a = "X" || sn_a = "x" then "" else sn_a ^ ", ")
              fn_a
              (if oc_a <> 0 then Format.sprintf ".%d" oc_a else ""))
