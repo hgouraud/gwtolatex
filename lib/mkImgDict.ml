@@ -156,9 +156,8 @@ let process dict1 ic line =
   | Failure _ -> Printf.eprintf "Bad image definition %s\n" line
   | End_of_file -> ()
 
-(** dict1 image_id, (annex_page, description, file_name, person_list, occ)
-    dict2 person_key, images_id list
-    dict3 file_name, image_id *)
+(** dict1 image_id, (annex_page, description, file_name, person_list, occ) dict2
+    person_key, images_id list dict3 file_name, image_id *)
 let create_images_dicts img_file fam_file =
   Printf.eprintf "Create images dicts\n";
   let dict1 = ref (Hashtbl.create 100) in

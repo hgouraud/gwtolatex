@@ -1,11 +1,4 @@
 (executable
  (public_name mkTex)
  (name mkTex)
- (libraries
-  gwtolatex
-  ezcurl
-  markup
-  unidecode
-  geneweb.gwdb-legacy
-  geneweb.sosa_zarith
-  geneweb))
+ (libraries gwtolatex ezcurl markup unidecode geneweb.db geneweb))

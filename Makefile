@@ -1,5 +1,14 @@
 -include Makefile.local
 
+# Pré suppose les variables env suivantes
+
+#GW2L_DIST=/Users/Henri/github/hgouraud/gwtolatex/distribution
+#GW2L_LIVRES=/Users/Henri/Genea/Livres-2
+#GW2L_BASES=/Users/Henri/Genea/GeneWeb-Bases
+# et
+#GW_DIST=/Users/Henri/github/hgouraud/geneweb/distribution
+#GW_BIN= $GW_DIST/gw
+
 # Variables for packagers.
 PREFIX=/usr
 DISTRIB_DIR=gw2l_dist
@@ -22,9 +31,6 @@ bin/gwrepl/.depend:
 .PHONY:hd/etc/version.txt
 
 # [End] Generated files section
-
-GENERATED_FILES_DEP = \
-	dune-workspace
 
 generated: $(GENERATED_FILES_DEP)
 

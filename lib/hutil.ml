@@ -1,6 +1,8 @@
 (* html utilities *)
 (* v1  Henri, 2023/10/16 *)
 
+module Gwdb = Geneweb_db.Driver
+
 let dummy_sn = [ "."; "X" ]
 
 let dummy_fn =
@@ -36,20 +38,6 @@ let dummy_fn =
     "Iles";
   ]
 
-let open_base basename =
-  match basename with
-  | "" ->
-      Printf.eprintf "No basename supplied\n";
-      exit 1
-  | bfile -> (
-      let bfile = bfile ^ ".gwb" in
-      let base = try Some (Gwdb.open_base bfile) with _ -> None in
-      match base with
-      | None ->
-          Printf.eprintf "Cannot open base %s\n" bfile;
-          exit 1
-      | Some base -> base)
-
 let get_real_person base i p n oc _content =
   (* TODO check <> content *)
   let p = Name.lower p in
@@ -59,7 +47,7 @@ let get_real_person base i p n oc _content =
       Gwdb.person_of_key base p n (try int_of_string oc with Failure _ -> 0)
     with
     | Some ip -> ip
-    | None -> ( try Gwdb.iper_of_string i with Failure _ -> Gwdb.dummy_iper)
+    | None -> ( try Gwdb.Iper.of_string i with Failure _ -> Gwdb.Iper.dummy)
   in
   let get_spouse base iper ifam =
     let f = Gwdb.foi base ifam in
@@ -155,8 +143,8 @@ let split_href href =
     List.map
       (fun (k, v) ->
         ( (if String.length k > 2 && k.[0] = '{' && k.[1] = '}' then
-           String.sub k 2 (String.length k - 2)
-          else k),
+             String.sub k 2 (String.length k - 2)
+           else k),
           if String.length v > 0 && v.[String.length v - 1] = '\\' then
             String.sub v 0 (String.length v - 1)
           else v ))

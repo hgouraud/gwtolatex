@@ -166,22 +166,22 @@ let print_tree (conf : Config.config) tree =
                         loop (i + 1)
                           (acc
                           ^ (if lrc = "e" then ""
-                            else
-                              Format.sprintf
-                                "{\\centering %s\\rule[0pt]{%s}{%1.2fpt}}"
-                                (if lrc = "r" then
-                                 Format.sprintf "\\hspace{%1.2f%s}"
-                                   (colwidth /. 4.0) conf.unit
-                                else if lrc = "l" then
-                                  Format.sprintf "\\hspace{-%1.2f%s}"
-                                    (colwidth /. 4.0) conf.unit
-                                else "")
-                                (if lrc = "c" then
-                                 Format.sprintf "%1.2f%s" colwidth conf.unit
-                                else
-                                  Format.sprintf "%1.2f%s" (colwidth /. 2.0)
-                                    conf.unit)
-                                conf.rulethickns)
+                             else
+                               Format.sprintf
+                                 "{\\centering %s\\rule[0pt]{%s}{%1.2fpt}}"
+                                 (if lrc = "r" then
+                                    Format.sprintf "\\hspace{%1.2f%s}"
+                                      (colwidth /. 4.0) conf.unit
+                                  else if lrc = "l" then
+                                    Format.sprintf "\\hspace{-%1.2f%s}"
+                                      (colwidth /. 4.0) conf.unit
+                                  else "")
+                                 (if lrc = "c" then
+                                    Format.sprintf "%1.2f%s" colwidth conf.unit
+                                  else
+                                    Format.sprintf "%1.2f%s" (colwidth /. 2.0)
+                                      conf.unit)
+                                 conf.rulethickns)
                           ^ if i + 1 = s then "" else "&")
                     in
                     loop 0 ""
@@ -314,16 +314,16 @@ let print_tree (conf : Config.config) tree =
               (fun (i, j, acc2) (_, s, ty, te, it, im) ->
                 let cell =
                   (match ty with
-                  | "Te" -> "Te " ^ Sutil.clean_double_back_slash te
-                  | "It" -> "It " ^ Sutil.clean_double_back_slash it
-                  | "Hl" -> "Hr " ^ "-l"
-                  | "Hr" -> "Hr " ^ "r-"
-                  | "Hc" -> "Hr " ^ "--"
-                  | "Vr1" -> "Vr1 " ^ "|"
-                  | "Vr2" -> "Vr2 " ^ "|"
-                  | "E" -> "E" ^ ""
-                  | "Im" -> "Im " ^ im
-                  | _ -> "x")
+                    | "Te" -> "Te " ^ Sutil.clean_double_back_slash te
+                    | "It" -> "It " ^ Sutil.clean_double_back_slash it
+                    | "Hl" -> "Hr " ^ "-l"
+                    | "Hr" -> "Hr " ^ "r-"
+                    | "Hc" -> "Hr " ^ "--"
+                    | "Vr1" -> "Vr1 " ^ "|"
+                    | "Vr2" -> "Vr2 " ^ "|"
+                    | "E" -> "E" ^ ""
+                    | "Im" -> "Im " ^ im
+                    | _ -> "x")
                   ^ Format.sprintf "(%d)" s
                 in
                 (i + 1, j + s, acc2 ^ Format.sprintf "[(%d)" i ^ cell ^ "] "))
@@ -359,12 +359,12 @@ let print_tree (conf : Config.config) tree =
     | 0 -> print_tree_mode_0 conf tree_right ^ print_tree_mode_0 conf tree_left
     | 1 ->
         (if conf.debug = 1 then print_tree_mode_0 conf tree_left ^ "\\newpage"
-        else "")
+         else "")
         ^ print_tree_mode_1 conf tree_right "right"
         ^ (if conf.debug = 1 then
-           print_tree_mode_0 conf tree_right ^ "\\newpage"
-          else if conf.samepage then "\\hspace{40mm}\n"
-          else "\\vskip 0mm")
+             print_tree_mode_0 conf tree_right ^ "\\newpage"
+           else if conf.samepage then "\\hspace{40mm}\n"
+           else "\\vskip 0mm")
         ^ print_tree_mode_1 conf tree_left "left"
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n)
   else
@@ -372,6 +372,6 @@ let print_tree (conf : Config.config) tree =
     | 0 -> print_tree_mode_0 conf tree
     | 1 ->
         (if conf.debug = 1 then print_tree_mode_0 conf tree ^ "\\newpage"
-        else "")
+         else "")
         ^ print_tree_mode_1 conf tree ""
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n

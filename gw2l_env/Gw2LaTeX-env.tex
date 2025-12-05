@@ -16,6 +16,7 @@
 \usepackage{color}
 \usepackage[useregional,showdow]{datetime2}
 \usepackage{enumitem}
+\usepackage{environ}
 \usepackage{float}
 \usepackage[T1]{fontenc}
 \usepackage{fp}
@@ -40,6 +41,7 @@
 \usepackage{url}
 \usepackage{vmargin}
 \usepackage{verse}
+\usepackage{xstring}
 
 \renewcommand{\familydefault}{\sfdefault}
 
@@ -123,12 +125,23 @@
 
 \newlength{\hh}
 
-\newenvironment{xxxhgitemize}
+\let\olditemize\itemize
+\let\oldenditemize\enditemize
+
+\RenewEnviron{itemize}{%
+  \IfSubStr{\BODY}{\item}{%
+    \olditemize\BODY\oldenditemize
+  }{}%
+}
+
+\newenvironment{hgitemize}
 {
 \begin{itemize}%
     \setlength{\itemsep}{0 cm}%
 }%
 {\end{itemize}}
+
+
 
 %\setlist[enumerate]{topsep=0pt,itemsep=-1ex,partopsep=1ex,parsep=1ex}
 \newlist{hgitemize}{itemize}{5}

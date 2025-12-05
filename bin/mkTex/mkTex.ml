@@ -1,6 +1,7 @@
 (* Copyright (c) 2013 H.Gouraud *)
 open Gwtolatex
 open Config
+module Driver = Geneweb_db.Driver
 
 type _name = string * string
 
@@ -382,9 +383,8 @@ let dummy_tags_3 =
 let skip_m_cmd = [ "MOD_NOTES" ]
 let _one_page och line = output_string och line
 
-(** process_tree_cumul accumulates results in a string
-    each tag is processed according to its role
-*)
+(** process_tree_cumul accumulates results in a string each tag is processed
+    according to its role *)
 
 let rec process_tree_cumul conf base och cumul tree (row, col) =
   let get_child children =
@@ -580,9 +580,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
       if not vignette then incr image_nbr;
       let image =
         ( (if vignette then Vignette
-          else if k <> "" then Imagek
-          else if s <> "" then Images
-          else Portrait),
+           else if k <> "" then Imagek
+           else if s <> "" then Images
+           else Portrait),
           (if k <> "" then image_label else s),
           (!chapter, !section, !subsection, !subsubsection),
           !image_nbr )
@@ -770,8 +770,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                   in
                   (List.mem test_hl conf.highlights, index_l)
                 in
-                (if hl then Format.sprintf "{\\hl " ^ content ^ "}"
-                else content)
+                (if hl then Format.sprintf "{\\hl " ^ content ^ "}" else content)
                 ^ str
               else content
             in
@@ -921,23 +920,23 @@ let one_command conf och line =
     let on_off = param = "off" || param = "Off" in
     match on_off with
     | true -> (true, default)
-    | false -> (
+    | false ->
         ( false,
           try Float.of_string param
           with Failure _ ->
             Printf.eprintf "Bad param %s\n" line;
-            default ))
+            default )
   in
   let get_int_value line param default =
     let on_off = param = "off" || param = "Off" in
     match on_off with
     | true -> (true, default)
-    | false -> (
+    | false ->
         ( false,
           try int_of_string param
           with Failure _ ->
             Printf.eprintf "Bad param %s\n" line;
-            default ))
+            default )
   in
 
   let len = String.length line in
@@ -1096,7 +1095,7 @@ let one_command conf och line =
         conf with
         highlights =
           (if param = "off" || param = "Off" then []
-          else param :: conf.highlights);
+           else param :: conf.highlights);
       }
   | "Hrule" -> { conf with hrule = param = "on" || param = "On" }
   | "ImageLabels" ->
@@ -1248,7 +1247,7 @@ let one_command conf och line =
         conf with
         imgwidth =
           (if param = "on" || param = "On" then conf.textwidth
-          else imgwidth_default);
+           else imgwidth_default);
         wide = param = "on" || param = "On";
       }
   | "Hoffset" ->
@@ -1311,8 +1310,7 @@ let print_images conf och images_list _key_str =
     (fun (im_type, name, (ch, sec, ssec, _sssec), nbr) ->
       let width =
         Format.sprintf "%2.2f%s"
-          (if Sutil.contains name "-wide" then conf.textwidth
-          else conf.imgwidth)
+          (if Sutil.contains name "-wide" then conf.textwidth else conf.imgwidth)
           conf.unit
       in
       if Sutil.contains name "-wide" then Printf.eprintf "Wide image: %s\n" name;
@@ -1377,16 +1375,16 @@ let print_images conf och images_list _key_str =
                       if sn = "Dupontxxx" && fn = "Jeanxxx" then
                         Printf.eprintf "%s, %s, photo %s\n" sn fn
                           (if anx_page <> 0 then
-                           Format.sprintf "%d/%d" image_id anx_page
-                          else Format.sprintf "%s" img_number0);
+                             Format.sprintf "%d/%d" image_id anx_page
+                           else Format.sprintf "%s" img_number0);
 
                       Format.sprintf "\\index{%s, %s%s, photo %s}" sn fn
                         (if key.pk_occ <> 0 then
-                         Format.sprintf " (%d)" key.pk_occ
-                        else "")
+                           Format.sprintf " (%d)" key.pk_occ
+                         else "")
                         (if anx_page <> 0 then
-                         Format.sprintf "%d/%d" image_id anx_page
-                        else Format.sprintf "%s" img_number0)
+                           Format.sprintf "%d/%d" image_id anx_page
+                         else Format.sprintf "%s" img_number0)
                       :: acc)
                     [] key_l
                 in
@@ -1559,53 +1557,59 @@ let main () =
     dict1 := dict1_t;
     dict2 := dict2_t;
     img_name_list := img_name_l);
-
+  if !basename = "" then (
+    Arg.usage speclist usage;
+    exit 2);
+  let bname = Filename.concat "." !basename in
   (* TODO find a way to open base remotely *)
-  let base = Hutil.open_base (Filename.concat "." !basename) in
+  try
+    Driver.with_database bname @@ fun base ->
+    let och = if !gwtest then Stdlib.stderr else open_out fname_out in
+    let ic = open_in_bin fname_in in
+    if !debug = -1 then Sys.enable_runtime_warnings false;
 
-  let och = if !gwtest then Stdlib.stderr else open_out fname_out in
-  let ic = open_in_bin fname_in in
-  if !debug = -1 then Sys.enable_runtime_warnings false;
+    if !gwtest then
+      Printf.eprintf
+        "This is \027[32mmkTeX\027[0m version %s running GW-test on base %s\n"
+        Sutil.version conf.basename
+    else
+      Printf.eprintf
+        "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
+        Sutil.version conf.family conf.basename fname_out conf.debug;
+    flush stderr;
 
-  if !gwtest then
-    Printf.eprintf
-      "This is \027[32mmkTeX\027[0m version %s running GW-test on base %s\n"
-      Sutil.version conf.basename
-  else
-    Printf.eprintf
-      "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
-      Sutil.version conf.family conf.basename fname_out conf.debug;
-  flush stderr;
+    let tmp = ref conf in
 
-  let tmp = ref conf in
-
-  (match mode with
-  | "html" ->
-      (* for testing purposes *)
-      let body = really_input_string ic (in_channel_length ic) in
-      let _ = process_html conf base och body in
-      close_in ic;
-      close_out och;
-      exit 0
-  | _ -> (
-      tmp := conf;
-      try
-        while true do
-          let line = input_line ic |> Sutil.strip_nl in
-          flush stderr;
-          tmp := process_one_line !tmp base dict1 dict2 och line
-        done
-      with End_of_file ->
+    (match mode with
+    | "html" ->
+        (* for testing purposes *)
+        let body = really_input_string ic (in_channel_length ic) in
+        let _ = process_html conf base och body in
         close_in ic;
-        close_out och));
-  Printf.eprintf "\n";
-  flush stderr;
-  let out_channel = open_out_bin "dict1.dat" in
-  Marshal.to_channel out_channel !dict1 [];
-  close_out out_channel;
-  img_ok_list := List.sort_uniq compare !img_ok_list;
-  let out_channel = open_out_bin "list1.dat" in
-  Marshal.to_channel out_channel !img_ok_list [];
-  close_out out_channel
+        close_out och;
+        exit 0
+    | _ -> (
+        tmp := conf;
+        try
+          while true do
+            let line = input_line ic |> Sutil.strip_nl in
+            flush stderr;
+            tmp := process_one_line !tmp base dict1 dict2 och line
+          done
+        with End_of_file ->
+          close_in ic;
+          close_out och));
+    Printf.eprintf "\n";
+    flush stderr;
+    let out_channel = open_out_bin "dict1.dat" in
+    Marshal.to_channel out_channel !dict1 [];
+    close_out out_channel;
+    img_ok_list := List.sort_uniq compare !img_ok_list;
+    let out_channel = open_out_bin "list1.dat" in
+    Marshal.to_channel out_channel !img_ok_list [];
+    close_out out_channel
+  with _ ->
+    Printf.eprintf "Cannot open base %s\n" bname;
+    exit 1
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

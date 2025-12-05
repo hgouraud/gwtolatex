@@ -12,7 +12,7 @@ Gets the data from the dictionaries created by mkImgDict
 (* si la clé est incomplète, on l'enregistre tout de même.  *)
 let _create_all_keys = ref false
 
-(** Parsing status of .gw block  *)
+(** Parsing status of .gw block *)
 type 'a read_family =
   | F_notes of MkImgDict.key * string  (** a notes block inside .gw file *)
   | F_other of string * string list  (** other content *)
@@ -26,7 +26,6 @@ let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
 let family = ref ""
 let out_file = ref ""
 let debug = ref 0
-let pass = ref 0
 let dev = ref false
 let verbose = ref false
 let no_fail = ref false
@@ -38,8 +37,8 @@ let bases = ref ""
 let test = ref false
 let test_nb = ref 0
 
-(** Parses int that starts at the position [i] inside [x].
-    Raises [Not_found] if integer isn't found. *)
+(** Parses int that starts at the position [i] inside [x]. Raises [Not_found] if
+    integer isn't found. *)
 let make_int x =
   let rec loop found n i =
     if i = String.length x then if found then n else raise Not_found
@@ -149,7 +148,8 @@ let input_a_line ic =
     String.sub line 0 (String.length line - 1)
   else line
 
-(** Read a line. If line is empty or only contains a comment (#), then read next line  *)
+(** Read a line. If line is empty or only contains a comment (#), then read next
+    line *)
 let input_real_line ic = input_line ic
 
 let read_line ic =
@@ -239,7 +239,7 @@ let notes_header oc (key : MkImgDict.key) =
 
 (* TODO image_id -> int rather than string !! *)
 
-(** prints the list of images on which person appears
+(* prints the list of images on which person appears
     images x.y.z.w on page ppp, or image in annex page n
     where x.y.z.w should be a section/img number
     pendant la création du fichier .tex, on calculera
@@ -261,7 +261,7 @@ let print_img_list oc (key : MkImgDict.key) images_l dict1 dict2 =
       match anx_img_list with
       | [] -> List.sort_uniq compare acc
       | image_id :: anx_img_list ->
-          let anx_page, desc, _fname, _key_l, _key_l_2, _image_occ =
+          let anx_page, _desc, _fname, _key_l, _key_l_2, _image_occ =
             Hashtbl.find dict1 image_id
           in
           if anx_page <> 0 then loop (anx_page :: acc) anx_img_list
@@ -301,7 +301,7 @@ let print_img_list oc (key : MkImgDict.key) images_l dict1 dict2 =
   loop images_l;
   output_string oc "\n]</span>\n"
 
-let update_img_list oc _key notes _dict1 dict2 _dict4 =
+let _update_img_list oc _key notes _dict1 _dict2 _dict4 =
   let lines = String.split_on_char '\n' notes in
   let rec loop lines =
     match lines with
@@ -313,7 +313,7 @@ let update_img_list oc _key notes _dict1 dict2 _dict4 =
           | n when n < 2 ->
               Printf.eprintf "bad IMG_L format\n";
               exit 2
-          | n ->
+          | _n ->
               let _key_str = List.nth parts 1 in
               let rec loop1 acc n =
                 if n = List.length parts then acc
@@ -339,7 +339,7 @@ let update_img_list oc _key notes _dict1 dict2 _dict4 =
   loop lines
 
 (** add image information at end of notes *)
-let print_notes oc key notes dict1 dict2 dict4 cnt =
+let print_notes oc key notes dict1 dict2 _dict4 cnt =
   notes_header oc key;
   output_string_nl oc notes;
   let key_str =
@@ -351,8 +351,8 @@ let print_notes oc key notes dict1 dict2 dict4 cnt =
     has_notes := key_str :: !has_notes);
   output_string oc "end notes\n"
 
-(** create notes for persons which did not have then.
-    insert image information *)
+(** create notes for persons which did not have then. insert image information
+*)
 let create_new_notes oc has_notes dict1 dict2 =
   let cnt1 = ref 0 in
   let cnt2 = ref 0 in

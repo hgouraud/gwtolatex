@@ -144,10 +144,10 @@ let main () =
 
   if !verbose then Printf.eprintf "Create temp dir\n";
   (if not (Sys.file_exists "tmp") then
-   try
-     let _ = Sys.command (Format.sprintf "mkdir tmp") in
-     ()
-   with Sys_error _ -> Printf.eprintf "Failed to create tmp dir\n");
+     try
+       let _ = Sys.command (Format.sprintf "mkdir tmp") in
+       ()
+     with Sys_error _ -> Printf.eprintf "Failed to create tmp dir\n");
   flush stderr;
 
   (* collect options *)
@@ -282,6 +282,8 @@ Inspect %s/tmp/gwc.log for possible errors.|}
    with Failure e ->
      let _ = Printf.eprintf "Error while renaming .tmp file (%s)\n" e in
      exit 0);
+
+  (* cleanup pass (remove empty \begin{hgitemize} ) *)
 
   (* run pdflatex *)
   if !verbose then Printf.eprintf "Run pdflatex\n";

@@ -1,11 +1,12 @@
 (* Copyright (c) 2013 H.Gouraud *)
 open Gwtolatex
-open Config
+module Driver = Geneweb_db.Driver
+module Collection = Geneweb_db.Collection
 
 type _name = string * string
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
-let gw2l_dist = ref "./gw2l_dist"
+let _gw2l_dist = ref "./gw2l_dist"
 let livres = ref "../livres"
 let test = ref false
 let follow = ref false
@@ -18,7 +19,7 @@ let passwd = ref ""
 let family = ref ""
 let debug = ref 0
 let verbose = ref false
-let treemode = ref 1
+let _treemode = ref 1
 
 (* execution context *)
 let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
@@ -29,11 +30,11 @@ let dry_run = ref false
 let gwtest = ref false
 let second = ref false
 let index = ref 0
-let dict1 = ref (Hashtbl.create 100)
-let dict2 = ref (Hashtbl.create 100)
-let img_name_list = ref []
-let img_ok_list = ref []
-let missing_tags = ref []
+let _dict1 = ref (Hashtbl.create 100)
+let _dict2 = ref (Hashtbl.create 100)
+let _img_name_list = ref []
+let _img_ok_list = ref []
+let _missing_tags = ref []
 
 (* TODO suppress (pages liées) and (modifier) in m=NOTES *)
 (* TODO suppress "base chausey ..." *)
@@ -53,7 +54,7 @@ let build_letters list =
     let rec loop acc list =
       match list with
       | [] -> acc
-      | (iper, sn, fn, oc, aliases, kind, key_l) :: list ->
+      | (_iper, sn, _fn, _oc, _aliases, _kind, _key_l) :: list ->
           let n = nbc sn.[0] in
           let c = String.sub (Sutil.particles sn) 0 n in
           if List.mem c acc || n > 1 || c > "a" then loop acc list
@@ -63,7 +64,7 @@ let build_letters list =
   in
   List.sort compare letters
 
-let output_string_nl oc str =
+let _output_string_nl oc str =
   output_string oc str;
   output_string oc "\n"
 
@@ -76,9 +77,9 @@ let letters_list letters =
 
 (* from Geneweb.Gutil *)
 let designation base p =
-  let first_name = Gwdb.p_first_name base p in
-  let nom = Gwdb.p_surname base p in
-  first_name ^ "." ^ string_of_int (Gwdb.get_occ p) ^ " " ^ nom
+  let first_name = Driver.p_first_name base p in
+  let nom = Driver.p_surname base p in
+  first_name ^ "." ^ string_of_int (Driver.get_occ p) ^ " " ^ nom
 
 (* Wiki format fn/sn/oc/tet *)
 let scan_person base str =
@@ -94,7 +95,7 @@ let scan_person base str =
         Printf.eprintf "Funny person ref: %s\n" str;
         ("", 0, "")
   in
-  Gwdb.person_of_key base fn sn oc
+  Driver.person_of_key base fn sn oc
 
 (* Key format fn.oc+sn *)
 let scan_person2 base str =
@@ -112,7 +113,7 @@ let scan_person2 base str =
     String.sub (List.nth parts 1) (i + 1)
       (String.length (List.nth parts 1) - i - 1)
   in
-  Gwdb.person_of_key base fn sn oc
+  Driver.person_of_key base fn sn oc
 
 let scan_notes base notes key =
   let lines = String.split_on_char '\n' notes in
@@ -143,7 +144,7 @@ let scan_notes base notes key =
   in
   if trace then
     Printf.eprintf "List: %s\n"
-      (List.map (fun ip -> designation base (Gwdb.poi base ip)) res
+      (List.map (fun ip -> designation base (Driver.poi base ip)) res
       |> String.concat ", ");
   res
 
@@ -178,11 +179,11 @@ let header =
     (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min
 
 let print_one_item och base inv_person_ref
-    (iper, sn, fn, oc, aliases, kind, key_l) =
-  let p = Gwdb.poi base iper in
-  let fn_a = Gwdb.sou base (Gwdb.get_first_name p) in
-  let sn_a = Gwdb.sou base (Gwdb.get_surname p) in
-  let oc_a = Gwdb.get_occ p in
+    (iper, sn, fn, oc, _aliases, kind, key_l) =
+  let p = Driver.poi base iper in
+  let fn_a = Driver.sou base (Driver.get_first_name p) in
+  let sn_a = Driver.sou base (Driver.get_surname p) in
+  let oc_a = Driver.get_occ p in
   let fn1, oc1, sn1, sn2 =
     match kind with
     | "boat" -> (fn, oc, "X", "")
@@ -225,10 +226,10 @@ let print_one_item och base inv_person_ref
               (fun key ->
                 match scan_person2 base key with
                 | Some ip ->
-                    let p = Gwdb.poi base ip in
-                    let fn = Gwdb.sou base (Gwdb.get_first_name p) in
-                    let sn = Gwdb.sou base (Gwdb.get_surname p) in
-                    let oc = Gwdb.get_occ p in
+                    let p = Driver.poi base ip in
+                    let fn = Driver.sou base (Driver.get_first_name p) in
+                    let sn = Driver.sou base (Driver.get_surname p) in
+                    let oc = Driver.get_occ p in
                     let p_0, n_0 =
                       ( Format.sprintf "%s%s" fn
                           (if oc = 0 then "" else "." ^ string_of_int oc),
@@ -267,7 +268,7 @@ let print_list_head n liste =
   let rec loop n = function
     | [] -> ()
     | _ when n < 0 -> ()
-    | (iper, sn, fn, oc, aliases, kind, notes) :: liste ->
+    | (_iper, sn, fn, oc, _aliases, _kind, _notes) :: liste ->
         Printf.eprintf "Item: %s %s.%d\n" sn fn oc;
         loop (n - 1) liste
   in
@@ -325,276 +326,291 @@ let main () =
   flush stderr;
 
   if !verbose then Printf.eprintf "Open base %s\n" !basename;
+  if !basename = "" then (
+    Arg.usage speclist usage;
+    exit 2);
+  let bname = Filename.concat "." !basename in
   (* TODO find a way to open base remotely *)
-  let base = Hutil.open_base (Filename.concat "." !basename) in
+  try
+    Driver.with_database bname @@ fun base ->
+    if !verbose then Printf.eprintf "Build full list\n";
+    let tmp = ref [] in
+    Collection.iter
+      (fun per ->
+        let iper = Driver.get_iper per in
+        let p = Driver.poi base iper in
+        let fn = Driver.sou base (Driver.get_first_name p) in
+        let sn = Driver.sou base (Driver.get_surname p) in
+        let oc = Driver.get_occ p in
+        let aliases = Driver.get_aliases p in
+        let notes = Driver.get_notes p in
+        if !debug = 4 && sn = "Marie" && fn = "Albert" then
+          Printf.eprintf "Found Albert\n";
+        tmp := (iper, sn, fn, oc, aliases, notes) :: !tmp)
+      (Driver.persons base);
+    let full_list = !tmp in
 
-  if !verbose then Printf.eprintf "Build full list\n";
-  let tmp = ref [] in
-  Gwdb.Collection.iter
-    (fun per ->
-      let iper = Gwdb.get_iper per in
-      let p = Gwdb.poi base iper in
-      let fn = Gwdb.sou base (Gwdb.get_first_name p) in
-      let sn = Gwdb.sou base (Gwdb.get_surname p) in
-      let oc = Gwdb.get_occ p in
-      let aliases = Gwdb.get_aliases p in
-      let notes = Gwdb.get_notes p in
-      if !debug = 4 && sn = "Marie" && fn = "Albert" then
-        Printf.eprintf "Found Albert\n";
-      tmp := (iper, sn, fn, oc, aliases, notes) :: !tmp)
-    (Gwdb.persons base);
-  let full_list = !tmp in
+    if !verbose then Printf.eprintf "Scan for boats\n";
+    (* scan for boats *)
+    let full_list =
+      List.map
+        (fun (iper, sn, fn, oc, aliases, notes) ->
+          if sn = "X" || sn = "x" then (iper, fn, fn, oc, aliases, "boat", notes)
+          else (iper, sn, fn, oc, aliases, "std", notes))
+        full_list
+    in
 
-  if !verbose then Printf.eprintf "Scan for boats\n";
-  (* scan for boats *)
-  let full_list =
-    List.map
-      (fun (iper, sn, fn, oc, aliases, notes) ->
-        if sn = "X" || sn = "x" then (iper, fn, fn, oc, aliases, "boat", notes)
-        else (iper, sn, fn, oc, aliases, "std", notes))
-      full_list
-  in
+    if !verbose then Printf.eprintf "Scan for .\n";
+    (* scan for . *)
+    let full_list =
+      List.map
+        (fun (iper, sn, fn, oc, aliases, kind, notes) ->
+          if sn = "." then (iper, fn, fn, oc, aliases, "list", notes)
+          else (iper, sn, fn, oc, aliases, kind, notes))
+        full_list
+    in
 
-  if !verbose then Printf.eprintf "Scan for .\n";
-  (* scan for . *)
-  let full_list =
-    List.map
-      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
-        if sn = "." then (iper, fn, fn, oc, aliases, "list", notes)
-        else (iper, sn, fn, oc, aliases, kind, notes))
-      full_list
-  in
+    if !verbose then Printf.eprintf "Scan for ? ?\n";
+    (* scan for ? ? *)
+    let full_list =
+      List.fold_left
+        (fun acc (iper, sn, fn, oc, aliases, kind, notes) ->
+          if sn = "?" then acc
+          else (iper, sn, fn, oc, aliases, kind, notes) :: acc)
+        [] full_list
+    in
 
-  if !verbose then Printf.eprintf "Scan for ? ?\n";
-  (* scan for ? ? *)
-  let full_list =
-    List.fold_left
-      (fun acc (iper, sn, fn, oc, aliases, kind, notes) ->
-        if sn = "?" then acc
-        else (iper, sn, fn, oc, aliases, kind, notes) :: acc)
-      [] full_list
-  in
-
-  if !verbose then Printf.eprintf "Build person_ref hashtbl\n";
-  let person_ref = Hashtbl.create 100 in
-  List.iter
-    (fun (iper, sn, fn, oc, aliases, kind, notes) ->
-      let sn = match kind with "boat" -> "X" | "list" -> "." | _ -> sn in
-      let key = Format.sprintf "%s.%d+%s" fn oc sn in
-      let key = Sutil.lower key |> Sutil.replace ' ' '_' in
-      Hashtbl.add person_ref key (scan_notes base (Gwdb.sou base notes) key))
-    full_list;
-  if !verbose then
-    Printf.eprintf "Full_list (%d), Hashtbl (%d)\n" (List.length full_list)
-      (Hashtbl.length person_ref);
-
-  let rec loop n =
-    if n > 0 then (
-      let iper, sn, fn, oc, aliases, kind, notes = List.nth full_list n in
-      let key = Format.sprintf "%s.%d+%s" fn oc sn in
-      let key = Sutil.lower key |> Sutil.replace ' ' '_' in
-      Printf.eprintf "Hashtbl item: %s, (%s)\n" key
-        (List.map
-           (fun ip -> designation base (Gwdb.poi base ip))
-           (Hashtbl.find person_ref key)
-        |> String.concat ", ");
-      loop (n - 1))
-  in
-  if !debug = 3 then loop 10;
-
-  (if !debug = 4 then
-   let key1 = "albert.0_marie" in
-   let key2 = "albert.1_marie" in
-   if Hashtbl.mem person_ref key1 || Hashtbl.mem person_ref key2 then
-     Printf.eprintf "Albert in person_ref\n"
-   else Printf.eprintf "Albert not person_ref\n");
-
-  if !debug = 4 then
+    if !verbose then Printf.eprintf "Build person_ref hashtbl\n";
+    let person_ref = Hashtbl.create 100 in
     List.iter
-      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
-        if sn = "Marie" && fn = "Albert" then
-          Printf.eprintf "Albert in full_list (%d)\n" oc;
-        if sn = "." then Printf.eprintf "Found in full_list %s.%d %s\n" fn oc sn)
+      (fun (_iper, sn, fn, oc, _aliases, kind, notes) ->
+        let sn = match kind with "boat" -> "X" | "list" -> "." | _ -> sn in
+        let key = Format.sprintf "%s.%d+%s" fn oc sn in
+        let key = Sutil.lower key |> Sutil.replace ' ' '_' in
+        Hashtbl.add person_ref key (scan_notes base (Driver.sou base notes) key))
       full_list;
+    if !verbose then
+      Printf.eprintf "Full_list (%d), Hashtbl (%d)\n" (List.length full_list)
+        (Hashtbl.length person_ref);
 
-  if !verbose then
-    Printf.eprintf "Build inverse hashtbl (%d)\n" (Hashtbl.length person_ref);
-  let inv_person_ref = invert_table person_ref in
+    let rec loop n =
+      if n > 0 then (
+        let _iper, sn, fn, oc, _aliases, _kind, _notes = List.nth full_list n in
+        let key = Format.sprintf "%s.%d+%s" fn oc sn in
+        let key = Sutil.lower key |> Sutil.replace ' ' '_' in
+        Printf.eprintf "Hashtbl item: %s, (%s)\n" key
+          (List.map
+             (fun ip -> designation base (Driver.poi base ip))
+             (Hashtbl.find person_ref key)
+          |> String.concat ", ");
+        loop (n - 1))
+    in
+    if !debug = 3 then loop 10;
 
-  if !verbose then
-    Printf.eprintf "Build ref lists (%d)\n" (Hashtbl.length inv_person_ref);
-  let new_list =
-    List.map
-      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
-        let sn2 = if kind = "boat" then "X" else sn in
-        let sn2 = if kind = "list" then "." else sn2 in
-        match Gwdb.person_of_key base fn sn2 oc with
-        | Some ip ->
-            let key_l =
-              match Hashtbl.find_opt inv_person_ref ip with
-              | Some key_l ->
-                  if !debug = 2 then
-                    Printf.eprintf "Found %s (%d)\n" (Gwdb.string_of_iper ip)
-                      (List.length key_l);
-                  key_l
-              | None -> []
+    (if !debug = 4 then
+       let key1 = "albert.0_marie" in
+       let key2 = "albert.1_marie" in
+       if Hashtbl.mem person_ref key1 || Hashtbl.mem person_ref key2 then
+         Printf.eprintf "Albert in person_ref\n"
+       else Printf.eprintf "Albert not person_ref\n");
+
+    if !debug = 4 then
+      List.iter
+        (fun (_iper, sn, fn, oc, _aliases, _kind, _notes) ->
+          if sn = "Marie" && fn = "Albert" then
+            Printf.eprintf "Albert in full_list (%d)\n" oc;
+          if sn = "." then
+            Printf.eprintf "Found in full_list %s.%d %s\n" fn oc sn)
+        full_list;
+
+    if !verbose then
+      Printf.eprintf "Build inverse hashtbl (%d)\n" (Hashtbl.length person_ref);
+    let inv_person_ref = invert_table person_ref in
+
+    if !verbose then
+      Printf.eprintf "Build ref lists (%d)\n" (Hashtbl.length inv_person_ref);
+    let new_list =
+      List.map
+        (fun (iper, sn, fn, oc, aliases, kind, _notes) ->
+          let sn2 = if kind = "boat" then "X" else sn in
+          let sn2 = if kind = "list" then "." else sn2 in
+          match Driver.person_of_key base fn sn2 oc with
+          | Some ip ->
+              let key_l =
+                match Hashtbl.find_opt inv_person_ref ip with
+                | Some key_l ->
+                    if !debug = 2 then
+                      Printf.eprintf "Found %s (%d)\n"
+                        (Driver.Iper.to_string ip) (List.length key_l);
+                    key_l
+                | None -> []
+              in
+              (iper, sn, fn, oc, aliases, kind, key_l)
+          | None ->
+              Printf.eprintf "Ip None %s, %s\n" fn sn;
+              (iper, sn, fn, oc, aliases, kind, []))
+        full_list
+    in
+
+    if !debug = 4 then
+      List.iter
+        (fun (_iper, sn, fn, oc, _aliases, _kind, _notes) ->
+          if sn = "Marie" && fn = "Albert" then
+            Printf.eprintf "Albert in new_list (%d)\n" oc)
+        new_list;
+
+    if !verbose then
+      Printf.eprintf "Expand aliases (%d)\n" (List.length new_list);
+    let new_list =
+      List.fold_left
+        (fun acc (iper, sn, fn, oc, aliases, kind, notes) ->
+          if aliases = [] then (iper, sn, fn, oc, aliases, kind, notes) :: acc
+          else
+            let al =
+              List.map
+                (fun al ->
+                  ( iper,
+                    Driver.sou base al,
+                    "",
+                    0,
+                    [],
+                    "alias",
+                    [
+                      Format.sprintf "voir %s, %s.%s" sn fn
+                        (if oc = 0 then "" else "." ^ string_of_int oc);
+                    ] ))
+                aliases
             in
-            (iper, sn, fn, oc, aliases, kind, key_l)
-        | None ->
-            Printf.eprintf "Ip None %s, %s\n" fn sn;
-            (iper, sn, fn, oc, aliases, kind, []))
-      full_list
-  in
-
-  if !debug = 4 then
-    List.iter
-      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
-        if sn = "Marie" && fn = "Albert" then
-          Printf.eprintf "Albert in new_list (%d)\n" oc)
-      new_list;
-
-  if !verbose then Printf.eprintf "Expand aliases (%d)\n" (List.length new_list);
-  let new_list =
-    List.fold_left
-      (fun acc (iper, sn, fn, oc, aliases, kind, notes) ->
-        if aliases = [] then (iper, sn, fn, oc, aliases, kind, notes) :: acc
-        else
-          let al =
-            List.map
-              (fun al ->
-                ( iper,
-                  Gwdb.sou base al,
-                  "",
-                  0,
-                  [],
-                  "alias",
-                  [
-                    Format.sprintf "voir %s, %s.%s" sn fn
-                      (if oc = 0 then "" else "." ^ string_of_int oc);
-                  ] ))
-              aliases
-          in
-          (iper, sn, fn, oc, aliases, kind, notes) :: (al @ acc))
-      [] new_list
-  in
-
-  if !verbose then
-    Printf.eprintf "Length with aliases: %d\n" (List.length new_list);
-
-  if !debug = 3 then print_list_head 20 new_list;
-
-  if !debug = 4 then
-    List.iter
-      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
-        if sn = "Marie" && fn = "Albert" then
-          Printf.eprintf "Albert in new_list_2 (%d)\n" oc;
-        if sn = "." then
-          Printf.eprintf "Found in new_list_2 %s.%d %s\n" fn oc sn)
-      new_list;
-
-  if !verbose then Printf.eprintf "Sort new_list\n";
-
-  let compare (iper1, sn1, fn1, oc1, aliases1, kind1, notes1)
-      (iper2, sn2, fn2, oc2, aliases2, kind2, notes2) =
-    let sn1 = Sutil.particles sn1 in
-    let sn2 = Sutil.particles sn2 in
-    let key1 =
-      Sutil.lower (Format.sprintf "%s%s%d" sn1 fn1 oc1) |> Sutil.replace ' ' '_'
+            (iper, sn, fn, oc, aliases, kind, notes) :: (al @ acc))
+        [] new_list
     in
-    let key2 =
-      Sutil.lower (Format.sprintf "%s%s%d" sn2 fn2 oc2) |> Sutil.replace ' ' '_'
+
+    if !verbose then
+      Printf.eprintf "Length with aliases: %d\n" (List.length new_list);
+
+    if !debug = 3 then print_list_head 20 new_list;
+
+    if !debug = 4 then
+      List.iter
+        (fun (_iper, sn, fn, oc, _aliases, _kind, _notes) ->
+          if sn = "Marie" && fn = "Albert" then
+            Printf.eprintf "Albert in new_list_2 (%d)\n" oc;
+          if sn = "." then
+            Printf.eprintf "Found in new_list_2 %s.%d %s\n" fn oc sn)
+        new_list;
+
+    if !verbose then Printf.eprintf "Sort new_list\n";
+
+    let compare (_iper1, sn1, fn1, oc1, _aliases1, _kind1, _notes1)
+        (_iper2, sn2, fn2, oc2, _aliases2, _kind2, _notes2) =
+      let sn1 = Sutil.particles sn1 in
+      let sn2 = Sutil.particles sn2 in
+      let key1 =
+        Sutil.lower (Format.sprintf "%s%s%d" sn1 fn1 oc1)
+        |> Sutil.replace ' ' '_'
+      in
+      let key2 =
+        Sutil.lower (Format.sprintf "%s%s%d" sn2 fn2 oc2)
+        |> Sutil.replace ' ' '_'
+      in
+      if key1 = "MarieAlbert0" || key1 = "MarieAlbert1" then
+        Printf.eprintf "Sorted Albert\n";
+      if key1 < key2 then -1 else if key1 = key2 then 0 else 1
     in
-    if key1 = "MarieAlbert0" || key1 = "MarieAlbert1" then
-      Printf.eprintf "Sorted Albert\n";
-    if key1 < key2 then -1 else if key1 = key2 then 0 else 1
-  in
 
-  let old = List.length new_list in
-  let new_list = List.sort_uniq compare new_list in
-  if !verbose then
-    Printf.eprintf "New list (sort uniq) %d -> %d\n" old (List.length new_list);
+    let old = List.length new_list in
+    let new_list = List.sort_uniq compare new_list in
+    if !verbose then
+      Printf.eprintf "New list (sort uniq) %d -> %d\n" old
+        (List.length new_list);
 
-  if !debug = 4 then
-    List.iter
-      (fun (iper, sn, fn, oc, aliases, kind, notes) ->
-        if sn = "Marie" && fn = "Albert" then
-          Printf.eprintf "Albert in new_list_3 (%d)\n" oc)
-      new_list;
+    if !debug = 4 then
+      List.iter
+        (fun (_iper, sn, fn, oc, _aliases, _kind, _notes) ->
+          if sn = "Marie" && fn = "Albert" then
+            Printf.eprintf "Albert in new_list_3 (%d)\n" oc)
+        new_list;
 
-  let letters = build_letters new_list in
-  if !verbose then Printf.eprintf "Letters: %d\n" (List.length letters);
+    let letters = build_letters new_list in
+    if !verbose then Printf.eprintf "Letters: %d\n" (List.length letters);
 
-  if !debug = 3 then print_list_head 20 new_list;
+    if !debug = 3 then print_list_head 20 new_list;
 
-  let print_index och base new_list person_ref letters =
-    output_string och header;
-    output_string och "<p>";
-    output_string och (label (List.hd letters));
-    output_string och (letters_list letters);
-    output_string och "<dl>";
-    let rec loop1 ltrs new_list =
-      match ltrs with
-      | [] -> ()
-      | letter :: ltrs ->
-          let ll = (Sutil.lower letter).[0] in
-          let rec loop2 new_list =
-            match new_list with
-            | [] -> output_string och "</dl>"
-            | ((iper, sn, fn, oc, aliases, kind, key_l) as item) :: new_list
-              when String.length sn > 0
-                   && sn <> "?"
-                   && (Sutil.lower (Sutil.particles sn)).[0] = ll ->
-                print_one_item och base inv_person_ref item;
-                loop2 new_list
-            | ((iper, sn, fn, oc, aliases, kind, key_l) as item) :: new_list
-              when List.length ltrs > 0 ->
-                output_string och "</dl><p>";
-                output_string och (label (List.hd ltrs));
-                output_string och (letters_list letters);
-                output_string och "<dl>";
-                print_one_item och base inv_person_ref item;
-                loop1 ltrs new_list
-            | _ -> ()
-          in
-          loop2 new_list
+    let print_index och base new_list _person_ref letters =
+      output_string och header;
+      output_string och "<p>";
+      output_string och (label (List.hd letters));
+      output_string och (letters_list letters);
+      output_string och "<dl>";
+      let rec loop1 ltrs new_list =
+        match ltrs with
+        | [] -> ()
+        | letter :: ltrs ->
+            let ll = (Sutil.lower letter).[0] in
+            let rec loop2 new_list =
+              match new_list with
+              | [] -> output_string och "</dl>"
+              | ((_iper, sn, _fn, _oc, _aliases, _kind, _key_l) as item)
+                :: new_list
+                when String.length sn > 0
+                     && sn <> "?"
+                     && (Sutil.lower (Sutil.particles sn)).[0] = ll ->
+                  print_one_item och base inv_person_ref item;
+                  loop2 new_list
+              | ((_iper, _sn, _fn, _oc, _aliases, _kind, _key_l) as item)
+                :: new_list
+                when List.length ltrs > 0 ->
+                  output_string och "</dl><p>";
+                  output_string och (label (List.hd ltrs));
+                  output_string och (letters_list letters);
+                  output_string och "<dl>";
+                  print_one_item och base inv_person_ref item;
+                  loop1 ltrs new_list
+              | _ -> ()
+            in
+            loop2 new_list
+      in
+      loop1 letters new_list
     in
-    loop1 letters new_list
-  in
 
-  (if !debug = 4 then
-   let key1 = "albert.0_marie" in
-   let key2 = "albert.1_marie" in
-   if Hashtbl.mem person_ref key1 || Hashtbl.mem person_ref key2 then
-     Printf.eprintf "Albert in person_ref (2)\n"
-   else Printf.eprintf "Albert not person_ref (2)\n");
+    (if !debug = 4 then
+       let key1 = "albert.0_marie" in
+       let key2 = "albert.1_marie" in
+       if Hashtbl.mem person_ref key1 || Hashtbl.mem person_ref key2 then
+         Printf.eprintf "Albert in person_ref (2)\n"
+       else Printf.eprintf "Albert not person_ref (2)\n");
 
-  let old = List.length new_list in
-  let new_list =
-    let rec loop acc prev new_list =
-      match new_list with
-      | [] -> acc
-      | ((iper, sn, fn, oc, aliases, kind, key_l) as item) :: new_list ->
-          let fn1, oc1, _sn1, sn2 =
-            match kind with
-            | "boat" -> (fn, oc, "X", "")
-            | "list" -> (fn, oc, ".", "")
-            | "alias" -> (fn, oc, sn, Sutil.particles sn)
-            | _ -> (fn, oc, sn, Sutil.particles sn ^ ", ")
-          in
-          let key =
-            Format.sprintf "%s%s%s" sn2 fn1
-              (if oc1 <> 0 then Format.sprintf ".%d" oc1 else "")
-          in
-          if key <> prev then loop (item :: acc) key new_list
-          else loop acc key new_list
+    let old = List.length new_list in
+    let new_list =
+      let rec loop acc prev new_list =
+        match new_list with
+        | [] -> acc
+        | ((_iper, sn, fn, oc, _aliases, kind, _key_l) as item) :: new_list ->
+            let fn1, oc1, _sn1, sn2 =
+              match kind with
+              | "boat" -> (fn, oc, "X", "")
+              | "list" -> (fn, oc, ".", "")
+              | "alias" -> (fn, oc, sn, Sutil.particles sn)
+              | _ -> (fn, oc, sn, Sutil.particles sn ^ ", ")
+            in
+            let key =
+              Format.sprintf "%s%s%s" sn2 fn1
+                (if oc1 <> 0 then Format.sprintf ".%d" oc1 else "")
+            in
+            if key <> prev then loop (item :: acc) key new_list
+            else loop acc key new_list
+      in
+      loop [] "" (List.rev new_list)
     in
-    loop [] "" (List.rev new_list)
-  in
-  if !verbose then
-    Printf.eprintf "New list (duplicates) %d -> %d\n" old (List.length new_list);
-  let och = open_out fname_out in
-  print_index och base new_list person_ref letters;
-  close_out och;
-  Printf.eprintf "Done (%d)\n" (List.length new_list)
+    if !verbose then
+      Printf.eprintf "New list (duplicates) %d -> %d\n" old
+        (List.length new_list);
+    let och = open_out fname_out in
+    print_index och base new_list person_ref letters;
+    close_out och;
+    Printf.eprintf "Done (%d)\n" (List.length new_list)
+  with _ ->
+    Printf.eprintf "Cannot open base %s\n" bname;
+    exit 1
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

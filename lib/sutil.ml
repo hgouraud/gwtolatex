@@ -62,7 +62,8 @@ let particles sn =
   in
   loop partics
 
-(** Read a line. If line is empty or only contains a comment (#), then read next line  *)
+(** Read a line. If line is empty or only contains a comment (#), then read next
+    line *)
 let rec input_real_line ic =
   let x = input_line ic in
   if String.length x > 0 && x.[0] = '#' then input_real_line ic else x
@@ -88,8 +89,8 @@ let convert_html str =
           let new_char = match char with "&#38;" -> "&" | _ -> char in
           loop
             (if k < String.length str1 then
-             String.sub str1 (k + 1) (String.length str1 - k - 1)
-            else "")
+               String.sub str1 (k + 1) (String.length str1 - k - 1)
+             else "")
             (String.sub str1 0 j ^ str2 ^ new_char)
   in
   loop str ""

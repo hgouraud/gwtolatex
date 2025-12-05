@@ -13,11 +13,11 @@ let gw_dir = ref (try Sys.getenv "GW_BIN" with Not_found -> "./")
 let family = ref ""
 let out_file = ref ""
 let debug = ref 0
-let pass = ref 0
+let _pass = ref 0
 let dev = ref false
 let verbose = ref false
 let no_fail = ref false
-let dict4 = Hashtbl.create 100
+let _dict4 = Hashtbl.create 100
 let line_cnt = ref 0
 let section_mark = ref ""
 
@@ -28,7 +28,7 @@ let test = ref false
 let test_nb = ref 0
 
 (** Removes spaces at the begining and at the end of string. *)
-let cut_space x =
+let _cut_space x =
   let len = String.length x in
   if len = 0 then x
   else if x = " " then ""
@@ -72,21 +72,22 @@ let strip_tr_sp s =
   loop 0
 
 (** Read line from input channel. *)
-let input_a_line ic =
+let _input_a_line ic =
   let line = input_line ic in
   incr line_cnt;
   if String.length line > 0 && line.[String.length line - 1] = '\r' then
     String.sub line 0 (String.length line - 1)
   else line
 
-(** Read a line. If line is empty or only contains a comment (#), then read next line  *)
+(** Read a line. If line is empty or only contains a comment (#), then read next
+    line *)
 let input_real_line ic = input_line ic
 
-let output_string_nl oc str =
+let _output_string_nl oc str =
   output_string oc str;
   output_string oc "\n"
 
-let process ich och dict1 dict2 dict4 img_ok_list =
+let process ich och dict1 _dict2 _dict4 img_ok_list =
   try
     while true do
       let line = input_real_line ich |> Sutil.strip_nl in
@@ -100,7 +101,7 @@ let process ich och dict1 dict2 dict4 img_ok_list =
         else
           let image_id = int_of_string (List.nth parts 1) in
           let _key_str = List.nth parts 2 |> Sutil.strip_c ')' in
-          let anx_page, desc, _fname, _key_l, _key_l_2, image_occ =
+          let anx_page, _desc, _fname, _key_l, _key_l_2, image_occ =
             Hashtbl.find dict1 image_id
           in
           let rec loop image_occ =
@@ -109,8 +110,9 @@ let process ich och dict1 dict2 dict4 img_ok_list =
                 if not (List.mem image_id img_ok_list) then
                   output_string och
                     (if anx_page <> 0 then
-                     Format.sprintf "annexe page %d" anx_page
-                    else "(???)") (* empty string is not acceptable for LaTeX *)
+                       Format.sprintf "annexe page %d" anx_page
+                     else "(???)")
+                  (* empty string is not acceptable for LaTeX *)
             | occ :: image_occ ->
                 let parts = String.split_on_char '.' occ in
                 let nbr =
@@ -122,7 +124,7 @@ let process ich och dict1 dict2 dict4 img_ok_list =
                   let rec loop n acc p1 =
                     match p1 with
                     | p :: p1 when n > 0 -> loop (n - 1) (p :: acc) p1
-                    | p :: p1 -> List.rev acc
+                    | _p :: _p1 -> List.rev acc
                     | _ -> assert false
                   in
                   loop (l1 - 1) [] p1
@@ -130,11 +132,11 @@ let process ich och dict1 dict2 dict4 img_ok_list =
                 let occ2 = String.concat "." p1 in
                 output_string och
                   (if Sutil.start_with occ2 0 !section_mark then
-                   Format.sprintf "image %s.%d ci-dessous" occ2 nbr
-                  else
-                    Format.sprintf
-                      "\\ref{img_ref_%d.%s}.%d page \\pageref{img_ref_%d.%s}"
-                      image_id occ nbr image_id occ);
+                     Format.sprintf "image %s.%d ci-dessous" occ2 nbr
+                   else
+                     Format.sprintf
+                       "\\ref{img_ref_%d.%s}.%d page \\pageref{img_ref_%d.%s}"
+                       image_id occ nbr image_id occ);
                 if image_occ <> [] then output_string och ", ";
                 loop image_occ
           in

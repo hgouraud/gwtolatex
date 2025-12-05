@@ -265,11 +265,11 @@ let copy_row row lr side =
       ( w,
         s,
         (if side = "bar" then match ty with "Te" | "It" -> "Vr1" | _ -> ty
-        else ty),
+         else ty),
         (if side = "bar" then ""
-        else match ty with "Te" -> get_part lr side te | _ -> te),
+         else match ty with "Te" -> get_part lr side te | _ -> te),
         (if side = "bar" then ""
-        else match ty with "It" -> get_part lr side it | _ -> it),
+         else match ty with "It" -> get_part lr side it | _ -> it),
         if side = "bar" then ""
         else match ty with "Im" -> get_part lr side im | _ -> im ))
     row
