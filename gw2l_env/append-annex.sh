@@ -11,7 +11,7 @@ if [ -f cpdf ]; then
     echo "appending $FAMILY-inputs/Annexes.pdf"
     cd tmp
     LINE=`grep "Output written on " $FAMILY.log`
-    export PAGES=`echo $LINE | sed 's/[^0-9]*\([0-9]\+\).*/\1/'`
+    export PAGES=`echo $LINE | sed -E 's/.*\(([0-9]+) pages.*/\1/'`
     export ODDEVEN=`expr $PAGES % 2`
     if test $ODDEVEN -eq 1
     then echo "Number of pages for $FAMILY is : $PAGES (odd)"
