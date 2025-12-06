@@ -17,7 +17,7 @@ cp -f -R ./gw2l_env/base-test.gw ./bases
 cp -f -R ./gw2l_env/images ./bases
 cp -f -R ./gw2l_env/lang ./bases
 cp -f -R ./gw2l_env/src ./bases
-cp -f -R ./gw2l_env/tex ./bases/etc
+cp -f -R ./gw2l_env/tex ./bases/etc/base_test
 # execution of gw2l components must be in bases
 
 if [ -d ./gw2l_dist ]; then
