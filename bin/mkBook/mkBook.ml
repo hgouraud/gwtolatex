@@ -133,13 +133,17 @@ let main () =
   (* install tex templates in bases/etc *)
   (* on excute dans le repo (dev) ou dans bases_dir *)
   if !verbose then Printf.eprintf "Installing TeX templates\n";
-  let etc_dir = Filename.concat !bases "etc" in
+
+  (* TODO create base-new, install tex in it *)
+  let etc_dir =
+    String.concat Filename.dir_sep [ !bases; "etc"; !base ^ "-new" ]
+  in
   let tex_dir = String.concat Filename.dir_sep [ !dist_dir; "tex" ] in
   let do_load_tex_files = Format.sprintf "cp -R %s %s" tex_dir etc_dir in
   let error = Sys.command do_load_tex_files in
   if error > 0 then (
     Printf.eprintf "Error while loading tex templates files (%d)\n" error;
-    exit 0);
+    exit 1);
   flush stderr;
 
   if !verbose then Printf.eprintf "Create temp dir\n";
@@ -199,7 +203,7 @@ let main () =
     let error = Sys.command make_gw_file in
     if error > 0 then (
       Printf.eprintf "Error while creating .gw file (%d)\n" error;
-      exit 0);
+      exit 1);
     flush stderr;
 
     (* make new .gw file *)
@@ -211,7 +215,7 @@ let main () =
     let error = Sys.command make_new_gw_file in
     if error > 0 then (
       Printf.eprintf "Error while creating new gw file (%d)\n\n" error;
-      exit 0);
+      exit 1);
     flush stderr;
 
     (* make new base from base-new.gw *)
@@ -231,7 +235,7 @@ let main () =
         {|Error while creating new base (%d)
 Inspect %s/tmp/gwc.log for possible errors.|}
         error !bases;
-      exit 0);
+      exit 1);
     flush stderr);
 
   (* run mkTex *)
@@ -254,7 +258,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   let error = Sys.command make_tex_file in
   if error > 0 then (
     Printf.eprintf "Error while creating .tex file (%d)\n" error;
-    exit 0);
+    exit 1);
   flush stderr;
 
   (* run mkUpdImgl *)
@@ -274,16 +278,27 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   let error = Sys.command upd_tex_file in
   if error > 0 then (
     Printf.eprintf "Error while updating .tex file (%d)\n" error;
-    exit 0);
+    exit 1);
   flush stderr;
   let out_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".tmp" ] in
   let out_file2 = String.concat Filename.dir_sep [ "tmp"; !family ^ ".tex" ] in
   (try Sys.rename out_file out_file2
    with Failure e ->
      let _ = Printf.eprintf "Error while renaming .tmp file (%s)\n" e in
-     exit 0);
+     exit 1);
 
-  (* cleanup pass (remove empty \begin{hgitemize} ) *)
+  (* cleanup pass (remove empty \begin{hgitemize} .. \end{hgitemize}) *)
+  (*
+  let clean_tex_file =
+    Printf.sprintf
+      {|perl -i.bak -0777 -pe 's/\begin{hgitemize}\n\n\end{hgitemize}//g' %s|}
+      (Filename.concat "tmp" (!family ^ ".tex"))
+  in
+  let error = Sys.command clean_tex_file in
+  if error > 0 then (
+    Printf.eprintf "Error while cleaning .tex file (%d)\n\n" error;
+    exit 1);
+  *)
 
   (* run pdflatex *)
   if !verbose then Printf.eprintf "Run pdflatex\n";
@@ -300,7 +315,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   let error = Sys.command make_pdf_file in
   if error > 0 then (
     Printf.eprintf "Error while creating .pdf file (%d)\n\n" error;
-    exit 0);
+    exit 1);
   flush stderr;
 
   (* might be necessary to process .idx before makeindex *)
@@ -315,7 +330,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   let error = Sys.command make_index in
   if error > 0 then (
     Printf.eprintf "Error while creating index file (%d)\n\n" error;
-    exit 0);
+    exit 1);
   flush stderr;
 
   (* run mkTweekInd *)
@@ -328,7 +343,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   let error = Sys.command tweek_index in
   if error > 0 then (
     Printf.eprintf "Error while managing index file (%d)\n\n" error;
-    exit 0);
+    exit 1);
   flush stderr;
 
   (* run pdflatex second time *)
@@ -338,7 +353,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
     let error = Sys.command make_pdf_file in
     if error > 0 then (
       Printf.eprintf "Error during second pdflatex run (%d)\n\n" error;
-      exit 0);
+      exit 1);
     flush stderr);
 
   (* insert annexe *)
@@ -357,7 +372,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
     let error = Sys.command annex_cmd in
     if error > 0 then (
       Printf.eprintf "Error while appending annex (%d)\n\n" error;
-      exit 0);
+      exit 1);
     flush stderr);
 
   (* move pdf to livres *)
@@ -370,7 +385,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   let error = Sys.command do_mv_pdf in
   if error > 0 then (
     Printf.eprintf "Error while moving pdf file(%d)\n\n" error;
-    exit 0);
+    exit 1);
   flush stderr;
 
   Printf.eprintf "Result file is in %s\n" final_pdf_file;

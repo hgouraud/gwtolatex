@@ -17,6 +17,8 @@
 \usepackage[useregional,showdow]{datetime2}
 \usepackage{enumitem}
 \usepackage{environ}
+\usepackage{etoolbox}
+\usepackage{fancyvrb}
 \usepackage{float}
 \usepackage[T1]{fontenc}
 \usepackage{fp}
@@ -35,6 +37,7 @@
 \usepackage{ragged2e}
 \usepackage[figuresright]{rotating}
 %\usepackage[counterclockwise]{rotating}
+\usepackage{scrextend}
 \usepackage{silence}
 \usepackage{soul}
 \usepackage{tabularx}
@@ -125,23 +128,6 @@
 
 \newlength{\hh}
 
-\let\olditemize\itemize
-\let\oldenditemize\enditemize
-
-\RenewEnviron{itemize}{%
-  \IfSubStr{\BODY}{\item}{%
-    \olditemize\BODY\oldenditemize
-  }{}%
-}
-
-\newenvironment{hgitemize}
-{
-\begin{itemize}%
-    \setlength{\itemsep}{0 cm}%
-}%
-{\end{itemize}}
-
-
 
 %\setlist[enumerate]{topsep=0pt,itemsep=-1ex,partopsep=1ex,parsep=1ex}
 \newlist{hgitemize}{itemize}{5}
@@ -152,7 +138,14 @@
 \setlist[hgitemize,5]{label=\textemdash,leftmargin=0.5cm,topsep=0pt,itemsep=0pt ,parsep=0pt,partopsep=0pt}
 \setlist[hgitemize,6]{label=-,leftmargin=0.5cm,topsep=0pt,itemsep=0pt ,parsep=0pt,partopsep=0pt}
 
-
+\RenewEnviron{hgitemize}{
+  \ifblank{\BODY}{}{
+    \begin{itemize}
+      \setlength{\itemsep}{0cm}
+      \expandafter\BODY
+    \end{itemize}
+  }{}
+}
 
 \newenvironment{hgitemize1}%
 { \begin{list}%
