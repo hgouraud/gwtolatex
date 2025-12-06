@@ -913,6 +913,8 @@ let mark_section och =
 (* <x Cmd param>remain *)
 (*       i     j       *)
 let one_command conf och line =
+  Printf.eprintf ".";
+  flush stderr;
   let get_float_value line param default =
     let on_off = param = "off" || param = "Off" in
     match on_off with
