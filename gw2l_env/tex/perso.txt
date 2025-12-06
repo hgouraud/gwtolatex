@@ -116,7 +116,7 @@
 %if;(has_occupation or has_birth_date or has_birth_place or
      has_baptism_date or has_baptism_place or is_dead or is_buried or
      is_cremated or has_consanguinity)
-  \begin{hgitemize}  
+\begin{hgitemize}
   %if;has_occupation;
     \item %apply;capitalize%with;%occupation;%end;%nl;
   %end;
@@ -135,8 +135,8 @@
   %else;
     %if;has_birth_note; (%birth_note;)%end;%nn;
     %if;has_birth_place;
-    \item %apply;capitalize(nth([born],sex)) à %birth_place;%nl;
-    %end;
+    \item %apply;capitalize(nth([born],sex)) à %birth_place;
+    %end;%nl;
   %end;
   %if;has_baptism_date;
     \item %apply;capitalize(nth([baptized],sex)) %on_baptism_date;
@@ -145,8 +145,8 @@
   %else;
     %if;has_baptism_note; (%baptism_note;)%end;%nn;
     %if;has_baptism_place;
-    \item %apply;capitalize(nth([baptized],sex)) à %baptism_place;%nl;
-    %end;
+    \item %apply;capitalize(nth([baptized],sex)) à %baptism_place;
+    %end;%nl;
   %end;
   %if;is_dead;
     \item %apply;capitalize(died)
@@ -176,7 +176,7 @@
   %if;(has_consanguinity and (bvar.show_consang != "no" or manitou))
     \item [*consanguinity][:] %consanguinity;%nl;
   %end;
-  \end{hgitemize}%nl;
+\end{hgitemize}%nl;
 %end;
 
 %if;has_parents;
@@ -223,23 +223,23 @@
            father.first_name = "Îles"
        )
     \hghp{[attached]}
-    \begin{hgitemize}
+\begin{hgitemize}
     %if;(father.surname = ".")
-      \item %father.first_name;%nl;
+      \item %father.first_name;
     %else;
-      \item %father;%nl;
-    %end;
-    \end{hgitemize}
+      \item %father;
+    %end;%nl;
+\end{hgitemize}
   %else;
     \hghp{[*parents]}
-    \begin{hgitemize}
+\begin{hgitemize}
     \item %[$%if;father.has_parents;\bullet %else;\circ%end;$%] %sp;
     %apply;hgref("name", father.surname, father.first_name, father.occ, "")%nn;
     %father.title;~%father.dates;%nl;
     \item %[$%if;mother.has_parents;\bullet %else;\circ%end;$%] %sp;
     %apply;hgref("name", mother.surname, mother.first_name, mother.occ, "")%nn;
     %mother.title;~%mother.dates;%nl;
-    \end{hgitemize}
+\end{hgitemize}
   %end;
 %end;
 
@@ -283,7 +283,7 @@
   %else;
     \hghm{[*marriage/marriages]1 [and::child/children]1}
   %end;
-  \begin{hgitemize}
+\begin{hgitemize}
   %foreach;family;
     \item
     %if;(
@@ -373,14 +373,14 @@
       %end;
       %if;(evar_opt = "from" and wizard);{\it  (%origin_file;)} %end;
     %end;
-  %end;
-  \end{hgitemize}
+  %end;%nl;
+\end{hgitemize}
 %end;
 
 
 %if;has_relations;
   \hghx{[*relation/relations]1}
-    \begin{hgitemize}
+\begin{hgitemize}
     %foreach;relation;
        \item
        [$\bullet$]%relation_type;[:]
@@ -420,15 +420,15 @@
           %apply;hgref("name", event_witness_relation.event.spouse.surname,
             event_witness_relation.event.spouse.first_name, event_witness_relation.event.spouse.occ, "")
         %end;
-    %end;
-    \end{hgitemize}
+    %end;%nl;
+\end{hgitemize}
 %end;
 
 %if;has_notes;
   \hghx{[*note/notes]1}
-  \begin{hgitemize}
-  \item %notes;
-  \end{hgitemize}
+\begin{hgitemize}
+  \item %notes;%nl;
+\end{hgitemize}
 %end;
 
 %reset_count;
@@ -448,13 +448,13 @@
   %else;
     \hghx{[*marriage notes/marriages notes]1}
   %end;
-  \begin{hgitemize}
+\begin{hgitemize}
   %foreach;family;
     \item [*marriage with] %apply;hgref("name", spouse.surname, spouse.first_name, spouse.occ, "")[:]
     %comment;
     %incr_count;
-  %end;
-  \end{hgitemize}
+  %end;%nl;
+\end{hgitemize}
 %end;
 
 %if;has_sources;

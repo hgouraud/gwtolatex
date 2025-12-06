@@ -250,6 +250,7 @@ let notes_header oc (key : MkImgDict.key) =
 let print_img_list oc (key : MkImgDict.key) images_l dict1 dict2 =
   let key_str =
     Format.sprintf "%s.%d+%s" key.pk_first_name key.pk_occ key.pk_surname
+    |> Sutil.replace '_' ' '
   in
   let anx_img_list =
     match Hashtbl.find_opt dict2 key with

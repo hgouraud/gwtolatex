@@ -610,7 +610,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             let content = get_child children in
             Lutil.simple_tag_1 t content
         (* TODO check here we are terminating something!! *)
-        | "br" -> "\\par\n"
+        | "br" -> "\n\n"
         | "sup" ->
             let content = get_child children in
             if content <> "" then Format.sprintf "\\textsuperscript{%s}" content
@@ -620,13 +620,11 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             content
         | "h1" ->
             let content = get_child children in
-            if content <> "" then
-              Format.sprintf "\n\\par{\\Large %s}\\par\n" content
+            if content <> "" then Format.sprintf "\n\n{\\Large %s}\n\n" content
             else ""
         | "h2" ->
             let content = get_child children in
-            if content <> "" then
-              Format.sprintf "\n\\par{\\large %s}\\par\n" content
+            if content <> "" then Format.sprintf "\n\n{\\large %s}\n\n" content
             else ""
         | "h3" ->
             let content = get_child children in
@@ -635,19 +633,18 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             (* TODO this is language dependant !! *)
             (* généraliser aux autres <hn>  </hn> *)
             let str =
-              if Sutil.contains content "Bateaux" then
-                "\n\\par\\hgbato{Bateaux}"
+              if Sutil.contains content "Bateaux" then "\n\n\\hgbato{Bateaux}"
               else if Sutil.contains content "Occupants" then
-                "\n\\par\\hgbato{Occupants}"
+                "\n\n\\hgbato{Occupants}"
               else if content <> "" then
-                Format.sprintf "\n\\par\\textbf{%s}\\par\n" content
+                Format.sprintf "\n\n\\textbf{%s}\n\n" content
               else ""
             in
             if content <> "" then str else ""
-        | "hr" -> "\\par\\noindent\\rule{\\textwidth}{0.4pt}\n"
+        | "hr" -> "\n\\noindent\\rule{\\textwidth}{0.4pt}\n"
         | "p" ->
             let content = get_child children in
-            if content <> "" then Format.sprintf "\\par\n %s" content else ""
+            if content <> "" then Format.sprintf "\n\n %s" content else ""
         | "table" ->
             let content = get_child children in
             content
@@ -1284,6 +1281,7 @@ let one_http_call conf base och line =
       with Not_found -> false
     then output_string och "Command m=D;t=V is not available (yet)\\\\\n"
     else
+      let _ = Unix.sleepf 0.05 in
       let resp = Ezcurl.get ~url () in
       match resp with
       | Ok { Ezcurl.code; body; _ } ->
@@ -1304,7 +1302,7 @@ let one_http_call conf base och line =
 
 (** print all images mentioned in the notes of a person *)
 let print_images conf och images_list _key_str =
-  output_string och (Format.sprintf "\\par\n");
+  output_string och (Format.sprintf "\n\n");
   (* TODO manage Wide *)
   List.iter
     (fun (im_type, name, (ch, sec, ssec, _sssec), nbr) ->
@@ -1396,9 +1394,9 @@ let print_images conf och images_list _key_str =
                "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\newline%s%s%s}%s\n"
                width width images_dir Filename.dir_sep name img_number img_label
                index_list
-               (if Sutil.contains name "-wide" then "\n\\par\n" else "")))
+               (if Sutil.contains name "-wide" then "\n\n\n" else "")))
     (List.rev images_list);
-  output_string och (Format.sprintf "\\par\n")
+  output_string och (Format.sprintf "\n\n")
 
 let process_one_line conf base _dict1 _dict2 och line =
   if line <> "" then
@@ -1459,8 +1457,7 @@ let process_one_line conf base _dict1 _dict2 och line =
                 print_images conf och !images_in_page key_str;
               images_in_page := [];
               if conf.hrule && not !gwtest then
-                output_string och
-                  (Format.sprintf "\\par\\vspace{0.5cm}\\hrule\n");
+                output_string och (Format.sprintf "\n\\vspace{0.5cm}\\hrule\n");
               conf
           | 'x' -> one_command conf och line
           | 'y' ->
