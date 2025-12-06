@@ -301,7 +301,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   *)
 
   (* run pdflatex *)
-  if !verbose then Printf.eprintf "Run pdflatex\n";
+  Printf.eprintf "Running \027[32mpdfLaTeX\027[0m for %s\n" !family;
   let aux_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".aux" ] in
   let do_rm_aux = Printf.sprintf "rm %s" aux_file in
   let _ = Sys.command do_rm_aux in
@@ -321,7 +321,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   (* might be necessary to process .idx before makeindex *)
 
   (* run makeindex *)
-  if !verbose then Printf.eprintf "Run makeindex\n";
+  Printf.eprintf "Running \027[32mmakeIndex\027[0m for %s\n" !family;
   let idx_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".idx" ] in
   (* makeindex does not like absolute paths! *)
   let make_index = Printf.sprintf "makeindex %s" idx_file in
@@ -348,7 +348,9 @@ Inspect %s/tmp/gwc.log for possible errors.|}
 
   (* run pdflatex second time *)
   if !second then (
-    if !verbose then Printf.eprintf "Run pdflatex second time\n";
+    Printf.eprintf
+      "Running \027[32mpdfLaTeX\027[0m a \027[32msecond\027[0m time for %s\n"
+      !family;
     flush stderr;
     let error = Sys.command make_pdf_file in
     if error > 0 then (
@@ -362,7 +364,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
       [ !livres; !family ^ "-inputs"; "Annexes.pdf" ]
   in
   if Sys.file_exists annex_file then (
-    if !verbose then Printf.eprintf "Append annex\n";
+    Printf.eprintf "\027[32mAppend annex\027[0m\n";
     let annex_cmd =
       Format.sprintf "%s %s %s"
         (Filename.concat !gw2l_dir "append-annex.sh")
@@ -370,13 +372,12 @@ Inspect %s/tmp/gwc.log for possible errors.|}
     in
     flush stderr;
     let error = Sys.command annex_cmd in
-    if error > 0 then (
+    if error > 0 then
       Printf.eprintf "Error while appending annex (%d)\n\n" error;
-      exit 1);
     flush stderr);
 
   (* move pdf to livres *)
-  if !verbose then Printf.eprintf "Move .pdf file to Livres\n";
+  Printf.eprintf "\027[32mMove\027[0m .pdf file to Livres\n";
   let pdf_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".pdf" ] in
   let final_pdf_file =
     String.concat Filename.dir_sep [ !livres; !family ^ ".pdf" ]
@@ -388,8 +389,9 @@ Inspect %s/tmp/gwc.log for possible errors.|}
     exit 1);
   flush stderr;
 
-  Printf.eprintf "Result file is in %s\n" final_pdf_file;
-  Printf.eprintf "Process time is %s s\n" (show_process_time start_time);
+  Printf.eprintf "\027[32mResult\027[0m file is in %s\n" final_pdf_file;
+  Printf.eprintf "\027[32mProcess time\027[0m is %s s\n"
+    (show_process_time start_time);
   flush stderr
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)
