@@ -1,1 +1,1 @@
-../../geneweb/lib/version.ml
+../../geneweb/_build/default/lib/version.ml

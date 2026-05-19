@@ -95,12 +95,14 @@ let process ich och dict1 _dict2 _dict4 img_ok_list =
         section_mark := String.sub line 12 (String.length line - 12)
       else if Sutil.start_with "(IMGID" 0 line then (
         let parts = String.split_on_char ' ' line in
-        if List.length parts <> 3 then (
+        if List.length parts < 3 then (
           Printf.eprintf "Bad IMGID syntax: %s\n" line;
           output_string och (strip_tr_sp line ^ "\n"))
         else
           let image_id = int_of_string (List.nth parts 1) in
-          let _key_str = List.nth parts 2 |> Sutil.strip_c ')' in
+          (* key may contain spaces: rejoin everything after index 2, strip trailing ')' *)
+          let key_parts = List.filteri (fun i _ -> i >= 2) parts in
+          let _key_str = String.concat " " key_parts |> Sutil.strip_c ')' in
           let anx_page, _desc, _fname, _key_l, _key_l_2, image_occ =
             Hashtbl.find dict1 image_id
           in

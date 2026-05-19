@@ -712,6 +712,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                 | "tex" ->
                     (* extract TeX command from content *)
                     if String.length content > 3 then
+                      (* restore { and } protected before HTML parsing *)
+                      let content = Sutil.replace_str "\x00L" "{" content in
+                      let content = Sutil.replace_str "\x00R" "}" content in
+                      (* legacy: notes written with [ instead of { *)
                       let content = Sutil.replace '[' '{' content in
                       let content = Sutil.replace ']' '}' content in
                       let reg1 = Str.regexp {|{width=\(.*\)}|} in
@@ -887,8 +891,64 @@ let guillemets_latex content =
   Str.global_replace (Str.regexp {|« |}) "«\\," content
   |> Str.global_replace (Str.regexp {| »|}) "\\,»"
 
+(* Protect { and } inside <span mode="tex">...</span> before HTML parsing.
+   The Markup HTML parser discards { and } since they are not valid HTML.
+   We replace them with placeholder bytes \x00L and \x00R before parsing,
+   then restore them in the mode="tex" branch of process_tree_cumul.
+   Handles multiline content and nested braces (e.g. \footnote{\pageref{...}}). *)
+let protect_tex_braces body =
+  let open_tag = {|mode="tex"|} in
+  let close_tag = "</span>" in
+  let buf = Buffer.create (String.length body) in
+  let len = String.length body in
+  let rec loop i =
+    if i >= len then ()
+    else
+      match Sutil.contains_index_from body open_tag i with
+      | -1 ->
+          (* no more tex spans: copy the rest verbatim *)
+          Buffer.add_string buf (String.sub body i (len - i))
+      | j ->
+          (* walk back to find the opening '<' of the span tag *)
+          let k = ref j in
+          while !k > 0 && body.[!k] <> '<' do
+            decr k
+          done;
+          (* copy body[i .. k-1] verbatim *)
+          Buffer.add_string buf (String.sub body i (!k - i));
+          (* find the closing '>' of the opening tag *)
+          let tag_end =
+            try String.index_from body j '>' with Not_found -> len - 1
+          in
+          (* copy the opening tag verbatim *)
+          Buffer.add_string buf (String.sub body !k (tag_end - !k + 1));
+          (* find the matching </span> *)
+          let close_start =
+            match Sutil.contains_index_from body close_tag (tag_end + 1) with
+            | -1 -> len
+            | p -> p
+          in
+          (* extract raw inner content and replace { } with placeholders *)
+          let inner =
+            String.sub body (tag_end + 1) (close_start - tag_end - 1)
+          in
+          String.iter
+            (fun c ->
+              match c with
+              | '{' -> Buffer.add_string buf "\x00L"
+              | '}' -> Buffer.add_string buf "\x00R"
+              | c -> Buffer.add_char buf c)
+            inner;
+          Buffer.add_string buf close_tag;
+          loop (close_start + String.length close_tag)
+  in
+  loop 0;
+  Buffer.contents buf
+
 let process_html conf base och body =
   let open Markup in
+  (* protect { and } in tex spans before the HTML parser discards them *)
+  let body = protect_tex_braces body in
   let tree =
     body |> string |> parse_html |> signals
     |> tree

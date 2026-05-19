@@ -210,6 +210,24 @@ let contains_index str sub =
   in
   loop 0
 
+let contains_index_from str sub from =
+  let strlen = String.length str in
+  let sublen = String.length sub in
+  let rec aux i1 i2 =
+    if i1 = sublen then i2 - sublen
+    else if i2 = strlen then -1
+    else if String.unsafe_get str i2 = String.unsafe_get sub i1 then
+      aux (i1 + 1) (i2 + 1)
+    else -1
+  in
+  let rec loop i =
+    if i + sublen <= strlen then
+      let r = aux 0 i in
+      if r <> -1 then r else loop (i + 1)
+    else -1
+  in
+  loop (max 0 from)
+
 let contains str sub =
   let strlen = String.length str in
   let sublen = String.length sub in

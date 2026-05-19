@@ -66,10 +66,7 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	# Apple extended attributes
 	# xattr -d com.apple.quarantine $(DISTRIB_DIR)/make-*.sh;
 	cp $(ENV_DIR)/Gw2LaTeX-env.tex $(DISTRIB_DIR)
-	cp ./version.txt ./tmp
-	echo ", commit: " >> ./tmp
-	echo $(COMMIT_ID) >> ./tmp
-	cp ./tmp $(DISTRIB_DIR)/version.txt
+	echo "$$(cat ./version.txt), commit: $(COMMIT_ID)" > $(DISTRIB_DIR)/version.txt
 	cp ./livres/test.pdf $(DISTRIB_DIR)/Gw2L-user-manuel.pdf
 	cp ./livres/test.txt $(DISTRIB_DIR)/template.txt
 	$(RM) ./tmp
