@@ -26,68 +26,13 @@ Version :
 \begin{document}
 \WarningsOff*
 
-\maketitle         % genère le titre
-\tableofcontents   % table des matières
-
 %%%%%%%%%%%%%%%%%%%%
 % Your document starts here
 %%%%%%%%%%%%%%%%%%%%
-<x Chapter Avant-propos>
-<x Input %%%LIVRES%%%/test-inputs/Notes.tex>
-
-<x Chapter Listes de descendants>
-\label{descendance}
-<x HighLight Dupont, Léon>
-<x HighLight Dupont, Maurice>
-
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=lucien;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Lucien Dupont</a>Dupont, Lucien (Famille)
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=leon;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">Famille Léon Dupont</a>Dupont, Léon (Famille)
-<x Section Famille Maurice Dupont>
-\index{Famille Maurice Dupont}
-Commentaire sur la famille de Maurice
-\par
-Pourrait être le contenu d'une note.
-\par
-<b href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=maurice;n=dupont;v=4;t=L;spouses=on;parents=on;templ=tex;w=%%%PASSWD%%%">
-<x HighLight off>
-
-<x Chapter Fiches individuelles de personnes>
-<x CollectImages on>
-<x LaTeX \label{fiches}>
-\section{Dupont, Maurice}
-Le fiche de Maurice n'est pas disponible (pour démonstration)!!
-<x Incr Section>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Lucien\index{Dupont, Lucien dit Le Frère}\label{luciendupont}</a>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Léon\label{leondupont}</a>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=jean;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Jean</a>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=jacques;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Jacques</a>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=emile;n=dupont;oc=0;templ=tex;w=%%%PASSWD%%%">Dupont, Emile</a>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=marie;n=durand;templ=tex;w=%%%PASSWD%%%">Durand, Marie</a>
-
-<x Chapter Pages liées et arbres généalogiques>
-
-<x Section Pages liées>
-<x LaTeX \label{pageliee}>
-<x WideImages on>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=NOTES&f=page-liee-test;templ=tex;w=%%%PASSWD%%%">Page liée test\label{pageliee}</a>
-<x WideImages off>
-
-<x Section Arbres généalogiques>
 <x TreeMode 1>
-<x Hrule off>
-<x Unit cm>
-<x Arbres on>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=lucien;n=dupont;v=3;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Lucien Dupont</a>
-<x Split 1>
-<x TwoPages on>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=D;p=Lucien;n=dupont;v=3;t=T;dag=on;templ=tex;w=%%%PASSWD%%%">Arbre descendant de Lucien (2 pages)</a>
-<x TwoPages off>
-<x LaTeX \newpage>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?m=A&p=alexandre&n=dupont&v=3&siblings=on&notes=on&t=T&after=&before=&dag=on&templ=tex&w=%%%PASSWD%%%">Arbre ascendant d'Alexandre Dupont</a>
-<x LaTeX \label{relation}>
-<x Sideways on>
-<a href="http://127.0.0.1:2317/%%%BASE%%%?em=R;ep=alexandre;en=dupont;m=NG;select=input;fn=;sn=;n=sebastien+durand;bd=0;color=;et=S;image=off;w=%%%PASSWD%%%;dag=on;templ=tex">Chemin entre Alexandre Dupont et Sébastien Durand</a>
-\index{Dupont, Alexandre},\index{Durand, Sébastien}
+<x Chapter Avant-propos>
+
+<a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien&n=dupont&m=A&t=Z&v=6&maxv=4&num=on&birth=on&birth_place=on&marr=on&marr_date=on&marr_place=on&child=on&death=on&death_place=on&age=on&occu=on&repeat=on&gen=1&ns=1&hl=1">test tableau</a>
 
 %%%%%%%%%%%%%%%%%%
 % Standard tail of document
@@ -99,18 +44,15 @@ Le fiche de Maurice n'est pas disponible (pour démonstration)!!
 \newpage
 {\huge {\bf Notes}}
 \par
-Run \textbf{mkBook} du : \today{} à \DTMcurrenttime{}
-\par
+Run mkBook du : {\ddmmyyyydate\today} at \currenttime
 <x GeneWebCommit on>
 \par
-\textbf{GwTo\LaTeX{}} version :
+GwTo\LaTeX{} version :
 <x Input ./gw2l_dist/version.txt>
 \par
-<x BaseVersion on>
+<y \hgbaseversion{}
 \par
-This is \textbf{pdfTeX}, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) kpathsea version 6.3.5
-\par
-This is \textbf{makeindex}, version 2.17 [TeX Live 2023] (kpathsea + Thai support).
+\pdftexbanner{}
 % Additionnal Notes page
 \newpage
 {\huge {\bf Notes}}

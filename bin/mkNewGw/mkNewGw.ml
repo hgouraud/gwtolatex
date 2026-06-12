@@ -467,11 +467,13 @@ let main () =
   close_out out_channel;
 
   comp_families ic oc in_file out_file dict1 dict2 dict4;
-  close_in ic;
-  close_out oc;
 
   let out_channel = open_out_bin "dict4.dat" in
   Marshal.to_channel out_channel dict4 [];
   close_out out_channel
 
-let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)
+let () =
+  try main ()
+  with e ->
+    Printf.eprintf "%s\n" (Printexc.to_string e);
+    exit 1

@@ -118,7 +118,7 @@ Creation of this new base may fail if you introduce naming discrepancies
 in this who_is_where file. Capitals and accents must be strictly observed.
 
 To run a test case
-- run ".setup-test.sh" to create a temporary test base in the gwtolatex folder
+- run "./setup-test.sh" to create a temporary test base in the gwtolatex folder
 - run "./run-test.sh" should create ./gwtolatex/livres/test.pdf which is the
 user  manual of GwToLaTeX.
   from ./gwtolatex/livres/test.txt

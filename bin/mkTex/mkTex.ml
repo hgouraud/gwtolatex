@@ -712,7 +712,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                 | "tex" ->
                     (* extract TeX command from content *)
                     if String.length content > 3 then
-                      (* restore { and } protected before HTML parsing *)
+                      (* notes stored in GeneWeb base must use [ ] instead of { }
+                       because GeneWeb's wiki renderer treats { } as highlight delimiters.
+                       [ ] survive the renderer and are converted here to { } for LaTeX. *)
                       let content = Sutil.replace_str "\x00L" "{" content in
                       let content = Sutil.replace_str "\x00R" "}" content in
                       (* legacy: notes written with [ instead of { *)
@@ -746,7 +748,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                     (* highlight content *)
                     (* attention, \\textbf{{\\hl xxxx}} ne fonctionne pas *)
                     if List.mem content conf.highlights then
-                      Format.sprintf "\\bf {{\\hl %s}}" content
+                      Format.sprintf "\\bf {\\hl %s}" content
                     else content
                 | "caption" ->
                     caption := content;
@@ -1620,6 +1622,7 @@ let main () =
     Arg.usage speclist usage;
     exit 2);
   let bname = Filename.concat "." !basename in
+  let bname = bname ^ ".gwb" in
   (* TODO find a way to open base remotely *)
   try
     Driver.with_database bname @@ fun base ->

@@ -1,35 +1,16 @@
 (* tree construction tools *)
 (* v1  Henri, 2023/10/16 *)
+(* v2  Henri+Claude, 2026/05 — dynamic Vr heights via row classification *)
 open TreeAux
 
 let row_width row = List.fold_left (fun w (_, s, _, _, _, _) -> w + s) 0 row
 let row_nb = ref 0
 let nb_head_rows = ref 0
 
-(* TODO Imagek = Portrait ?? no *)
-type im_type = Portrait | Imagek | Images | Vignette
-
-type image = {
-  im_type : im_type;
-  filename : string;
-  where : int * int * int * int; (* ch, sec, ssec, sssec*)
-  image_nbr : int;
-}
-
-(* width, span, (E O Hr Hc Hl Vc Im), item, text, image *)
-type c_type = E | Hc | Hr | Hl | Vr1 | Vr2 | Te | It | Im
-
-type t_cell = {
-  width : float;
-  span : int;
-  typ : string;
-  item : string;
-  txt : string;
-  img : int;
-}
-
-type t_line = t_cell list
-type t_table = { row : int; col : int; body : t_line list }
+(* ── Row array for nearest_sig scanning ─────────────────────────── *)
+(* convert tree list to array once per print call so nearest_sig
+   can index in O(1)                                                 *)
+let tree_to_array tree = Array.of_list tree
 
 let print_tree (conf : Config.config) tree =
   let i, w, w0, ok = test_tree_width tree 0 in
@@ -44,9 +25,7 @@ let print_tree (conf : Config.config) tree =
       List.fold_left (fun a col -> if col.[0] = 'F' then a + 1 else a) 0 cols
     in
     let tree_width =
-      match conf.sideways with
-      | true -> conf.textheight (* maybe *.0.9 to account for title *)
-      | false -> conf.textwidth
+      if conf.sideways then conf.textheight else conf.textwidth
     in
     let col_sep = conf.colsep in
     let col_e_w = conf.colsep in
@@ -59,12 +38,10 @@ let print_tree (conf : Config.config) tree =
       /. Float.of_int col_f_n
     in
     let colwidth = col_f_w in
-    (* TODO take into account trees split in two *)
     let tabular_env =
       let colspec_f = Format.sprintf "P{%1.2fcm}" col_f_w in
       let colspec_e = Format.sprintf "P{%1.2fcm}" col_e_w in
       let empty_col i = (List.nth cols i).[0] = 'E' in
-
       let tab_env =
         let rec loop res i =
           if i = col_n then res
@@ -78,16 +55,12 @@ let print_tree (conf : Config.config) tree =
         else String.concat "" tab_env
       in
       tab_env ^ "c"
-      (* TODO is two pages start at col_middle when doing right part *)
     in
     (cols, tabular_env, colwidth)
   in
 
-  (* ***************************   mode 1, actually print tree *)
+  (* ── Mode 1: actual LaTeX tabular output ─────────────────────── *)
   let print_tree_mode_1 (conf : Config.config) tree page =
-    (*let tree = split_hr_cells conf tree in*)
-    (*let tree = split_rows_with_vbar conf tree in*)
-    (*let tree = if conf.double then double_each_cell conf tree else tree in*)
     let tree =
       let rec loop n tree =
         match n with 0 -> tree | _ -> loop (n - 1) (expand_cells conf tree)
@@ -95,22 +68,21 @@ let print_tree (conf : Config.config) tree =
       loop conf.expand tree
     in
     let tree = squeeze_row_tree tree in
-    (*let tree = merge_cells conf tree in*)
-    (*let tree = expand_hrl_cells conf tree in*)
     let tree = remove_duplicate_rows tree in
     let cols, tabular_env, colwidth = init_cols tree nb_head_rows in
-
     let cols_str, tab_env = print_tab_env cols tabular_env in
     if conf.debug = 1 then
       Format.eprintf "Tabular env: tree length: %d\n%s\n%s\n" (List.length tree)
         cols_str tab_env;
+
+    (* Build row array for nearest_sig lookups *)
+    let rows = tree_to_array tree in
 
     let offset_b =
       if conf.hoffset <> 0. then
         Format.sprintf "\\hspace*{%1.2f%s}\n" conf.hoffset conf.unit
       else ""
     in
-    let offset_e = "" in
     let tabular_b =
       Format.sprintf
         "%s\\nohyphens\\newcolumntype{P}[1]{>{\\centering\\arraybackslash}p{#1}}\n\
@@ -119,30 +91,22 @@ let print_tree (conf : Config.config) tree =
         conf.colsep conf.unit offset_b tabular_env
     in
     let tabular_e =
-      Format.sprintf "\\end{tabular}%s\n\\hyphenation{nor-mal-ly}\n%s\n"
-        offset_e
+      Format.sprintf "\\end{tabular}%s\n\\hyphenation{nor-mal-ly}\n"
         (if conf.sideways then "\\end{sideways}\n" else "")
     in
+
     row_nb := 0;
     tabular_b
     ^ List.fold_left
         (fun acc1 row ->
+          let ri = !row_nb in
           incr row_nb;
-          (* FIXME why rev ???? *)
           let row = List.rev row in
           let _, row_str =
             List.fold_left
               (fun (col, acc2) (_, s, ty, te, it, im) ->
-                (* FIXME why do we have 0 span (see split_tree) *)
                 if s = 0 then (col, acc2)
                 else
-                  let _colspan_b =
-                    if s > 1 then Format.sprintf "\\multicolumn{%d}{c}{" s
-                    else ""
-                  in
-                  let _colspan_e = if s > 1 then "}" else "" in
-                  (* for testing purposes, add \\fbox{ to minipage_b and } to minipage_e
-                     BUT no fbow within multicolumns !! *)
                   let fbox_b = if conf.debug = 999 then "\\fbox{" else "" in
                   let fbox_e = if conf.debug = 999 then "}" else "" in
                   let minipage_b =
@@ -159,6 +123,8 @@ let print_tree (conf : Config.config) tree =
                     else "\\" ^ conf.fontsize ^ "{"
                   in
                   let font_e = if conf.fontsize = "" then "" else "}" in
+
+                  (* ── Horizontal rule helper ── *)
                   let hr s lrc =
                     let rec loop i acc =
                       if i = s then acc
@@ -186,35 +152,56 @@ let print_tree (conf : Config.config) tree =
                     in
                     loop 0 ""
                   in
+
+                  (* ── Vertical rule with dynamic height ─────────
+                     Use nearest_sig to determine what this bar row
+                     connects: content above, branch below, etc.
+                     This mirrors dagSvg.js bar endpoint logic.     *)
+                  let vr_rule is_short =
+                    let h_cm, short =
+                      if is_short then (conf.rulethickns /. 10.0, true)
+                      else vr_height_cm conf rows ri
+                    in
+                    let h_cm, short =
+                      if is_short then (h_cm, true) else (h_cm, short)
+                    in
+                    if short then
+                      (* Vr2: small square dot *)
+                      Format.sprintf "\\rule[0pt]{%1.2fpt}{%1.2fpt}"
+                        conf.rulethickns conf.rulethickns
+                    else
+                      (* Vr1: full-height rule *)
+                      Format.sprintf "\\rule[0pt]{%1.2fpt}{%1.2fcm}"
+                        conf.rulethickns h_cm
+                  in
+
                   let cell_str =
-                    (* begin of cell *)
                     if (List.nth cols col).[0] = 'E' then ""
                     else
                       match ty with
                       | "Te" | "It" ->
                           let str =
-                            Format.sprintf "%s"
-                              (let te =
-                                 Sutil.replace '\n' ' ' te
-                                 |> Sutil.suppress_leading_sp
-                                 |> Sutil.clean_double_back_slash_2
-                                 |> Sutil.clean_leading_double_back_slash
-                                 |> Sutil.clean_item
-                               in
-                               let it =
-                                 Sutil.replace '\n' ' ' it
-                                 |> Sutil.suppress_leading_sp
-                                 |> Sutil.clean_double_back_slash_2
-                                 |> Sutil.clean_leading_double_back_slash
-                                 |> Sutil.clean_item
-                               in
-                               match (te, it) with
-                               | "", it when it <> "" -> font_b ^ it ^ font_e
-                               | te, "" when te <> "" -> font_b ^ te ^ font_e
-                               | te, it when te <> "" && it <> "" ->
-                                   font_b ^ te ^ "\\\\" ^ it ^ font_e
-                               | "", "" -> ""
-                               | _, _ -> font_b ^ te ^ it ^ font_e)
+                            let te =
+                              Sutil.replace '\n' ' ' te
+                              |> Sutil.suppress_leading_sp
+                              |> Sutil.clean_double_back_slash_2
+                              |> Sutil.clean_leading_double_back_slash
+                              |> Sutil.clean_item
+                            in
+                            let it =
+                              Sutil.replace '\n' ' ' it
+                              |> Sutil.suppress_leading_sp
+                              |> Sutil.clean_double_back_slash_2
+                              |> Sutil.clean_leading_double_back_slash
+                              |> Sutil.clean_item
+                            in
+                            match (te, it) with
+                            | "", it when it <> "" -> font_b ^ it ^ font_e
+                            | te, "" when te <> "" -> font_b ^ te ^ font_e
+                            | te, it when te <> "" && it <> "" ->
+                                font_b ^ te ^ "\\\\" ^ it ^ font_e
+                            | "", "" -> ""
+                            | _, _ -> font_b ^ te ^ it ^ font_e
                           in
                           if s = 1 then
                             Format.sprintf "%s%s%s" minipage_b str minipage_e
@@ -238,37 +225,27 @@ let print_tree (conf : Config.config) tree =
                             ^ hr (s / 2) "c"
                           else hr (s / 2) "e" ^ "&\n" ^ hr (s / 2) "c"
                       | "Hc" ->
-                          (* concat colspan entries of multicolumn 1 *)
-                          Format.sprintf "%s"
-                            (let rec loop i acc =
-                               if i = s then acc
-                               else
-                                 loop (i + 1)
-                                   (acc
-                                   ^ Format.sprintf
-                                       "\\rule[0pt]{%1.2f%s}{%1.2fpt}%s"
-                                       colwidth conf.unit conf.rulethickns
-                                       (if i + 1 = s then "" else "&\n"))
-                             in
-                             loop 0 "")
+                          let rec loop i acc =
+                            if i = s then acc
+                            else
+                              loop (i + 1)
+                                (acc
+                                ^ Format.sprintf
+                                    "\\rule[0pt]{%1.2f%s}{%1.2fpt}%s" colwidth
+                                    conf.unit conf.rulethickns
+                                    (if i + 1 = s then "" else "&\n"))
+                          in
+                          loop 0 ""
                       | "Vr1" ->
-                          if s = 1 then
-                            Format.sprintf "\\rule{%1.2fpt}{0.2cm}"
-                              conf.rulethickns
-                          else
-                            Format.sprintf
-                              "\\multicolumn{%d}{c}{\\rule{%1.2fpt}{0.2cm}}" s
-                              conf.rulethickns
+                          let rule = vr_rule false in
+                          if s = 1 then rule
+                          else Format.sprintf "\\multicolumn{%d}{c}{%s}" s rule
                       | "Vr2" ->
-                          if s = 1 then
-                            Format.sprintf "\\rule[0pt]{%1.2fpt}{%1.2fpt}"
-                              conf.rulethickns conf.rulethickns
-                          else
-                            Format.sprintf
-                              "\\multicolumn{%d}{c}{\\rule{%1.2fpt}{%1.2fpt}}" s
-                              conf.rulethickns conf.rulethickns
+                          let rule = vr_rule true in
+                          if s = 1 then rule
+                          else Format.sprintf "\\multicolumn{%d}{c}{%s}" s rule
                       | "E" ->
-                          if s = 1 then Format.sprintf ""
+                          if s = 1 then ""
                           else Format.sprintf "\\multicolumn{%d}{c}{}" s
                       | "Im" ->
                           Format.sprintf
@@ -277,14 +254,12 @@ let print_tree (conf : Config.config) tree =
                             (get_img_name conf.basename im)
                             minipage_e
                       | _ -> "??"
-                    (* end of cell *)
                   in
                   (col + s, cell_str :: acc2))
               (0, []) row
           in
           let row_str = String.concat "&" row_str in
-
-          (* somewhat of a hack to link the two half trees with some arrow *)
+          (* Two-page linking arrows *)
           let row_str =
             if conf.twopages && page = "left" && !row_nb = nb_head_rows + 1 then
               row_str ^ "$\\hspace{-0.5cm}\\rightarrow$"
@@ -300,6 +275,7 @@ let print_tree (conf : Config.config) tree =
     ^ tabular_e
   in
 
+  (* ── Mode 0: debug text dump ─────────────────────────────────── *)
   let print_tree_mode_0 _conf tree =
     let cols, tabular_env, _colwidth = init_cols tree nb_head_rows in
     let tree, _n =
@@ -321,7 +297,7 @@ let print_tree (conf : Config.config) tree =
                     | "Hc" -> "Hr " ^ "--"
                     | "Vr1" -> "Vr1 " ^ "|"
                     | "Vr2" -> "Vr2 " ^ "|"
-                    | "E" -> "E" ^ ""
+                    | "E" -> "E"
                     | "Im" -> "Im " ^ im
                     | _ -> "x")
                   ^ Format.sprintf "(%d)" s
@@ -340,10 +316,8 @@ let print_tree (conf : Config.config) tree =
       (String.length tree) cols_str tab_env tree
   in
 
+  (* ── Pipeline ────────────────────────────────────────────────── *)
   let tree = flip_tree_h tree in
-
-  (* FIXME Not needed anymore *)
-  (* TODO fix the calling side *)
   test_zero_span_t tree "init";
   let tree = remove_empty_cols conf tree nb_head_rows in
   let i, w, w0, ok = test_tree_width tree nb_head_rows in
@@ -351,6 +325,7 @@ let print_tree (conf : Config.config) tree =
     Printf.eprintf "Unbalanced tree, row %d w=%d, w0=%d\n" i w w0;
     exit 1);
   test_zero_span_t tree "after empty cols";
+
   if conf.twopages then (
     let tree_left, tree_right = split_tree conf tree in
     test_zero_span_t tree_left "tree_left";
