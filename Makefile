@@ -67,13 +67,17 @@ distrib: build ## Build the project and copy what is necessary for distribution
 	# xattr -d com.apple.quarantine $(DISTRIB_DIR)/make-*.sh;
 	cp $(ENV_DIR)/Gw2LaTeX-env.tex $(DISTRIB_DIR)
 	echo "$$(cat ./version.txt), commit: $(COMMIT_ID)" > $(DISTRIB_DIR)/version.txt
-	cp ./livres/test.pdf $(DISTRIB_DIR)/Gw2L-user-manuel.pdf
-	cp ./livres/test.txt $(DISTRIB_DIR)/template.txt
+	if [ -f ./livres/test.pdf ]; then \
+	  cp -f ./livres/test.pdf $(DISTRIB_DIR)/Gw2L-user-manuel.pdf; \
+	  cp -f ./livres/test.txt $(DISTRIB_DIR)/template.txt; \
+	fi
 	$(RM) ./tmp
 
 install: distrib
 	$(RM) -r $(BASES)/$(DISTRIB_DIR)
 	cp -R $(DISTRIB_DIR) $(BASES)
+	rm -R -f bases/$(DISTRIB_DIR)
+	cp -R $(DISTRIB_DIR) bases
 	
 clean:
 	@echo -n "Cleaning…"

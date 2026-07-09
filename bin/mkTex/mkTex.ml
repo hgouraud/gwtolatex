@@ -30,6 +30,16 @@ let dict1 = ref (Hashtbl.create 100)
 let dict2 = ref (Hashtbl.create 100)
 let img_name_list = ref []
 let img_ok_list = ref []
+
+(* Canonical lookup of an image id by (possibly TeX-escaped) file name.
+   Uses MkImgDict.canonical_img_name so lookup and dictionary construction
+   share the same normalisation.  Returns None for unknown names; callers
+   use 0 as the "unknown" sentinel, which MkImgDict guarantees is never a
+   real image id. *)
+let lookup_image_id name =
+  let n = MkImgDict.canonical_img_name (Sutil.replace_str "\\_{}" "_" name) in
+  List.assoc_opt n !img_name_list
+
 let missing_tags = ref []
 
 (* Assumes we are running in bases folder GeneWeb security constraint *)
@@ -325,19 +335,25 @@ let print_image conf (im_type, name, (ch, sec, ssec, sssec), nb) =
         "jpg"
   | Images | Wide ->
       let image_id =
-        match List.assoc_opt name !img_name_list with
+        match lookup_image_id name with
         | Some id -> id
-        | None -> 0
+        | None ->
+            (* normal case: who_is_where only lists photos with at least
+               two identified persons; id 0 = no person index *)
+            if !verbose then
+              Printf.eprintf "Print image: (%s) sans index de personnes\n" name;
+            0
       in
       let _anx_page, _desc, _fname, _key_l, _key_l_2, _image_occ =
         match Hashtbl.find_opt !dict1 image_id with
         | Some (anx_page, desc, fname, key_l, key_l_2, image_occ) ->
             (anx_page, desc, fname, key_l, key_l_2, image_occ)
         | None ->
-            Printf.eprintf "Print image: %d non existant (2)!\n" image_id;
+            if image_id <> 0 then
+              Printf.eprintf "Print image: %d non existant (2)!\n" image_id;
             (0, "dummy", "", [], [], [])
       in
-      img_ok_list := image_id :: !img_ok_list;
+      if image_id <> 0 then img_ok_list := image_id :: !img_ok_list;
       Format.sprintf "\n\\includegraphics[width=%1.2f%s]{%s%s%s}\n"
         (if wide then conf.textwidth else conf.imgwidth)
         conf.unit (* 5 cm in page mode, 1.5 cm in table mode *)
@@ -605,11 +621,16 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     | Text s -> if s = "\n" then " " else s
     | Element (name, attributes, children) (* as elt *) -> (
         match name with
-        | ("i" | "u" | "b" | "em" | "tt" | "strong" | "tiny" | "small" | "big")
-          as t ->
+        | ("u" | "b" | "em" | "tt" | "strong" | "tiny" | "small" | "big") as t
+          ->
             let content = get_child children in
             Lutil.simple_tag_1 t content
         (* TODO check here we are terminating something!! *)
+        | "i" ->
+            let content = get_child children in
+            if content <> "" then
+              Format.sprintf "\\begin{itshape}{%s}\\end{itshape}\n" content
+            else ""
         | "br" -> "\n\n"
         | "sup" ->
             let content = get_child children in
@@ -1386,17 +1407,32 @@ let print_images conf och images_list _key_str =
               [ "."; "src"; conf.basename; "images" ]
           in
           let image_id =
-            match List.assoc_opt name1 !img_name_list with
+            match lookup_image_id name1 with
             | Some id -> id
-            | None -> 0
+            | None ->
+                (* normal case: who_is_where only lists photos with at
+                   least two identified persons; id 0 = no person index *)
+                if !verbose then (
+                  Printf.eprintf
+                    "Image (%s) sans index de personnes (%d noms connus)\n"
+                    name1
+                    (List.length !img_name_list);
+                  let stem = Sutil.lower (Filename.remove_extension name1) in
+                  List.iter
+                    (fun (n, id) ->
+                      if Sutil.contains (Sutil.lower n) stem then
+                        Printf.eprintf "  proche : (%s) id=%d\n" n id)
+                    !img_name_list);
+                0
           in
           let anx_page, desc, fname, key_l, key_l_2, image_occ =
             match Hashtbl.find_opt !dict1 image_id with
             | Some (anx_page, desc, fname, key_l, key_l_2, image_occ) ->
                 (anx_page, desc, fname, key_l, key_l_2, image_occ)
             | None ->
-                Printf.eprintf "Image_id (%d) (%s) non existant!\n" image_id
-                  name1;
+                if image_id <> 0 then
+                  Printf.eprintf "Image_id (%d) (%s) non existant!\n" image_id
+                    name1;
                 (0, "dummy", "", [], [], [])
           in
           let img_number0 =
@@ -1406,9 +1442,11 @@ let print_images conf och images_list _key_str =
             | 4 -> Format.sprintf "%d.%d.%d.%d" ch sec ssec nbr
             | _ -> Format.sprintf "%d.%d.%d.%d" ch sec ssec nbr
           in
-          Hashtbl.replace !dict1 image_id
-            (anx_page, desc, fname, key_l, key_l_2, img_number0 :: image_occ);
-          (*if image_id = 0 then Printf.eprintf "Name1: (%s)\n" name1;*)
+          (* never create/overwrite the sentinel entry 0: it would make the
+             next unknown image silently reuse it *)
+          if image_id <> 0 then
+            Hashtbl.replace !dict1 image_id
+              (anx_page, desc, fname, key_l, key_l_2, img_number0 :: image_occ);
           let img_number =
             match conf.imagelabels with
             | 1 -> Format.sprintf "\n\\hglabxsa{%d}{%d}{%d}" ch sec nbr
@@ -1467,6 +1505,7 @@ let process_one_line conf base _dict1 _dict2 och line =
     let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
     let line = Sutil.replace_str "%%%BASE%%%" conf.basename line in
     let line = Sutil.replace_str "%%%PASSWD%%%" conf.passwd line in
+
     let conf =
       match line.[0] with
       | '<' -> (
@@ -1632,11 +1671,12 @@ let main () =
 
     if !gwtest then
       Printf.eprintf
-        "This is \027[32mmkTeX\027[0m version %s running GW-test on base %s\n"
+        "This is \027[32mmkTeX\027[0m version yyy %s running GW-test on base %s\n"
         Sutil.version conf.basename
     else
       Printf.eprintf
-        "This is \027[32mmkTeX\027[0m version %s for %s on base %s to %s (%d)\n"
+        "This is \027[32mmkTeX\027[0m version xxx %s for %s on base %s to %s \
+         (%d)\n"
         Sutil.version conf.family conf.basename fname_out conf.debug;
     flush stderr;
 

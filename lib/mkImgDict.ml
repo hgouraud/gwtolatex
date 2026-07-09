@@ -14,6 +14,12 @@ let test_nb = ref 0
 type key = { pk_first_name : string; pk_surname : string; pk_occ : int }
 (** Key to refer a person's definition *)
 
+(* Canonical form of an image file name.  Used both when building the
+   dictionaries (below) and when looking a name up (mkTex), so the two
+   sides can never diverge.  trim removes stray spaces around ';'
+   separators and Windows '\r' line endings. *)
+let canonical_img_name s = String.trim s
+
 let print_key key =
   Printf.eprintf "%s.%d+%s\n" key.pk_first_name key.pk_occ key.pk_surname
 
@@ -63,7 +69,7 @@ let undo_particle sn =
   else Format.sprintf "%s%s%s" particle (if apostr then "" else " ") surname
 
 (*
-Read Livres/family-input/who_is_where.tex
+Read Livres/family-input/who_is_where.txt
 # n;texte descriptif;nom-de-fichier.jpg
 # n = numero de page de l'annexe,
 # ou 0 pour les photos dans le corps du document
@@ -80,86 +86,102 @@ Read Livres/family-input/who_is_where.tex
 (* # voir ... *)
 (* \index{X, Y}/z  ;z indique N° d'occurrence, "z" si ?? *)
 
+(* Read one line of the \index block, returning "" at end of file so the
+   entry being parsed is still registered. *)
+let input_real_line_opt ic =
+  try Sutil.input_real_line ic with End_of_file -> ""
+
 (* construit dict1 :
-   Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], 0) *)
+   Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], [])
+
+   Returns the over-read line, if any: parsing the \index block reads one
+   line ahead, and when that line is neither empty nor an \index line it
+   may be the next image definition.  The caller must process it instead
+   of reading a fresh line, otherwise consecutive definitions (an image
+   with no \index person followed directly by another image) are lost —
+   which surfaced later as "Image (...) absente de img_name_list". *)
 let process dict1 ic line =
   try
     let parts = String.split_on_char ';' line in
-    if line = "" then ()
-    else if List.length parts <> 4 then
-      Printf.eprintf "Bad image definition %s\n" line
+    if line = "" then None
+    else if List.length parts <> 4 then (
+      Printf.eprintf "Bad image definition %s\n" line;
+      None)
     else
-      let image_id = int_of_string (List.nth parts 0) in
-      let anx_page = int_of_string (List.nth parts 1) in
-      let desc = List.nth parts 2 in
-      let fname = List.nth parts 3 in
-      if Hashtbl.mem !dict1 image_id then
-        Printf.eprintf "Duplicate image definition %d, %s\n" image_id desc
+      let image_id = int_of_string (String.trim (List.nth parts 0)) in
+      let anx_page = int_of_string (String.trim (List.nth parts 1)) in
+      let desc = String.trim (List.nth parts 2) in
+      let fname = canonical_img_name (List.nth parts 3) in
+      if image_id = 0 then (
+        Printf.eprintf
+          "Image_id 0 is reserved for lookup failures, skipping: %s\n" line;
+        None)
+      else if Hashtbl.mem !dict1 image_id then (
+        Printf.eprintf "Duplicate image definition %d, %s\n" image_id desc;
+        None)
       else
-        let line = Sutil.input_real_line ic in
-        let key_l =
-          let rec loop line key_l =
-            if line = "" then key_l
-            else if Sutil.start_with "\\index" 0 line then
-              let i = try String.index line '{' with Not_found -> -1 in
-              let j = try String.index line '}' with Not_found -> -1 in
-              if i <> -1 && j <> -1 then
-                let str = String.sub line (i + 1) (j - i - 1) in
-                let ocn =
-                  if String.length line > j + 2 then
-                    String.sub line (j + 2) (String.length line - j - 2)
-                  else "0"
-                in
-                let ocn = if ocn = "z" then "-1" else ocn in
-                let parts = String.split_on_char ',' str in
-                let sn =
-                  if List.length parts > 0 then List.nth parts 0 else ""
-                in
-                let fn =
-                  if List.length parts > 1 then List.nth parts 1 else ""
-                in
-                let fn =
-                  if String.length fn > 1 && fn.[0] = ' ' then
-                    String.sub fn 1 (String.length fn - 1)
-                  else fn
-                in
-                let i = try String.index fn '(' with Not_found -> -1 in
-                let j = try String.index fn ')' with Not_found -> -1 in
-                let fn =
-                  if
-                    i <> -1 && j <> -1
-                    && String.length fn > i + 2
-                    && fn.[i + 1] = 'e'
-                    && fn.[i + 2] = 'p'
-                  then String.sub fn 0 (i - 1)
-                  else fn
-                in
-                let sn = undo_particle sn in
-                let sn = Sutil.replace ' ' '_' sn in
-                let fn = Sutil.replace ' ' '_' fn in
-                let (key : key) =
-                  {
-                    pk_first_name = fn;
-                    pk_surname = sn;
-                    pk_occ = int_of_string ocn;
-                  }
-                in
-                if sn = "" && fn = "" then loop (input_line ic) key_l
-                else loop (Sutil.input_real_line ic) (key :: key_l)
-              else key_l
-            else key_l
-          in
-          loop line []
+        let rec loop line key_l =
+          if line = "" then (key_l, None)
+          else if Sutil.start_with "\\index" 0 line then
+            let i = try String.index line '{' with Not_found -> -1 in
+            let j = try String.index line '}' with Not_found -> -1 in
+            if i <> -1 && j <> -1 then
+              let str = String.sub line (i + 1) (j - i - 1) in
+              let ocn =
+                if String.length line > j + 2 then
+                  String.sub line (j + 2) (String.length line - j - 2)
+                else "0"
+              in
+              let ocn = if ocn = "z" then "-1" else ocn in
+              let parts = String.split_on_char ',' str in
+              let sn = if List.length parts > 0 then List.nth parts 0 else "" in
+              let fn = if List.length parts > 1 then List.nth parts 1 else "" in
+              let fn =
+                if String.length fn > 1 && fn.[0] = ' ' then
+                  String.sub fn 1 (String.length fn - 1)
+                else fn
+              in
+              let i = try String.index fn '(' with Not_found -> -1 in
+              let j = try String.index fn ')' with Not_found -> -1 in
+              let fn =
+                if
+                  i <> -1 && j <> -1
+                  && String.length fn > i + 2
+                  && fn.[i + 1] = 'e'
+                  && fn.[i + 2] = 'p'
+                then String.sub fn 0 (i - 1)
+                else fn
+              in
+              let sn = undo_particle sn in
+              let sn = Sutil.replace ' ' '_' sn in
+              let fn = Sutil.replace ' ' '_' fn in
+              let (key : key) =
+                {
+                  pk_first_name = fn;
+                  pk_surname = sn;
+                  pk_occ = int_of_string ocn;
+                }
+              in
+              if sn = "" && fn = "" then loop (input_real_line_opt ic) key_l
+              else loop (input_real_line_opt ic) (key :: key_l)
+            else (key_l, None)
+          else (key_l, Some line)
         in
-        Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], [])
-  with
-  | Failure _ -> Printf.eprintf "Bad image definition %s\n" line
-  | End_of_file -> ()
+        let key_l, leftover = loop (input_real_line_opt ic) [] in
+        Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], []);
+        leftover
+  with Failure _ ->
+    Printf.eprintf "Bad image definition %s\n" line;
+    None
 
 (** dict1 image_id, (annex_page, description, file_name, person_list, occ) dict2
     person_key, images_id list dict3 file_name, image_id *)
 let create_images_dicts img_file fam_file =
-  Printf.eprintf "Create images dicts\n";
+  Printf.eprintf "Create images dicts from %s\n" img_file;
+  if not (Sys.file_exists img_file) then
+    failwith (Format.sprintf "Images file %s not found" img_file);
+  if not (Sys.file_exists fam_file) then
+    failwith (Format.sprintf "Family file %s not found" fam_file);
   let dict1 = ref (Hashtbl.create 100) in
   let dict2 = Hashtbl.create 100 in
   let dict3 = Hashtbl.create 100 in
@@ -199,9 +221,12 @@ let create_images_dicts img_file fam_file =
   let ic = open_in img_file in
   let rec loop line =
     match line with
-    | Some line ->
-        process dict1 ic line;
-        loop (Sutil.read_line ic)
+    | Some line -> (
+        (* process may over-read one line (see its comment); re-process it
+           as a potential definition instead of dropping it *)
+        match process dict1 ic line with
+        | Some leftover -> loop (Some leftover)
+        | None -> loop (Sutil.read_line ic))
     | None -> close_in ic
   in
   loop (Sutil.read_line ic);

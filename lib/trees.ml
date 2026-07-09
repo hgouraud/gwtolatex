@@ -339,7 +339,7 @@ let print_tree (conf : Config.config) tree =
         ^ (if conf.debug = 1 then
              print_tree_mode_0 conf tree_right ^ "\\newpage"
            else if conf.samepage then "\\hspace{40mm}\n"
-           else "\\vskip 0mm")
+           else "\\vskip 20mm")
         ^ print_tree_mode_1 conf tree_left "left"
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n)
   else
