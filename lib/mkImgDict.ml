@@ -177,14 +177,18 @@ let process dict1 ic line =
 (** dict1 image_id, (annex_page, description, file_name, person_list, occ) dict2
     person_key, images_id list dict3 file_name, image_id *)
 let create_images_dicts img_file fam_file =
-  Printf.eprintf "Create images dicts from %s\n" img_file;
-  if not (Sys.file_exists img_file) then
-    failwith (Format.sprintf "Images file %s not found" img_file);
-  if not (Sys.file_exists fam_file) then
-    failwith (Format.sprintf "Family file %s not found" fam_file);
   let dict1 = ref (Hashtbl.create 100) in
   let dict2 = Hashtbl.create 100 in
   let dict3 = Hashtbl.create 100 in
+  Printf.eprintf "Create images dicts from %s\n" img_file;
+  let img_file_opt =
+    if not (Sys.file_exists img_file) then (
+      Printf.eprintf "Images file %s not found\n" img_file;
+      false)
+    else true
+  in
+  if not (Sys.file_exists fam_file) then
+    failwith (Format.sprintf "Family file %s not found" fam_file);
 
   let ic = open_in fam_file in
   let rec loop acc line =
@@ -218,54 +222,59 @@ let create_images_dicts img_file fam_file =
   (*liste des personnes ayant une page perso *)
   let list4 = loop [] (Sutil.read_line ic) in
 
-  let ic = open_in img_file in
-  let rec loop line =
-    match line with
-    | Some line -> (
-        (* process may over-read one line (see its comment); re-process it
-           as a potential definition instead of dropping it *)
-        match process dict1 ic line with
-        | Some leftover -> loop (Some leftover)
-        | None -> loop (Sutil.read_line ic))
-    | None -> close_in ic
-  in
-  loop (Sutil.read_line ic);
+  if img_file_opt then begin
+    let ic = open_in img_file in
+    let rec loop line =
+      match line with
+      | Some line -> (
+          (* process may over-read one line (see its comment); re-process it
+             as a potential definition instead of dropping it *)
+          match process dict1 ic line with
+          | Some leftover -> loop (Some leftover)
+          | None -> loop (Sutil.read_line ic))
+      | None -> close_in ic
+    in
+    loop (Sutil.read_line ic);
 
-  (* filtre key_l pour ne garder que ceux presents -> key_l_2 *)
-  Hashtbl.filter_map_inplace
-    (fun _image_id (anx_page, desc, fname, key_l, _key_l_2, occ) ->
-      let key_l_2 =
-        List.fold_left
-          (fun acc key -> if List.mem key list4 then key :: acc else acc)
-          [] key_l
-      in
-      Some (anx_page, desc, fname, key_l, key_l_2, occ))
-    !dict1;
+    (* filtre key_l pour ne garder que ceux presents -> key_l_2 *)
+    Hashtbl.filter_map_inplace
+      (fun _image_id (anx_page, desc, fname, key_l, _key_l_2, occ) ->
+        let key_l_2 =
+          List.fold_left
+            (fun acc key -> if List.mem key list4 then key :: acc else acc)
+            [] key_l
+        in
+        Some (anx_page, desc, fname, key_l, key_l_2, occ))
+      !dict1;
 
-  Printf.eprintf "Dict1 (%d)\n" (Hashtbl.length !dict1);
+    Printf.eprintf "Dict1 (%d)\n" (Hashtbl.length !dict1);
 
-  (* dict1 has been built, now we build the inverse indexes *)
-  (* liste des images sur lesquelles apparait une personne *)
-  (* en passant dict3 : fname -> image_id *)
-  (* dict2 -> key image_id list *)
-  Hashtbl.iter
-    (fun image_id (_anx_page, _desc, fname, key_l, _key_l_2, _occ) ->
-      Hashtbl.add dict3 fname image_id;
-      List.iter
-        (fun key ->
-          match Hashtbl.find_opt dict2 key with
-          | Some x -> Hashtbl.replace dict2 key (image_id :: x)
-          | None -> Hashtbl.add dict2 key [ image_id ])
-        key_l)
-    !dict1;
+    (* dict1 has been built, now we build the inverse indexes *)
+    (* liste des images sur lesquelles apparait une personne *)
+    (* en passant dict3 : fname -> image_id *)
+    (* dict2 -> key image_id list *)
+    Hashtbl.iter
+      (fun image_id (_anx_page, _desc, fname, key_l, _key_l_2, _occ) ->
+        Hashtbl.add dict3 fname image_id;
+        List.iter
+          (fun key ->
+            match Hashtbl.find_opt dict2 key with
+            | Some x -> Hashtbl.replace dict2 key (image_id :: x)
+            | None -> Hashtbl.add dict2 key [ image_id ])
+          key_l)
+      !dict1;
 
-  Printf.eprintf "Dict2 (%d)\n" (Hashtbl.length dict2);
+    Printf.eprintf "Dict2 (%d)\n" (Hashtbl.length dict2);
 
-  (* create list_assoc [fname, image_id] *)
-  let img_fname_l =
-    Hashtbl.fold (fun fname image_id acc -> (fname, image_id) :: acc) dict3 []
-  in
-  let img_fname_l =
-    List.sort_uniq (fun (_fname1, id1) (_fname2, id2) -> id1 - id2) img_fname_l
-  in
-  (!dict1, dict2, img_fname_l)
+    (* create list_assoc [fname, image_id] *)
+    let img_fname_l =
+      Hashtbl.fold (fun fname image_id acc -> (fname, image_id) :: acc) dict3 []
+    in
+    let img_fname_l =
+      List.sort_uniq
+        (fun (_fname1, id1) (_fname2, id2) -> id1 - id2)
+        img_fname_l
+    in
+    (!dict1, dict2, img_fname_l)
+  end
+  else (!dict1, dict2, [])

@@ -399,6 +399,13 @@ let dummy_tags_3 =
 let skip_m_cmd = [ "MOD_NOTES" ]
 let _one_page och line = output_string och line
 
+(* true while walking inside a <span mode="tex"> subtree: content there is
+   literal, hand-authored LaTeX (with { } already restored from the
+   \x00L/\x00R placeholders set up by protect_tex_braces) and must NOT be
+   escaped. Everywhere else, text nodes are ordinary GeneWeb content (notes,
+   sources, names...) and must be escaped before landing in the .tex file. *)
+let in_tex_raw = ref false
+
 (** process_tree_cumul accumulates results in a string each tag is processed
     according to its role *)
 
@@ -480,7 +487,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     match ic with
     | None ->
         Format.sprintf " (Missing file %s) "
-          (Filename.concat src_dir (v ^ ".txt"))
+          (Lutil.escape (Filename.concat src_dir (v ^ ".txt")))
     | Some ic ->
         let file = really_input_string ic (in_channel_length ic) in
         if not (Sutil.contains file "usemap=") then
@@ -495,7 +502,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
           if i = -1 || j = -1 || i + 9 >= String.length file || j - i - 9 < 0
           then
             Format.sprintf "Funny SRC content %s"
-              (Filename.concat src_dir (v ^ ".txt"))
+              (Lutil.escape (Filename.concat src_dir (v ^ ".txt")))
           else
             let href = String.sub file (i + 9) (j - i - 9) in
             let href_attrl = Hutil.split_href href in
@@ -506,7 +513,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
               make_image_str s k content "" ""
               ^ "\\footnote{Image (peut être) cliquable sur la version \
                  Internet}"
-            else Format.sprintf "Funny SRC content %s" href
+            else Format.sprintf "Funny SRC content %s" (Lutil.escape href)
   in
 
   (*
@@ -532,7 +539,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     let attr = get_att_list attributes in
     let href = try List.assoc "href" attr with Not_found -> "" in
     let mode = try List.assoc "mode" attr with Not_found -> "" in
-    let caption = try List.assoc "caption" attr with Not_found -> "" in
+    let caption =
+      try Lutil.escape (List.assoc "caption" attr) with Not_found -> ""
+    in
     let href_attrl = Hutil.split_href href in
     let b = Hutil.get_href_attr "b" href_attrl in
     let m = Hutil.get_href_attr "m" href_attrl in
@@ -567,7 +576,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         else if m = "CAL" then content ^ index_s
         else if Sutil.contains content "includegraphics" then
           "{\\bf " ^ content ^ "}"
-        else if List.mem test_hl conf.highlights then
+        else if List.mem (Lutil.escape test_hl) conf.highlights then
           "{\\hl {\\bf " ^ content ^ " xxx}}"
         else "{\\bf " ^ content ^ "}" ^ index_s
       in
@@ -618,7 +627,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
 
   let element =
     match tree with
-    | Text s -> if s = "\n" then " " else s
+    | Text s ->
+        let s = if s = "\n" then " " else s in
+        if !in_tex_raw then s else Lutil.escape s
     | Element (name, attributes, children) (* as elt *) -> (
         match name with
         | ("u" | "b" | "em" | "tt" | "strong" | "tiny" | "small" | "big") as t
@@ -708,23 +719,23 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             (* <span style="display:none" mode="caption">Caption</span> applied to the next image *)
             (* children is a single string of TeX *)
             (* % might not be there (old format) *)
+            let attr_mode = Hutil.get_attr attributes "mode" in
+            (* content is literal raw LaTeX only inside mode="tex" spans;
+               everywhere else it's ordinary GeneWeb text and must be
+               escaped - which the Text node now does by default. *)
+            let saved_raw = !in_tex_raw in
+            if attr_mode = "tex" then in_tex_raw := true;
             let content = get_child children in
+            in_tex_raw := saved_raw;
             let display_none =
               Hutil.test_attr attributes "style" "display:none"
             in
-            let mode = Hutil.get_attr attributes "mode" in
-            let old_tex_mode =
-              (* for backward compatibility *)
-              if String.length content > 3 then String.sub content 0 3 = "tex"
-              else false
-            in
             let mode =
-              match mode with
+              match attr_mode with
               | "tex" -> "tex"
               | "highlight" -> "highlight"
               | "wide" -> "wide"
               | "a_ref" -> "a_ref"
-              | "" -> if old_tex_mode then "tex" else ""
               | _ -> ""
             in
             let str =
@@ -742,27 +753,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                       let content = Sutil.replace '[' '{' content in
                       let content = Sutil.replace ']' '}' content in
                       let reg1 = Str.regexp {|{width=\(.*\)}|} in
-                      let content =
-                        if Str.string_match reg1 content 0 then
-                          let xxyy = Str.matched_group 1 content in
-                          let new_s = "[width=" ^ xxyy ^ "]" in
-                          Str.global_replace reg1 new_s content
-                        else content
-                      in
-                      let content =
-                        if old_tex_mode then
-                          String.sub content 4 (String.length content - 7)
-                        else content
-                      in
-                      let i =
-                        (* ???? old format !! *)
-                        try String.index_from content 0 '%'
-                        with Not_found -> -1
-                      in
-                      if i > 0 then
-                        String.sub content 0 i
-                        ^ String.sub content (i + 1)
-                            (String.length content - i - 1)
+                      if Str.string_match reg1 content 0 then
+                        let xxyy = Str.matched_group 1 content in
+                        let new_s = "[width=" ^ xxyy ^ "]" in
+                        Str.global_replace reg1 new_s content
                       else content
                     else content
                 | "highlight" ->
@@ -792,7 +786,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                     Format.sprintf "%s, %s%s" sn fn
                       (if oc <> 0 then Format.sprintf " (%d)" oc else "")
                   in
-                  (List.mem test_hl conf.highlights, index_l)
+                  (List.mem (Lutil.escape test_hl) conf.highlights, index_l)
                 in
                 (if hl then Format.sprintf "{\\hl " ^ content ^ "}" else content)
                 ^ str
@@ -859,11 +853,11 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             continue "" children
         | "celltext" ->
             c_typ := "Te";
-            c_txt := Lutil.escape (get_child children);
+            c_txt := get_child children;
             continue "" children
         | "cellitem" ->
             c_typ := "It";
-            c_item := Lutil.escape (get_child children);
+            c_item := get_child children;
             continue "" children
         | "rule-left" ->
             c_typ := "Hl";
@@ -892,7 +886,11 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             continue "" children
         | "image" ->
             c_typ := "Im";
-            c_img := Lutil.escape (get_child children);
+            (* c_img is a bare filename, not prose text - keep it raw *)
+            let saved = !in_tex_raw in
+            in_tex_raw := true;
+            c_img := get_child children;
+            in_tex_raw := saved;
             continue "" children
         (* end trees ***************************** *)
         | name when List.mem name dummy_tags_0 -> continue cumul children
@@ -1177,7 +1175,7 @@ let one_command conf och line =
         conf with
         highlights =
           (if param = "off" || param = "Off" then []
-           else param :: conf.highlights);
+           else Lutil.escape param :: conf.highlights);
       }
   | "Hrule" -> { conf with hrule = param = "on" || param = "On" }
   | "ImageLabels" ->
@@ -1342,48 +1340,76 @@ let one_command conf och line =
       output_string och (Format.sprintf "%s%s ???\n" cmd remain);
       conf
 
+let encode_url s =
+  let buf = Buffer.create (String.length s + 16) in
+  String.iter
+    (fun c ->
+      match c with
+      | 'A' .. 'Z'
+      | 'a' .. 'z'
+      | '0' .. '9'
+      (* unreserved *)
+      | '-' | '.' | '_' | '~'
+      (* URL structure, kept as-is *)
+      | ':' | '/' | '?' | '&' | '=' | ';' | '#' | '+' | '%' ->
+          Buffer.add_char buf c
+      | c -> Buffer.add_string buf (Printf.sprintf "%%%02X" (Char.code c)))
+    s;
+  Buffer.contents buf
+
+let extract_quoted line =
+  match String.index_opt line '"' with
+  | None -> None
+  | Some b -> (
+      match String.index_from_opt line (b + 1) '"' with
+      | None -> None
+      | Some e when e > b + 1 -> Some (String.sub line (b + 1) (e - b - 1))
+      | Some _ -> None (* "" empty url *))
+
 let one_http_call conf base och line =
-  let url_beg = try String.index_from line 0 '"' with Not_found -> 0 in
-  let url_end =
-    try String.index_from line (url_beg + 1) '"' with Not_found -> 0
-  in
-  let url = String.sub line (url_beg + 1) (url_end - url_beg - 1) in
-  let parts = String.split_on_char '?' line in
-  if List.length parts > 1 then
-    let evars =
-      String.split_on_char '&' (Sutil.replace ';' '&' (List.nth parts 1))
-    in
-    let evars =
-      List.map
-        (fun kv ->
-          let parts = String.split_on_char '=' kv in
-          if List.length parts > 1 then (List.nth parts 0, List.nth parts 1)
-          else (List.nth parts 0, ""))
-        evars
-    in
-    if
-      try List.assoc "m" evars = "D" && List.assoc "t" evars = "V"
-      with Not_found -> false
-    then output_string och "Command m=D;t=V is not available (yet)\\\\\n"
-    else
-      let _ = Unix.sleepf 0.05 in
-      let resp = Ezcurl.get ~url () in
-      match resp with
-      | Ok { Ezcurl.code; body; _ } ->
-          if bad_code code then (
-            Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
-            if not !gwtest then
+  match extract_quoted line with
+  | None ->
+      Printf.eprintf "one_http_call: no quoted url in: %s\n%!"
+        (Lutil.escape line)
+  | Some url -> (
+      let url = encode_url url in
+      let parts = String.split_on_char '?' url in
+      if List.length parts > 1 then
+        let evars =
+          String.split_on_char '&' (Sutil.replace ';' '&' (List.nth parts 1))
+        in
+        let evars =
+          List.map
+            (fun kv ->
+              let parts = String.split_on_char '=' kv in
+              if List.length parts > 1 then (List.nth parts 0, List.nth parts 1)
+              else (List.nth parts 0, ""))
+            evars
+        in
+        if
+          try List.assoc "m" evars = "D" && List.assoc "t" evars = "V"
+          with Not_found -> false
+        then output_string och "Command m=D;t=V is not available (yet)\\\\\n"
+        else
+          let _ = Unix.sleepf 0.05 in
+          let resp = Ezcurl.get ~url () in
+          match resp with
+          | Ok { Ezcurl.code; body; _ } ->
+              if bad_code code then (
+                Printf.eprintf "bad code when fetching %s: %d\n%!" url code;
+                if not !gwtest then
+                  output_string och
+                    (Format.sprintf "Bad code when fetching %s: %d!\n"
+                       (Lutil.escape url) code))
+              else if not (!dry_run || !gwtest) then
+                process_html conf base och body
+              else ()
+          | Error (_, msg) ->
+              Printf.eprintf "error when fetching %s\n %s\n%!" url
+                (Lutil.escape msg);
               output_string och
-                (Format.sprintf "Bad code when fetching %s: %d!\n"
-                   (Lutil.escape url) code))
-          else if not (!dry_run || !gwtest) then process_html conf base och body
-          else ()
-      | Error (_, msg) ->
-          Printf.eprintf "error when fetching %s\n %s\n%!" url
-            (Lutil.escape msg);
-          output_string och
-            (Format.sprintf "Error when fetching %s:\n %s\n" (Lutil.escape url)
-               (Lutil.escape msg))
+                (Format.sprintf "Error when fetching %s:\n %s\n"
+                   (Lutil.escape url) (Lutil.escape msg)))
 
 (** print all images mentioned in the notes of a person *)
 let print_images conf och images_list _key_str =
@@ -1400,6 +1426,7 @@ let print_images conf och images_list _key_str =
       match im_type with
       | Imagek | Portrait | Vignette -> ()
       | Images | Wide ->
+          (* FIXME may be unnecessary with \usepackage{grffile} *)
           let name1 = Sutil.replace_str "\\_{}" "_" name in
           let name = Filename.remove_extension name in
           let images_dir =
@@ -1478,7 +1505,8 @@ let print_images conf och images_list _key_str =
                              Format.sprintf "%d/%d" image_id anx_page
                            else Format.sprintf "%s" img_number0);
 
-                      Format.sprintf "\\index{%s, %s%s, photo %s}" sn fn
+                      Format.sprintf "\\index{%s, %s%s, photo %s}"
+                        (Lutil.escape sn) (Lutil.escape fn)
                         (if key.pk_occ <> 0 then
                            Format.sprintf " (%d)" key.pk_occ
                          else "")
@@ -1512,6 +1540,9 @@ let process_one_line conf base _dict1 _dict2 och line =
           match line.[1] with
           | 'a' | 'b' ->
               let content = get_a_content line in
+              (* content is used both for database lookup (must stay raw)
+                 and for writing into \index{}/\section{} (must be escaped) *)
+              let content_tex = Lutil.escape content in
               let href = Hutil.get_href line in
               let href_attrl = Hutil.split_href href in
               let i = Hutil.get_href_attr "i" href_attrl in
@@ -1548,11 +1579,12 @@ let process_one_line conf base _dict1 _dict2 och line =
               let index =
                 if Sutil.contains line "\\index" then ""
                   (* index manually done *)
-                else Format.sprintf "\\index{%s}" content (* automatic index *)
+                else Format.sprintf "\\index{%s}" content_tex
+                (* automatic index *)
               in
               if line.[1] = 'a' && not !gwtest then
                 output_string och
-                  (Format.sprintf "\\%ssection{%s%s}\n" sec content index);
+                  (Format.sprintf "\\%ssection{%s%s}\n" sec content_tex index);
 
               one_http_call conf base och line;
 
@@ -1581,6 +1613,7 @@ let process_one_line conf base _dict1 _dict2 och line =
 (* addition in each personnal page of image index information *)
 
 let main () =
+  Printexc.record_backtrace true;
   let usage =
     "Usage: " ^ Filename.basename Sys.argv.(0) ^ " [options] where options are:"
   in
@@ -1660,11 +1693,12 @@ let main () =
   if !basename = "" then (
     Arg.usage speclist usage;
     exit 2);
-  let bname = Filename.concat "." !basename in
-  let bname = bname ^ ".gwb" in
+  let bname = !basename in
   (* TODO find a way to open base remotely *)
   try
     Driver.with_database bname @@ fun base ->
+    Printf.eprintf "Base %s is open\n" bname;
+    flush stderr;
     let och = if !gwtest then Stdlib.stderr else open_out fname_out in
     let ic = open_in_bin fname_in in
     if !debug = -1 then Sys.enable_runtime_warnings false;
@@ -1710,8 +1744,9 @@ let main () =
     let out_channel = open_out_bin "list1.dat" in
     Marshal.to_channel out_channel !img_ok_list [];
     close_out out_channel
-  with _ ->
-    Printf.eprintf "Cannot open base %s\n" bname;
-    exit 1
+  with e ->
+    Printf.eprintf "Fatal error: %s\n%s%!" (Printexc.to_string e)
+      (Printexc.get_backtrace ());
+    exit 2
 
 let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)

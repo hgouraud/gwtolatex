@@ -134,7 +134,6 @@ let main () =
   (* on excute dans le repo (dev) ou dans bases_dir *)
   if !verbose then Printf.eprintf "Installing TeX templates\n";
 
-  (* TODO create base-new, install tex in it *)
   let etc_dir =
     String.concat Filename.dir_sep [ !bases; "etc"; !base ^ "-new" ]
   in
@@ -192,6 +191,7 @@ let main () =
       [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
   in
   let who = Sys.file_exists who_is_where_file in
+  let who = true in
   if who then (
     (* Create base.gw file *)
     if !verbose then Printf.eprintf "Create %s.gw file\n" !base;

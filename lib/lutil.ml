@@ -23,14 +23,30 @@ let simple_tag_1 t str =
   in
   if str <> "" then Format.sprintf "\\%s{%s}" cmd str else ""
 
+(* TODO remove later *)
+let _latex_escape s =
+  let buf = Buffer.create (String.length s) in
+  String.iter
+    (fun c ->
+      match c with
+      | '&' | '%' | '$' | '#' | '_' | '{' | '}' ->
+          Buffer.add_char buf '\\';
+          Buffer.add_char buf c
+      | '~' -> Buffer.add_string buf "\\textasciitilde{}"
+      | '^' -> Buffer.add_string buf "\\textasciicircum{}"
+      | '\\' -> Buffer.add_string buf "\\textbackslash{}"
+      | c -> Buffer.add_char buf c)
+    s;
+  Buffer.contents buf
+
 let escape_aux str =
   let special =
     [
       ('&', "\\&{}");
       ('%', "\\%{}");
       ('#', "\\#{}");
-      ('~', "\\~{}");
-      ('^', "\\^{}");
+      ('~', "\\textasciitilde{}");
+      ('^', "\\textasciicircum{}");
       ('_', "\\_{}");
       (* dont escape $, {, } and \, we need them in the content *)
     ]
