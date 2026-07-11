@@ -118,37 +118,73 @@ let print_tree (conf : Config.config) tree =
                   let minipage_e =
                     Format.sprintf "\\end{center}\\end{minipage}%s" fbox_e
                   in
+                  (* {\tiny ...} not \tiny{...}: size commands are
+                     switches, the braces must enclose the switch or it
+                     leaks past its intended scope *)
                   let font_b =
                     if conf.fontsize = "" then ""
-                    else "\\" ^ conf.fontsize ^ "{"
+                    else "{\\" ^ conf.fontsize ^ " "
                   in
                   let font_e = if conf.fontsize = "" then "" else "}" in
 
-                  (* ── Horizontal rule helper ── *)
+                  (* ── Horizontal rule helper ──
+                     End segments must be FLUSH with the column edge they
+                     share with the neighbouring full rule. The old
+                     colwidth/4 hspace left the half-rule floating
+                     centered-ish, colwidth/8 short of the edge on both
+                     sides: visibly detached "stray" dashes at the two
+                     ends of every branch. hspace* (not hspace): the glue
+                     sits at a line edge and plain \hspace would be
+                     dropped there. *)
                   let hr s lrc =
+                    (* Every rule overhangs its cell by colsep on the
+                       side(s) where it meets a neighbour: adjacent cells
+                       are separated by 2 x \tabcolsep, so without the
+                       overhang the branch line shows a 2*colsep nick at
+                       every column boundary. Negative \hspace* keeps the
+                       line's natural width equal to the column width, so
+                       centering is unaffected. *)
+                    let cs = conf.colsep in
+                    let half = colwidth /. 2.0 in
+                    let u = conf.unit in
+                    (* Segments are built inside \makebox (an \hbox):
+                       in paragraph mode TeX DISCARDS a trailing glue at
+                       \par, so an end-of-cell \hspace* (the Hl right
+                       spacer) silently vanished and the half-rule got
+                       re-centered, overshooting its connector. Inside a
+                       box, glue is never discarded, and the box's fixed
+                       width (= column width) keeps centering exact. *)
+                    let mbox body =
+                      Format.sprintf "\\makebox[%1.2f%s][l]{%s}" colwidth u body
+                    in
+                    let rule_w w =
+                      Format.sprintf "\\rule[0pt]{%1.2f%s}{%1.2fpt}" w u
+                        conf.rulethickns
+                    in
+                    let hsp w = Format.sprintf "\\hspace*{%1.2f%s}" w u in
+                    let seg =
+                      match lrc with
+                      | "e" -> ""
+                      | "c" ->
+                          (* full-width rule, bridging both column gaps *)
+                          mbox
+                            (hsp (-.cs)
+                            ^ rule_w (colwidth +. (2.0 *. cs))
+                            ^ hsp (-.cs))
+                      | "r" ->
+                          (* rule on the right half, flush with the right
+                             edge and bridging toward the next cell *)
+                          mbox (hsp half ^ rule_w (half +. cs) ^ hsp (-.cs))
+                      | "l" ->
+                          (* rule on the left half, flush with the left
+                             edge and bridging toward the previous cell *)
+                          mbox (hsp (-.cs) ^ rule_w (half +. cs) ^ hsp half)
+                      | _ -> ""
+                    in
                     let rec loop i acc =
                       if i = s then acc
                       else
-                        loop (i + 1)
-                          (acc
-                          ^ (if lrc = "e" then ""
-                             else
-                               Format.sprintf
-                                 "{\\centering %s\\rule[0pt]{%s}{%1.2fpt}}"
-                                 (if lrc = "r" then
-                                    Format.sprintf "\\hspace{%1.2f%s}"
-                                      (colwidth /. 4.0) conf.unit
-                                  else if lrc = "l" then
-                                    Format.sprintf "\\hspace{-%1.2f%s}"
-                                      (colwidth /. 4.0) conf.unit
-                                  else "")
-                                 (if lrc = "c" then
-                                    Format.sprintf "%1.2f%s" colwidth conf.unit
-                                  else
-                                    Format.sprintf "%1.2f%s" (colwidth /. 2.0)
-                                      conf.unit)
-                                 conf.rulethickns)
-                          ^ if i + 1 = s then "" else "&")
+                        loop (i + 1) (acc ^ seg ^ if i + 1 = s then "" else "&")
                     in
                     loop 0 ""
                   in
@@ -225,17 +261,10 @@ let print_tree (conf : Config.config) tree =
                             ^ hr (s / 2) "c"
                           else hr (s / 2) "e" ^ "&\n" ^ hr (s / 2) "c"
                       | "Hc" ->
-                          let rec loop i acc =
-                            if i = s then acc
-                            else
-                              loop (i + 1)
-                                (acc
-                                ^ Format.sprintf
-                                    "\\rule[0pt]{%1.2f%s}{%1.2fpt}%s" colwidth
-                                    conf.unit conf.rulethickns
-                                    (if i + 1 = s then "" else "&\n"))
-                          in
-                          loop 0 ""
+                          (* same bridged segments as the hr helper, so
+                             full-cell rules also join across the
+                             2x\tabcolsep column gaps *)
+                          hr s "c"
                       | "Vr1" ->
                           let rule = vr_rule false in
                           if s = 1 then rule

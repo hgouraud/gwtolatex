@@ -591,13 +591,13 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         match
           try Some (Hutil.get_real_person base i p n oc content)
           with e ->
-            if conf.debug > 0 || p <> "" || n <> "" || i <> "" then
-              if conf.debug = 2 then
-                Printf.eprintf
-                  "tag_a: lookup failed for p=%s n=%s oc=%s i=%s (%s) - \
-                   falling back to plain text\n\
-                   %!"
-                  p n oc i (Printexc.to_string e);
+            (* logging gated at debug=2 per Henri's local convention *)
+            if conf.debug = 2 then
+              Printf.eprintf
+                "tag_a: lookup failed for p=%s n=%s oc=%s i=%s (%s) - falling \
+                 back to plain text\n\
+                 %!"
+                p n oc i (Printexc.to_string e);
             None
         with
         | Some (fn, sn, ocn, _sp, index_s) ->
@@ -724,6 +724,131 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         | "p" ->
             let content = get_child children in
             if content <> "" then Format.sprintf "\n\n %s" content else ""
+        | "table" when Hutil.test_attr attributes "id" "dag" ->
+            (* version marker: printed unconditionally so a stale binary
+               is immediately visible on stderr *)
+            Printf.eprintf "dag translator v3\n%!";
+            (* GeneWeb 7.x renders trees as <table id="dag"> instead of the
+               old <bigtree><cell>... markup, so these pages were falling
+               into the generic table flattening below and coming out
+               scrambled. Translate the dag grid into the same cell model
+               <bigtree> feeds to Trees.print_tree:
+                 td.dag-bar            -> Vr1 (vertical bar)
+                 td > hr.left/right/full -> Hl / Hr / Hc (branch rules)
+                 td with content       -> Te (processed normally: person
+                                          links, portraits, dates)
+                 empty td              -> E
+                 colspan               -> cell span, one row per <tr>.
+               Cell/row accumulation deliberately mirrors the bigtree
+               tags: cells and rows are prepended, and only the row list
+               is reversed before print_tree. *)
+            let dag_rows = ref [] in
+            let dag_row = ref [] in
+            let rec do_rows nodes =
+              List.iter
+                (fun n ->
+                  match n with
+                  | Element (("tbody" | "thead"), _, ch) -> do_rows ch
+                  | Element ("tr", _, cells) ->
+                      dag_row := [];
+                      do_cells cells;
+                      dag_rows := !dag_row :: !dag_rows
+                  | _ -> ())
+                nodes
+            and do_cells cells =
+              List.iter
+                (fun c ->
+                  match c with
+                  | Element (("td" | "th"), attrs, ch) ->
+                      let span =
+                        match
+                          int_of_string_opt (Hutil.get_attr attrs "colspan")
+                        with
+                        | Some sp when sp > 0 -> sp
+                        | _ -> 1
+                      in
+                      let cell =
+                        if
+                          Sutil.contains
+                            (Hutil.get_attr attrs "class")
+                            "dag-bar"
+                        then (0, span, "Vr1", "", "", "")
+                        else
+                          let hr_class =
+                            List.fold_left
+                              (fun acc n ->
+                                match n with
+                                | Element ("hr", a, _) ->
+                                    Hutil.get_attr a "class"
+                                | _ -> acc)
+                              "" ch
+                          in
+                          if hr_class <> "" then
+                            let typ =
+                              match hr_class with
+                              | "left" -> "Hl"
+                              | "right" -> "Hr"
+                              | _ -> "Hc"
+                            in
+                            (0, span, typ, "", "", "")
+                          else
+                            (* split the cell at the first top-level <br>:
+                               person line -> te, spouse line -> it.
+                               Trees renders Te cells with both as
+                               te \\ it, matching the dag's two lines. *)
+                            let te, it =
+                              let seen_br = ref false in
+                              let img = ref "" in
+                              let te, it =
+                                List.fold_left
+                                  (fun (te, it) n ->
+                                    match n with
+                                    | Element ("br", _, _) ->
+                                        seen_br := true;
+                                        (te, it)
+                                    | Element ("div", a, _)
+                                      when Sutil.contains
+                                             (Hutil.get_attr a "class")
+                                             "dag-img-slot" ->
+                                        (* portrait slot: keep it on its
+                                           own centered line above the
+                                           person text *)
+                                        let s =
+                                          process_tree_cumul conf base och "" n
+                                            (row, col)
+                                        in
+                                        if String.trim s <> "" then img := s;
+                                        (te, it)
+                                    | n ->
+                                        let s =
+                                          process_tree_cumul conf base och "" n
+                                            (row, col)
+                                        in
+                                        if !seen_br then (te, it ^ s)
+                                        else (te ^ s, it))
+                                  ("", "") ch
+                              in
+                              let te =
+                                if !img = "" then te else !img ^ "\\\\" ^ te
+                              in
+                              if conf.debug = 2 then
+                                Printf.eprintf
+                                  "dag cell: img?%b split?%b te=(%s) it=(%s)\n\
+                                   %!"
+                                  (!img <> "") (it <> "") (chop_body 80 te)
+                                  (chop_body 80 it);
+                              (te, it)
+                            in
+                            if String.trim (te ^ it) = "" then
+                              (0, span, "E", "", "", "")
+                            else (0, span, "Te", te, it, "")
+                      in
+                      dag_row := cell :: !dag_row
+                  | _ -> ())
+                cells
+            in
+            do_rows children;
+            Trees.print_tree conf (List.rev !dag_rows)
         | "table" ->
             let content = get_child children in
             content
@@ -910,7 +1035,37 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             continue "" children
         | "cellitem" ->
             c_typ := "It";
-            c_item := get_child children;
+            (* Split the item at its first top-level <br>: person line
+               goes to c_txt (te), spouse line to c_item (it) - Trees
+               renders a cell with both as te \\ it, stacked. A
+               dag-img-slot portrait becomes its own leading line.
+               Previously everything was flattened into one string whose
+               newlines collapse to spaces downstream: portrait, person
+               and spouse all ran together on one line. *)
+            let seen_br = ref false in
+            let img = ref "" in
+            let te = ref "" in
+            let it = ref "" in
+            List.iter
+              (fun nd ->
+                match nd with
+                | Element ("br", _, _) -> seen_br := true
+                | Element ("div", a, _)
+                  when Sutil.contains (Hutil.get_attr a "class") "dag-img-slot"
+                  ->
+                    let s = process_tree_cumul conf base och "" nd (row, col) in
+                    if String.trim s <> "" then img := s
+                | nd ->
+                    let s = process_tree_cumul conf base och "" nd (row, col) in
+                    if !seen_br then it := !it ^ s else te := !te ^ s)
+              children;
+            let te_full = if !img = "" then !te else !img ^ "\\\\" ^ !te in
+            if String.trim !it = "" then (
+              c_txt := "";
+              c_item := te_full)
+            else (
+              c_txt := te_full;
+              c_item := !it);
             continue "" children
         | "rule-left" ->
             c_typ := "Hl";

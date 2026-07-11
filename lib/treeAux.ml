@@ -78,18 +78,77 @@ let nearest_sig rows ri dir =
    Used to make Vr1 rules span exactly the gap between content cells,
    mirroring dagSvg.js's contentBottom/contentTop snapping.
    This is necessarily approximate for LaTeX without a second pass.    *)
-let estimate_content_height_cm (conf : Config.config) (_, _, ty, te, it, _im) =
+
+(* Count characters as they will actually render: skip LaTeX command
+   names, skip the whole {...} argument of invisible commands
+   (\index, \label, \hspace, \vspace and \raisebox's dimension), skip
+   braces, and count UTF-8 code points rather than bytes. Without this,
+   \index{...} entries and markup made cells look 3-5x taller than they
+   render, so every Vr1 bar stretched to match: huge vertical gaps
+   between generations. *)
+let visible_length str =
+  let n = String.length str in
+  let rec skip_group i depth =
+    if i >= n then i
+    else
+      match str.[i] with
+      | '{' -> skip_group (i + 1) (depth + 1)
+      | '}' -> if depth <= 1 then i + 1 else skip_group (i + 1) (depth - 1)
+      | _ -> skip_group (i + 1) depth
+  in
+  let is_letter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') in
+  let rec loop i acc =
+    if i >= n then acc
+    else
+      let c = str.[i] in
+      if c = '\\' then
+        let j =
+          let rec cmd j =
+            if j < n && is_letter str.[j] then cmd (j + 1) else j
+          in
+          cmd (i + 1)
+        in
+        let name = String.sub str (i + 1) (j - i - 1) in
+        if
+          (name = "index" || name = "label" || name = "hspace"
+         || name = "vspace" || name = "raisebox")
+          && j < n
+          && str.[j] = '{'
+        then loop (skip_group j 0) acc
+        else loop j acc
+      else if c = '{' || c = '}' then loop (i + 1) acc
+      else if Char.code c land 0xC0 = 0x80 then loop (i + 1) acc
+        (* UTF-8 continuation byte *)
+      else loop (i + 1) (acc + 1)
+  in
+  loop 0 0
+
+(* width_cm is the actual width of THIS cell (colwidth x span), not the
+   full text width - a 3cm cell wraps far sooner than a 15cm line. *)
+let estimate_content_height_cm (conf : Config.config) width_cm
+    ((_, _, ty, te, it, _im) : int * int * string * string * string * string) =
   match ty with
   | "Im" -> conf.imgwidth (* image is square-ish by default *)
   | "Te" | "It" ->
-      let text = if ty = "Te" then te else it in
       (* rough estimate: each line ~0.4cm at \small, ~0.5cm at \normalsize *)
       let line_h = 0.45 in
-      (* count approximate lines from string length and column width *)
-      let chars_per_line = int_of_float (conf.textwidth /. 0.22) in
-      (* ~2.2mm per char *)
-      let nlines = max 1 ((String.length text / max 1 chars_per_line) + 1) in
-      Float.of_int nlines *. line_h
+      let chars_per_line = max 1 (int_of_float (width_cm /. 0.20)) in
+      (* ~2mm per char *)
+      let nlines s =
+        if s = "" then 0
+        else (visible_length s + chars_per_line - 1) / chars_per_line
+      in
+      (* Te cells render te \\ it stacked *)
+      let n = max 1 (nlines te + nlines it) in
+      (* an inline portrait adds roughly its own width in height *)
+      let img_h =
+        if
+          Sutil.contains te "includegraphics"
+          || Sutil.contains it "includegraphics"
+        then conf.imgwidth
+        else 0.0
+      in
+      (Float.of_int n *. line_h) +. img_h
   | _ -> 0.0
 
 (* For a bar row at index ri in rows[], compute the vertical rule height (cm)
@@ -100,49 +159,27 @@ let estimate_content_height_cm (conf : Config.config) (_, _, ty, te, it, _im) =
      - if below is Branch/Sibling → end at branch row
      - if below is Content → end at contentTop (≈ 0.0 from top of cell)
    Returns (h_cm, is_short) where is_short marks Vr2-style dots.      *)
-let vr_height_cm (conf : Config.config) rows ri =
+let vr_height_cm (_conf : Config.config) rows ri =
   let above = nearest_sig rows ri (-1) in
   let below = nearest_sig rows ri 1 in
   let branch_gap = 0.3 in
-  (* cm between branch line and content *)
-  let node_to_branch =
-    (* height from contentBottom of node above down to branch line *)
-    match above with
-    | Some (ai, Content) ->
-        (* find the content cell in row ai — use max height in row *)
-        let max_h =
-          List.fold_left
-            (fun h cell -> max h (estimate_content_height_cm conf cell))
-            0.0 rows.(ai)
-        in
-        (* gap = row height - content height + half branch row height *)
-        max_h +. branch_gap
-    | Some (_, Branch) | Some (_, Sibling) -> branch_gap
-    | _ -> branch_gap
-  in
-  let branch_to_node =
-    match below with
-    | Some (bi, Content) ->
-        let max_h =
-          List.fold_left
-            (fun h cell -> max h (estimate_content_height_cm conf cell))
-            0.0 rows.(bi)
-        in
-        max_h +. branch_gap
-    | Some (_, Branch) | Some (_, Sibling) -> branch_gap
-    | _ -> branch_gap
-  in
+  (* The tabular FLOWS rows: every content row already occupies its own
+     height, so a bar row is pure inter-generation whitespace. The
+     previous version added the estimated content height of the adjacent
+     row to the bar - correct for dagSvg.js absolute positioning, wrong
+     here: a 5cm portrait in the row below inflated the bar to 5cm of
+     blank air on top of the portrait's own row. Bars are now short
+     constants; content rows provide their own space. *)
   match (above, below) with
   | Some (_, Content), Some (_, Content) ->
-      (* direct bar between two content rows — medium height *)
-      let h = node_to_branch +. branch_to_node in
-      (h, false)
+      (* direct bar between two content rows *)
+      (3.0 *. branch_gap, false)
   | Some (_, Content), Some (_, (Branch | Sibling)) ->
       (* parent bar — from content down to branch line *)
-      (node_to_branch, false)
+      (2.0 *. branch_gap, false)
   | Some (_, (Branch | Sibling)), Some (_, Content) ->
       (* child bar — from branch line down to content *)
-      (branch_to_node, false)
+      (2.0 *. branch_gap, false)
   | Some (_, (Branch | Sibling)), Some (_, (Branch | Sibling)) ->
       (* bar between two branch rows — short dot *)
       (branch_gap, true)

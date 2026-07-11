@@ -2,29 +2,37 @@
 (* v1  Henri, 2023/10/16 *)
 
 let simple_tag_1 t str =
-  let tags =
+  (* commands that take an argument: \cmd{...} scopes correctly *)
+  let arg_cmds =
     [
       ("i", "textit");
       ("u", "underline");
       ("b", "textbf");
-      (* \it is a font switch, not a one-arg command: \it{x} italicizes
-         everything after it. \textit scopes correctly. Same for tt/large
-         etc. below if they ever misbehave. *)
       ("em", "textit");
       ("strong", "textbf");
-      ("big", "large");
-      ("small", "small");
-      ("tiny", "tiny");
-      ("tt", "tt");
+      ("tt", "texttt");
     ]
   in
-  let cmd =
-    try List.assoc t tags
-    with Not_found ->
-      Printf.eprintf "funny tag 1 %s\n" t;
-      "underline"
-  in
-  if str <> "" then Format.sprintf "\\%s{%s}" cmd str else ""
+  (* <small>/<big> must scale RELATIVE to the surrounding size: a
+     <small>1558</small> marriage year inside a FontSize-tiny tree cell
+     must come out smaller than tiny, not absolute \small (which is
+     LARGER than tiny). \textsmaller/\textlarger come from the relsize
+     package: add \usepackage{relsize} to Gw2LaTeX-env.tex. *)
+  let rel_cmds = [ ("big", "textlarger"); ("small", "textsmaller") ] in
+  let arg_cmds = arg_cmds @ rel_cmds in
+  (* font-size SWITCHES: must be emitted as {\cmd ...} so the switch
+     cannot escape its braces. *)
+  let switches = [ ("tiny", "tiny") ] in
+  if str = "" then ""
+  else
+    match List.assoc_opt t arg_cmds with
+    | Some cmd -> Format.sprintf "\\%s{%s}" cmd str
+    | None -> (
+        match List.assoc_opt t switches with
+        | Some cmd -> Format.sprintf "{\\%s %s}" cmd str
+        | None ->
+            Printf.eprintf "funny tag 1 %s\n" t;
+            Format.sprintf "\\underline{%s}" str)
 
 let escape_aux str =
   let special =
