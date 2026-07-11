@@ -401,10 +401,17 @@ let _one_page och line = output_string och line
 
 (* true while walking inside a <span mode="tex"> subtree: content there is
    literal, hand-authored LaTeX (with { } already restored from the
-   \x00L/\x00R placeholders set up by protect_tex_braces) and must NOT be
-   escaped. Everywhere else, text nodes are ordinary GeneWeb content (notes,
+   brace markers set up by protect_tex_braces) and must NOT be escaped.
+   Everywhere else, text nodes are ordinary GeneWeb content (notes,
    sources, names...) and must be escaped before landing in the .tex file. *)
 let in_tex_raw = ref false
+
+(* Placeholder markers used by protect_tex_braces to shield literal { and }
+   from the HTML parser (which discards them, and would eat a NUL-based
+   marker too - see protect_tex_braces below for why). Defined here so the
+   Text node case in process_tree_cumul can restore them. *)
+let brace_open_marker = "\xEE\x80\x80" (* U+E000 *)
+let brace_close_marker = "\xEE\x80\x81" (* U+E001 *)
 
 (** process_tree_cumul accumulates results in a string each tag is processed
     according to its role *)
@@ -553,34 +560,58 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     let s = Hutil.get_href_attr "s" href_attrl in
     let v = Hutil.get_href_attr "v" href_attrl in
     let t = Hutil.get_href_attr "t" href_attrl in
+    if conf.debug > 0 then
+      Printf.eprintf "b=%s vs basename=%s\n" b conf.basename;
     if List.mem m skip_m_cmd then ""
     else
       let content = get_child children in
       (* between <a...> and </a> *)
-      let fn, sn, ocn, _sp, index_s =
-        Hutil.get_real_person base i p n oc content
-      in
-      let test_hl =
-        Format.sprintf "(%s, %s%s)" sn fn
-          (if ocn <> 0 then Format.sprintf " (%d)" ocn else "")
-      in
-      let str =
-        if m = "SRC" || m = "DOC" then read_src_file v content
-        else if m = "D" && t = "V" then
-          Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
-        else if String.lowercase_ascii b <> String.lowercase_ascii conf.basename
-        then
-          Format.sprintf "%s\\footnote{%s}" content
-            (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
-        else if s <> "" then make_image_str s k content mode caption
-        else if m = "CAL" then content ^ index_s
-        else if Sutil.contains content "includegraphics" then
-          "{\\bf " ^ content ^ "}"
-        else if List.mem (Lutil.escape test_hl) conf.highlights then
-          "{\\hl {\\bf " ^ content ^ " xxx}}"
-        else "{\\bf " ^ content ^ "}" ^ index_s
-      in
-      str
+      (* IMPORTANT: the branches that don't involve a person (SRC/DOC
+         files, links to another base, image links m=IM;s=...) must be
+         decided BEFORE the person lookup. get_real_person raises for
+         empty/unknown p/n/i - which is the normal situation for image
+         links - and when the whole chain lived inside its try block,
+         every image link fell back to plain text: nothing was printed
+         or collected in images_in_page, so print_images emitted no
+         images on person pages. *)
+      if m = "SRC" || m = "DOC" then read_src_file v content
+      else if m = "D" && t = "V" then
+        Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
+      else if String.lowercase_ascii b <> String.lowercase_ascii conf.basename
+      then
+        Format.sprintf "%s\\footnote{%s}" content
+          (Sutil.replace '&' ';' href |> Sutil.decode |> Lutil.escape)
+      else if s <> "" then make_image_str s k content mode caption
+      else
+        (* person link: the lookup may legitimately fail (hand-typed key,
+           no p/n at all). Must not take down the whole page either:
+           process_tree_cumul only writes its accumulated result once at
+           the end, so an uncaught exception here would silently discard
+           everything already rendered. Fall back to plain bold text. *)
+        match
+          try Some (Hutil.get_real_person base i p n oc content)
+          with e ->
+            if conf.debug > 0 || p <> "" || n <> "" || i <> "" then
+              if conf.debug = 2 then
+                Printf.eprintf
+                  "tag_a: lookup failed for p=%s n=%s oc=%s i=%s (%s) - \
+                   falling back to plain text\n\
+                   %!"
+                  p n oc i (Printexc.to_string e);
+            None
+        with
+        | Some (fn, sn, ocn, _sp, index_s) ->
+            let test_hl =
+              Format.sprintf "(%s, %s%s)" sn fn
+                (if ocn <> 0 then Format.sprintf " (%d)" ocn else "")
+            in
+            if m = "CAL" then content ^ index_s
+            else if Sutil.contains content "includegraphics" then
+              "{\\bf " ^ content ^ "}"
+            else if List.mem (Lutil.escape test_hl) conf.highlights then
+              "{\\hl {\\bf " ^ content ^ " xxx}}"
+            else "{\\bf " ^ content ^ "}" ^ index_s
+        | None -> "{\\bf " ^ content ^ "}"
   in
 
   (* <img SRC="%sm=IM;s=grande-ile-aerien-v.jpg"></a> *)
@@ -597,7 +628,21 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     let k = Hutil.get_href_attr "k" href_attrl in
     let s = Hutil.get_href_attr "s" href_attrl in
     let str =
-      let fn, sn, ocn, _sp, index_s = Hutil.get_real_person base i p n oc "" in
+      let fn, sn, ocn, index_s =
+        try
+          let fn, sn, ocn, _sp, index_s =
+            Hutil.get_real_person base i p n oc ""
+          in
+          (fn, sn, ocn, index_s)
+        with e ->
+          if conf.debug = 2 then
+            Printf.eprintf
+              "tag_img: lookup failed for p=%s n=%s oc=%s i=%s (%s) - falling \
+               back to no person data\n\
+               %!"
+              p n oc i (Printexc.to_string e);
+          ("", "", 0, "")
+      in
       (* TODO lower?? *)
       let ocn = if ocn = 0 then "0" else string_of_int ocn in
       let image_label = Format.sprintf "%s.%s.%s" fn ocn sn in
@@ -629,6 +674,8 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     match tree with
     | Text s ->
         let s = if s = "\n" then " " else s in
+        let s = Sutil.replace_str brace_open_marker "{" s in
+        let s = Sutil.replace_str brace_close_marker "}" s in
         if !in_tex_raw then s else Lutil.escape s
     | Element (name, attributes, children) (* as elt *) -> (
         match name with
@@ -747,8 +794,6 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                       (* notes stored in GeneWeb base must use [ ] instead of { }
                        because GeneWeb's wiki renderer treats { } as highlight delimiters.
                        [ ] survive the renderer and are converted here to { } for LaTeX. *)
-                      let content = Sutil.replace_str "\x00L" "{" content in
-                      let content = Sutil.replace_str "\x00R" "}" content in
                       (* legacy: notes written with [ instead of { *)
                       let content = Sutil.replace '[' '{' content in
                       let content = Sutil.replace ']' '}' content in
@@ -774,19 +819,27 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                      gw2fn="fnxx" gw2oc="ocxx" gw2al="alxx">content</span> *)
                 (* this mode allows the template code to pass parameters to mkTex *)
                 let hl, str =
-                  let _w = Hutil.get_attr attributes "gw2w" in
-                  let sn = Hutil.get_attr attributes "gw2sn" in
-                  let fn = Hutil.get_attr attributes "gw2fn" in
-                  let oc = Hutil.get_attr attributes "gw2oc" in
-                  let _al = Hutil.get_attr attributes "gw2al" in
-                  let fn, sn, oc, _sp, index_l =
-                    Hutil.get_real_person base "" fn sn oc ""
-                  in
-                  let test_hl =
-                    Format.sprintf "%s, %s%s" sn fn
-                      (if oc <> 0 then Format.sprintf " (%d)" oc else "")
-                  in
-                  (List.mem (Lutil.escape test_hl) conf.highlights, index_l)
+                  try
+                    let _w = Hutil.get_attr attributes "gw2w" in
+                    let sn = Hutil.get_attr attributes "gw2sn" in
+                    let fn = Hutil.get_attr attributes "gw2fn" in
+                    let oc = Hutil.get_attr attributes "gw2oc" in
+                    let _al = Hutil.get_attr attributes "gw2al" in
+                    let fn, sn, oc, _sp, index_l =
+                      Hutil.get_real_person base "" fn sn oc ""
+                    in
+                    let test_hl =
+                      Format.sprintf "%s, %s%s" sn fn
+                        (if oc <> 0 then Format.sprintf " (%d)" oc else "")
+                    in
+                    (List.mem (Lutil.escape test_hl) conf.highlights, index_l)
+                  with e ->
+                    if conf.debug = 2 then
+                      Printf.eprintf
+                        "a_ref: lookup failed (%s) - falling back to plain text\n\
+                         %!"
+                        (Printexc.to_string e);
+                    (false, "")
                 in
                 (if hl then Format.sprintf "{\\hl " ^ content ^ "}" else content)
                 ^ str
@@ -912,76 +965,86 @@ let guillemets_latex content =
   Str.global_replace (Str.regexp {|« |}) "«\\," content
   |> Str.global_replace (Str.regexp {| »|}) "\\,»"
 
-(* Protect { and } inside <span mode="tex">...</span> before HTML parsing.
+(* Protect { and } everywhere in body before HTML parsing.
    The Markup HTML parser discards { and } since they are not valid HTML.
-   We replace them with placeholder bytes \x00L and \x00R before parsing,
-   then restore them in the mode="tex" branch of process_tree_cumul.
-   Handles multiline content and nested braces (e.g. \footnote{\pageref{...}}). *)
+   We replace them with placeholder marker strings before parsing, then
+   restore them uniformly at every Text node in process_tree_cumul.
+   This covers both hand-written LaTeX inside <span mode="tex"> spans and
+   bare LaTeX mixed with HTML tags (e.g. content pulled in via
+   <x Input file>), which is not wrapped in any span at all.
+
+   NB: the markers (brace_open_marker/brace_close_marker, defined above
+   near in_tex_raw) must NOT contain a NUL byte (\x00): the HTML5
+   tokenization spec mandates that every literal NUL in the input be
+   replaced before parsing even starts, so a NUL-based marker silently
+   disappears and can never be matched back afterwards. We use two
+   Private Use Area codepoints instead, which the parser treats as
+   ordinary text. *)
 let protect_tex_braces body =
-  let open_tag = {|mode="tex"|} in
-  let close_tag = "</span>" in
   let buf = Buffer.create (String.length body) in
-  let len = String.length body in
-  let rec loop i =
-    if i >= len then ()
-    else
-      match Sutil.contains_index_from body open_tag i with
-      | -1 ->
-          (* no more tex spans: copy the rest verbatim *)
-          Buffer.add_string buf (String.sub body i (len - i))
-      | j ->
-          (* walk back to find the opening '<' of the span tag *)
-          let k = ref j in
-          while !k > 0 && body.[!k] <> '<' do
-            decr k
-          done;
-          (* copy body[i .. k-1] verbatim *)
-          Buffer.add_string buf (String.sub body i (!k - i));
-          (* find the closing '>' of the opening tag *)
-          let tag_end =
-            try String.index_from body j '>' with Not_found -> len - 1
-          in
-          (* copy the opening tag verbatim *)
-          Buffer.add_string buf (String.sub body !k (tag_end - !k + 1));
-          (* find the matching </span> *)
-          let close_start =
-            match Sutil.contains_index_from body close_tag (tag_end + 1) with
-            | -1 -> len
-            | p -> p
-          in
-          (* extract raw inner content and replace { } with placeholders *)
-          let inner =
-            String.sub body (tag_end + 1) (close_start - tag_end - 1)
-          in
-          String.iter
-            (fun c ->
-              match c with
-              | '{' -> Buffer.add_string buf "\x00L"
-              | '}' -> Buffer.add_string buf "\x00R"
-              | c -> Buffer.add_char buf c)
-            inner;
-          Buffer.add_string buf close_tag;
-          loop (close_start + String.length close_tag)
-  in
-  loop 0;
+  String.iter
+    (fun c ->
+      match c with
+      | '{' -> Buffer.add_string buf brace_open_marker
+      | '}' -> Buffer.add_string buf brace_close_marker
+      | c -> Buffer.add_char buf c)
+    body;
   Buffer.contents buf
 
 let process_html conf base och body =
   let open Markup in
   (* protect { and } in tex spans before the HTML parser discards them *)
   let body = protect_tex_braces body in
+  (* ~context:`Document is essential: for a fragment (e.g. an <x Input>
+     block like <a>..</a><em>..</em>text), Markup's auto-detection parses
+     in fragment mode, yielding the nodes as a SEQUENCE of top-level
+     trees - and Markup.tree consumes only the FIRST one, silently
+     dropping every sibling after it (the <em>, following text, <br>,
+     next lines...). Document context wraps everything in html/body, so
+     the single root really contains the whole block. html/body/head are
+     already handled by dummy_tags_0/dummy_tags_3 in the walker. *)
   let tree =
-    body |> string |> parse_html |> signals
+    body |> string
+    |> parse_html ~context:`Document
+    |> signals
     |> tree
          ~text:(fun ss -> Text (String.concat "" ss))
          ~element:(fun (_, name) attributes children ->
            Element (name, attributes, children))
   in
+  (* debug: show exactly what the parser built and what the walk returned,
+     so missing output can be blamed on either the tree or the walker.
+     Run with -debug 1 (or <x Debug 1>). *)
+  if conf.debug > 0 then (
+    Printf.eprintf "process_html: input (%s)\n" (chop_body 300 body);
+    (match tree with
+    | Some (Element (name, _a, children)) ->
+        Printf.eprintf "process_html: tree root=%s\n" name;
+        dump children 0
+    | Some (Text s) -> Printf.eprintf "process_html: tree=text (%s)\n" s
+    | None -> Printf.eprintf "process_html: tree=none\n");
+    flush stderr);
+  (* process_tree_cumul only ever writes its result once, at the end, so any
+     uncaught exception anywhere in the walk (most likely a hand-typed
+     person reference that doesn't resolve) would otherwise discard the
+     entire page silently. tag_a/tag_img/a_ref already guard their own
+     lookups; this is a last-resort net for anything else. *)
   let content =
-    match tree with
-    | Some tree -> process_tree_cumul conf base och "" tree (0, 0)
-    | _ -> "bad tree"
+    try
+      match tree with
+      | Some tree -> process_tree_cumul conf base och "" tree (0, 0)
+      | _ -> "bad tree"
+    with e ->
+      Printf.eprintf
+        "process_html: uncaught exception during tree walk (%s) - output for \
+         this block may be incomplete\n\
+         %!"
+        (Printexc.to_string e);
+      ""
   in
+  if conf.debug > 0 then (
+    Printf.eprintf "process_html: output (%s)\n" (chop_body 300 content);
+    flush stderr);
   let content = guillemets_latex content in
   output_string och content
 
@@ -991,9 +1054,53 @@ let mark_section och =
   output_string och
     (Format.sprintf "\nsectionmark %d.%d.%d\n" !chapter !section !subsection)
 
+(* <y title="...">: emit a heading at the current section level, same level
+   logic as the <a|b> person-entry case in process_one_line. Only a line
+   that actually carries a title attribute triggers this - anything else
+   (href=..., or no title at all) stays a genuine no-op. Tolerates spacing
+   around = and either quote style. Shared between process_one_line (for
+   the main file) and one_command's Input handler (for included files),
+   since both need to recognize <y ...> the same way. *)
+let do_y_line och line =
+  let title =
+    let try_re re =
+      try
+        ignore (Str.search_forward re line 0);
+        Some (Str.matched_group 1 line)
+      with Not_found -> None
+    in
+    let re_dq = Str.regexp {|title[ \t]*=[ \t]*"\([^"]*\)"|} in
+    let re_sq = Str.regexp {|title[ \t]*=[ \t]*'\([^']*\)'|} in
+    match try_re re_dq with
+    | Some t -> t
+    | None -> ( match try_re re_sq with Some t -> t | None -> "")
+  in
+  if title = "" then (if not !gwtest then output_string och "")
+  else
+    let title_tex = Lutil.escape title in
+    let sec =
+      match !current_level with
+      | 0 -> ""
+      | 1 ->
+          incr section;
+          mark_section och;
+          ""
+      | 2 ->
+          incr subsection;
+          mark_section och;
+          "sub"
+      | 3 ->
+          incr subsubsection;
+          mark_section och;
+          "subsub"
+      | _ -> "subsubsub"
+    in
+    if not !gwtest then
+      output_string och (Format.sprintf "\\%ssection{%s}\n" sec title_tex)
+
 (* <x Cmd param>remain *)
 (*       i     j       *)
-let one_command conf och line =
+let rec one_command conf base och line =
   Printf.eprintf ".";
   flush stderr;
   let get_float_value line param default =
@@ -1024,17 +1131,25 @@ let one_command conf och line =
     if line.[len - 1] = '\n' then (String.sub line 0 (len - 1), len - 1)
     else (line, len)
   in
-  let i = try String.index_from line 3 ' ' with Not_found -> -1 in
-  let i =
-    if i = -1 then try String.index_from line 3 '>' with Not_found -> -1
-    else i
-  in
   let j = try String.index_from line 0 '>' with Not_found -> -1 in
-  let cmd = if i > 0 then String.sub line 3 (i - 3) else "" in
+  (* i = separator between cmd and param: the first space INSIDE the tag,
+     i.e. before the closing '>'. The old code took the first space
+     anywhere in the line, so on <x Cmd>text with spaces the space found
+     was AFTER '>', giving i > j: cmd absorbed '>text' and String.sub got
+     a negative length (Invalid_argument "String.sub / Bytes.sub"). If
+     the tag has no space, fall back to '>' itself so cmd ends there. *)
+  let i =
+    let sp = try String.index_from line 3 ' ' with Not_found -> -1 in
+    if sp <> -1 && (j = -1 || sp < j) then sp else j
+  in
+  let cmd = if i > 3 then String.sub line 3 (i - 3) else "" in
   let param =
-    if i > 0 && i < len - 2 && j > 0 && j < len then
-      String.sub line (i + 1) (j - i - 1)
-    else "" |> String.trim
+    (if i > 0 && i < len - 2 && j > 0 && j < len && j > i + 1 then
+       String.sub line (i + 1) (j - i - 1)
+     else "")
+    (* NB: the old "else "" |> String.trim" only ever trimmed the empty
+       string - precedence - so param was never actually trimmed *)
+    |> String.trim
   in
   if cmd = "" then Printf.eprintf "Bad command: %s\n" line;
   let remain =
@@ -1209,22 +1324,67 @@ let one_command conf och line =
           Printf.eprintf "Bad param: %s\n" line;
           conf)
   | "Input" ->
-      (let param = Sutil.replace_str "%%%LIVRES%%%" !livres param in
-       let param = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist param in
-       let param = Sutil.replace_str "%%%PASSWD%%%" !passwd param in
-       let ic = open_in param in
-       try
-         while true do
-           let line = input_line ic |> Sutil.strip_nl in
-           let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
-           let line = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist line in
-           let line = Sutil.replace_str "%%%PASSWD%%%" !passwd line in
-           output_string och (strip_tr_sp line ^ "\n")
-         done
-       with End_of_file -> close_in ic);
-      conf
+      let param = Sutil.replace_str "%%%LIVRES%%%" !livres param in
+      let param = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist param in
+      let param = Sutil.replace_str "%%%PASSWD%%%" !passwd param in
+      let param = Sutil.replace_str "%%%BASE%%%" !basename param in
+      let ic = open_in param in
+      if Filename.check_suffix param ".tex" then (
+        (* Pure LaTeX (macros, preambles, comments) - dump verbatim,
+           untouched by escaping, HTML parsing, or command dispatch. *)
+        let buf = Buffer.create 4096 in
+        (try
+           while true do
+             let line = input_line ic |> Sutil.strip_nl in
+             let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
+             let line = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist line in
+             let line = Sutil.replace_str "%%%PASSWD%%%" !passwd line in
+             let line = Sutil.replace_str "%%%BASE%%%" !basename line in
+             Buffer.add_string buf (strip_tr_sp line);
+             Buffer.add_char buf '\n'
+           done
+         with End_of_file -> close_in ic);
+        output_string och (Buffer.contents buf);
+        conf)
+      else
+        (* Anything else (.txt, ...) is GeneWeb-authored content: <x ...>
+           and <y ...> command lines are dispatched exactly like in the
+           main file (so <x HighLight ...>, <y title="...">, etc. work
+           inside included files too), and everything else is buffered
+           and flushed through process_html - which resolves <a>/<em>/
+           <br>/<p> tags and escapes plain text - each time a command
+           line interrupts it, so output stays in original file order. *)
+        let conf_ref = ref conf in
+        let pending = Buffer.create 4096 in
+        let flush_pending () =
+          if Buffer.length pending > 0 then (
+            process_html !conf_ref base och (Buffer.contents pending);
+            Buffer.clear pending)
+        in
+        (try
+           while true do
+             let line = input_line ic |> Sutil.strip_nl in
+             let line = Sutil.replace_str "%%%LIVRES%%%" !livres line in
+             let line = Sutil.replace_str "%%%GW2L_DIST%%%" !gw2l_dist line in
+             let line = Sutil.replace_str "%%%PASSWD%%%" !passwd line in
+             let line = Sutil.replace_str "%%%BASE%%%" !basename line in
+             let line = strip_tr_sp line in
+             if String.length line >= 2 && line.[0] = '<' && line.[1] = 'x' then (
+               flush_pending ();
+               conf_ref := one_command !conf_ref base och line)
+             else if String.length line >= 2 && line.[0] = '<' && line.[1] = 'y'
+             then (
+               flush_pending ();
+               do_y_line och line)
+             else (
+               Buffer.add_string pending line;
+               Buffer.add_char pending '\n')
+           done
+         with End_of_file -> close_in ic);
+        flush_pending ();
+        !conf_ref
   | "LaTeX" ->
-      output_string och param;
+      output_string och (param ^ "\n");
       conf
   | "NbImgPerLine" ->
       let _off, value = get_int_value line param 3 in
@@ -1550,9 +1710,17 @@ let process_one_line conf base _dict1 _dict2 och line =
               let n = Hutil.get_href_attr "n" href_attrl in
               let oc = Hutil.get_href_attr "oc" href_attrl in
               (* get_real_person builds \index if any *)
-              let _fn, _sn, _ocn, _sp, _index_s =
-                Hutil.get_real_person base i p n oc content
-              in
+              (try
+                 let _fn, _sn, _ocn, _sp, _index_s =
+                   Hutil.get_real_person base i p n oc content
+                 in
+                 ()
+               with e ->
+                 if conf.debug = 2 then
+                   Printf.eprintf
+                     "process_one_line: lookup failed for p=%s n=%s oc=%s (%s)\n\
+                      %!"
+                     p n oc (Printexc.to_string e));
               let key_str = Format.sprintf "%s.%s+%s" p oc n in
               let sec =
                 (* -> chapter, 1-> section, ... *)
@@ -1586,6 +1754,20 @@ let process_one_line conf base _dict1 _dict2 och line =
                 output_string och
                   (Format.sprintf "\\%ssection{%s%s}\n" sec content_tex index);
 
+              (* Anything following </a> on the same line (e.g.
+                 <em>(1859-1910)</em> 18 janvier 1901 ... <br />) used to be
+                 silently discarded: this branch only ever used the anchor
+                 text (section title) and the href (personal page fetch).
+                 Render the tail through process_html so inline tags like
+                 <em> and <br /> are resolved, right under the heading. *)
+              (let tail =
+                 let i = Sutil.contains_index line "</a>" in
+                 if i = -1 then ""
+                 else String.sub line (i + 4) (String.length line - i - 4)
+               in
+               if String.trim tail <> "" && not !gwtest then
+                 process_html conf base och tail);
+
               one_http_call conf base och line;
 
               if conf.collectimages && !images_in_page <> [] then
@@ -1594,9 +1776,9 @@ let process_one_line conf base _dict1 _dict2 och line =
               if conf.hrule && not !gwtest then
                 output_string och (Format.sprintf "\n\\vspace{0.5cm}\\hrule\n");
               conf
-          | 'x' -> one_command conf och line
+          | 'x' -> one_command conf base och line
           | 'y' ->
-              if not !gwtest then output_string och "";
+              do_y_line och line;
               conf
           | _ ->
               if not !gwtest then output_string och (line ^ "\n");

@@ -190,7 +190,7 @@ let main () =
     String.concat Filename.dir_sep
       [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
   in
-  let who = Sys.file_exists who_is_where_file in
+  let _who = Sys.file_exists who_is_where_file in
   let who = true in
   if who then (
     (* Create base.gw file *)

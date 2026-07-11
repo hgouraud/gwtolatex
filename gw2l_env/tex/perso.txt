@@ -106,13 +106,13 @@
 %(apply;hgref("name", surname, first_name, occ, ""%)
 
 %if;has_image;
-  \begin{tabular}{ @{}p{5.1cm} @{}p{0.8cm} @{}p{9.4cm} }
+  <span mode="tex">\begin{tabular}{ @{}p{5.1cm} @{}p{0.8cm} @{}p{9.4cm} }
    \parbox{5cm}{
    <a href="%image_html_url;"> 
-   <img src="%image_url;"%image_size; border=0 alt="[image/images]0"></a>
-   } & &
+   <img src="%image_url;"%image_size; border=0 alt="[image/images]0"></a>}
+   & &</span>
 %end;
-%if;has_image;\begin{minipage}{9.4cm}%end;
+%if;has_image;<span mode="tex">\begin{minipage}{9.4cm}</span>%end;
 %if;(has_occupation or has_birth_date or has_birth_place or
      has_baptism_date or has_baptism_place or is_dead or is_buried or
      is_cremated or has_consanguinity)
@@ -130,29 +130,30 @@
     %else
       \item %apply;capitalize(nth([born],sex)) %on_birth_date;
     %end;
+    %if;has_birth_place; à %birth_place;%end;%nl;
     %if;has_birth_note; (%birth_note;)%end;%nn;
-    %if;has_birth_place;, à %birth_place;%end;%nl;
   %else;
-    %if;has_birth_note; (%birth_note;)%end;%nn;
     %if;has_birth_place;
     \item %apply;capitalize(nth([born],sex)) à %birth_place;
+    %if;has_birth_note; (%birth_note;)%end;%nn;
     %end;%nl;
   %end;
   %if;has_baptism_date;
     \item %apply;capitalize(nth([baptized],sex)) %on_baptism_date;
+    %if;has_baptism_place; à %baptism_place;%end;%nl;
     %if;has_baptism_note; (%baptism_note;)%end;%nn;
-    %if;has_baptism_place;, à %baptism_place;%end;%nl;
   %else;
-    %if;has_baptism_note; (%baptism_note;)%end;%nn;
     %if;has_baptism_place;
     \item %apply;capitalize(nth([baptized],sex)) à %baptism_place;
+    %if;has_baptism_note; (%baptism_note;)%end;%nn;
     %end;%nl;
   %end;
   %if;is_dead;
     \item %apply;capitalize(died)
     %if;has_death_date; %on_death_date;%end;
     %if;has_death_note; %death_note;%end;%nn;
-    %if;has_death_place;, à %death_place;%end;
+    %if;has_death_place; à %death_place;%end;
+    %if;has_death_note; (%death_note;)%end;%nn;
     %if;has_linked_page.DEATH; %linked_page.DEATH;%end;%nl;
   %end;
   %if;computable_age;
@@ -164,14 +165,15 @@
   %if;is_buried;
     \item %apply;capitalize(nth([buried],sex))
     %if;has_burial_date; %on_burial_date;%end;
+    %if;has_burial_place; à %burial_place;%end;%nl;
     %if;has_burial_note; (%burial_note;)%end;%nn;
-    %if;has_burial_place;, à %burial_place;%end;%nl;
   %end;
   %if;is_cremated;
     \item %apply;capitalize(nth([cremated],sex))
     %if;has_cremation_date; %on_cremation_date;%end;
     %if;has_burial_note; (%burial_note;)%end;%nn;
-    %if;has_cremation_place;, à %cremation_place;%end;%nl;
+    %if;has_cremation_place; à %cremation_place;%end;%nl;
+    %if;has_burial_note; (%burial_note;)%end;%nn;
   %end;
   %if;(has_consanguinity and (bvar.show_consang != "no" or manitou))
     \item [*consanguinity][:] %consanguinity;%nl;
@@ -235,17 +237,17 @@
 \begin{hgitemize}
     \item %[$%if;father.has_parents;\bullet %else;\circ%end;$%] %sp;
     %apply;hgref("name", father.surname, father.first_name, father.occ, "")%nn;
-    %father.title;~%father.dates;%nl;
+    %father.title; %father.dates;%nl;
     \item %[$%if;mother.has_parents;\bullet %else;\circ%end;$%] %sp;
     %apply;hgref("name", mother.surname, mother.first_name, mother.occ, "")%nn;
-    %mother.title;~%mother.dates;%nl;
+    %mother.title; %mother.dates;%nl;
 \end{hgitemize}
   %end;
 %end;
 
 %if;has_image;
-  \end{minipage}%nl;
-  \end{tabular}%nl;
+  <span mode="tex">\end{minipage}</span>%nl;
+  <span mode="tex">\end{tabular}</span>%nl;
   \par
 %end;
 
@@ -350,13 +352,13 @@
         %end;%nn;
       %end;%nn;
       %apply;hgref("name", spouse.surname, spouse.first_name, spouse.occ, "")%nn;
-      %spouse.title;~%spouse.dates;
+      %spouse.title; %spouse.dates;
       %if;has_witnesses;
         %sp;([witness/witnesses]w[:]
         %foreach;witness;
           %if;not is_first;, %end;
           %apply;hgref("name", witness.surname, witness.first_name, witness.occ, "")%nn;
-          %witness.title;~%witness.dates;
+          %witness.title; %witness.dates;
         %end;)%nn;
       %end;
       %if;are_divorced;, [divorced]0%divorce_date;%end;
@@ -387,24 +389,24 @@
        %if;(has_relation_him and has_relation_her)
         %(%[$%if;relation_him.has_families;\bullet %else;\circ%end;$%] %sp;%)
           %apply;hgref("name", relation_him.surname, relation_him.first_name, relation_him.occ, "")%nn;
-          %relation_him.title;~%relation_him.dates;
+          %relation_him.title; %relation_him.dates;
         %(%[$%if;relation_her.has_families;\bullet %else;\circ%end;$%] %sp;%)
           %apply;hgref("name", relation_her.surname, relation_her.first_name, relation_her.occ, "")%nn;
-          %relation_her.title;~%relation_her.dates;
+          %relation_her.title; %relation_her.dates;
        %elseif;has_relation_him;
         %(%[$%if;relation_him.has_families;\bullet %else;\circ%end;$%] %sp;%)
           %apply;hgref("name", relation_him.surname, relation_him.first_name, relation_him.occ, "")%nn;
-          %relation_him.title;~%relation_him.dates;
+          %relation_him.title; %relation_him.dates;
        %elseif;has_relation_her;
         %(%[$%if;relation_her.has_families;\bullet %else;\circ%end;$%] %sp;%)
           %apply;hgref("name", relation_her.surname, relation_her.first_name, relation_her.occ, "")%nn;
-          %relation_her.title;~%relation_her.dates;
+          %relation_her.title; %relation_her.dates;
        %end;
     %end;
     %foreach;related;
       \item %[$%if;related.has_families;\bullet %else;\circ%end;$%] %sp;%related_type;[:]
       %apply;hgref("name", related.surname, related.first_name, related.occ, "")
-      %related.title;~%related.dates;
+      %related.title; %related.dates;
     %end;
     
     %foreach;event_witness_relation;

@@ -47,7 +47,17 @@ let get_real_person base i p n oc _content =
       Gwdb.person_of_key base p n (try int_of_string oc with Failure _ -> 0)
     with
     | Some ip -> ip
-    | None -> ( try Gwdb.Iper.of_string i with Failure _ -> Gwdb.Iper.dummy)
+    | None -> (
+        (* i may be "" or garbage: of_string can raise more than Failure
+           depending on the backend, and poi on Iper.dummy raises too.
+           Raise Not_found here instead so callers' fallbacks (plain bold
+           text) trigger deterministically, rather than letting a random
+           exception escape - in the <x Input> path an escaped exception
+           reaches process_html's last-resort net, which throws away the
+           WHOLE pending block (anchor text, following <em>, next lines). *)
+        match try Some (Gwdb.Iper.of_string i) with _ -> None with
+        | Some ip when ip <> Gwdb.Iper.dummy -> ip
+        | _ -> raise Not_found)
   in
   let get_spouse base iper ifam =
     let f = Gwdb.foi base ifam in
@@ -153,6 +163,18 @@ let split_href href =
   if List.mem_assoc "b" evars then evars
   else
     let server = List.nth parts 0 in
+    (* server is normally a bare "base" or old-CGI "base_token" - but for a
+       full URL href (e.g. "http://127.0.0.1:2317/henri", a local dev/other
+       instance link), the base name is the last path segment, not the
+       whole URL. Strip down to that segment first so the base_token '_'
+       split below sees just the base name. *)
+    let server =
+      if Sutil.contains server "://" then
+        let i = try String.rindex server '/' with Not_found -> -1 in
+        if i <> -1 then String.sub server (i + 1) (String.length server - i - 1)
+        else server
+      else server
+    in
     let b =
       let j = try String.index server '_' with Not_found -> -1 in
       if j <> -1 then String.sub server 0 j else server

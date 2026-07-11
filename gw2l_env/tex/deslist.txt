@@ -39,7 +39,7 @@
 }
 
 %define;tothegen(xx)
-  [*to the %s generation:::xx]%nn;
+  [*to the %s gen:::xx]%nn;
 %end;
 
 %define;togen(xx)
@@ -79,7 +79,7 @@
         %if;(spouse.is_male)[son/daughter/child]0
         %else;[son/daughter/child]1%end;
       %and;
-        %apply;somebody_spouse_parent1("father")~[and]~%nn;
+        %apply;somebody_spouse_parent1("father") [and] %nn;
         %apply;somebody_spouse_parent1("mother")%nn;
       %end;}%nn;
     %end;%nn;
@@ -99,29 +99,34 @@
     , %if;xx.is_male;[born]0%elseif;xx.is_female;[born]1%else;[born]2%end;
     %if;xx.has_birth_date; %xx.on_birth_date;%end;
     %if;xx.has_birth_place;, à %xx.birth_place;%end;
+    %if;xx.has_birth_note; (%xx.birth_note;)%end;
   %end;%nn;
   %if;(xx.has_baptism_date or xx.has_baptism_place)
     , %if;xx.is_male;[baptized]0%elseif;xx.is_female;[baptized]1%nn;
     %else;[baptized]2%end;
     %if;xx.has_baptism_date; %xx.on_baptism_date;%end;
-    %if;xx.has_baptism_place;, à %xx.baptism_place;%end;
+    %if;xx.has_baptism_place; à %xx.baptism_place;%end;
+    %if;xx.has_baptism_note; (%xx.baptism_note;)%end;
   %end;%nn;
   %if;xx.is_dead;, %xx.died;
     %if;(xx.has_death_date) %xx.on_death_date;%end;
-    %if;(xx.has_death_place), à %xx.death_place;%end;
+    %if;(xx.has_death_place) à %xx.death_place;%end;
+    %if;(xx.has_death_note) (%xx.death_note;)%end;
   %end;%nn;
-  %if;xx.is_buried;,
-    %if;xx.is_male;[buried]0%else;[buried]1%end;
+  %if;xx.is_buried;
+    , %if;xx.is_male;[buried]0%else;[buried]1%end;
     %if;xx.has_burial_date; %xx.on_burial_date;%end;
-    %if;xx.has_burial_place;, à %xx.burial_place;%end;%nl;
+    %if;xx.has_burial_place; à %xx.burial_place;%end;%nl;
+    %if;(xx.has_death_note) (%xx.death_note;)%end;
   %end;%nn;
-  %if;xx.is_cremated;,
-    %if;xx.is_male;[cremated]0%else;[cremated]1%end;
+  %if;xx.is_cremated;
+    , %if;xx.is_male;[cremated]0%else;[cremated]1%end;
     %if;xx.has_cremation_date; %xx.on_cremation_date;%end;
-    %if;xx.has_cremation_place;, à %xx.cremation_place;%end;%nl;
+    %if;xx.has_cremation_place; à %xx.cremation_place;%end;%nl;
+    %if;(xx.has_death_note) (%xx.death_note;)%end;
   %end;%nn;
   %if;xx.computable_death_age;%sp;
-    [age at death][:] %xx.death_age;%nn;
+    , [age at death][:] %xx.death_age;%nn;
   %end;%nn;
   %if;xx.has_occupation;, %xx.occupation;%end;%nn;
   %if;(evar.rel = "on" and xx.has_relations)
@@ -166,7 +171,8 @@
     %if;(family_cnt=1)\\%else;\par%end;%nn;
     %apply;capitalize%with;\hspace*{-0.2cm}- %apply;married_to%with;
         %if;(on_marriage_date != "") %on_marriage_date;%end;%nn;
-        %if;(marriage_place != ""), à %marriage_place;,%end;%nn;
+        %if;(marriage_place != "") à %marriage_place;%end;%nn;
+        %if;(marriage_note != "") (%marriage_note;)%end;%nn;
       %end;%nn;
     %end;
     %sp;%apply;hgref("name", spouse.surname, spouse.first_name, spouse.occ, "")%nn;
@@ -220,7 +226,7 @@
 %end;
 
 %define;by_list(xx)
-  %apply;togen(xx).
+  %apply;togen(e.v).
   \par%nl;
   %reset_count;
   %apply;descendants_by_list("self", "self", 0, xx, 0)%nl;

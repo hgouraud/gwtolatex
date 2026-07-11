@@ -131,23 +131,20 @@
 
 \newlength{\hh}
 
+\newlist{hgitemizex}{itemize}{6}
+\setlist[hgitemizex,1]{label=\textbullet,leftmargin=0.5cm,nosep,before=\setlength{\parskip}{0pt}}
+\setlist[hgitemizex,2]{label=$\circ$,leftmargin=0.5cm,nosep,before=\setlength{\parskip}{0pt}}
+\setlist[hgitemizex,3]{label=$\diamond$,leftmargin=0.5cm,nosep,before=\setlength{\parskip}{0pt}}
+\setlist[hgitemizex,4]{label=$\rightarrow$,leftmargin=0.5cm,nosep,before=\setlength{\parskip}{0pt}}
+\setlist[hgitemizex,5]{label=\textemdash,leftmargin=0.5cm,nosep,before=\setlength{\parskip}{0pt}}
+\setlist[hgitemizex,6]{label=-,leftmargin=0.5cm,nosep,before=\setlength{\parskip}{0pt}}
 
-%\setlist[enumerate]{topsep=0pt,itemsep=-1ex,partopsep=1ex,parsep=1ex}
-\newlist{hgitemize}{itemize}{5}
-\setlist[hgitemize,1]{label=\textbullet,leftmargin=0.5cm,topsep=0pt,itemsep=0pt,parsep=0pt,partopsep=-3pt}
-\setlist[hgitemize,2]{label=$\circ$,leftmargin=0.5cm,topsep=0pt,itemsep=0pt,parsep=0pt,partopsep=0pt}
-\setlist[hgitemize,3]{label=$\diamond$,leftmargin=0.5cm,topsep=0pt,itemsep=0pt,parsep=0pt,partopsep=0pt}
-\setlist[hgitemize,4]{label=$\rightarrow$,leftmargin=0.5cm,topsep=0pt,itemsep=0pt,parsep=0pt,partopsep=0pt}
-\setlist[hgitemize,5]{label=\textemdash,leftmargin=0.5cm,topsep=0pt,itemsep=0pt ,parsep=0pt,partopsep=0pt}
-\setlist[hgitemize,6]{label=-,leftmargin=0.5cm,topsep=0pt,itemsep=0pt ,parsep=0pt,partopsep=0pt}
-
-\RenewEnviron{hgitemize}{
-  \ifblank{\BODY}{}{
-    \begin{itemize}
-      \setlength{\itemsep}{0cm}
-      \expandafter\BODY
-    \end{itemize}
-  }{}
+\NewEnviron{hgitemize}{%
+  \expandafter\ifblank\expandafter{\BODY}{}{%
+    \begin{hgitemizex}
+      \BODY
+    \end{hgitemizex}%
+  }%
 }
 
 \newenvironment{hgitemize1}%

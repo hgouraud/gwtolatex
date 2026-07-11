@@ -7,7 +7,10 @@ let simple_tag_1 t str =
       ("i", "textit");
       ("u", "underline");
       ("b", "textbf");
-      ("em", "it");
+      (* \it is a font switch, not a one-arg command: \it{x} italicizes
+         everything after it. \textit scopes correctly. Same for tt/large
+         etc. below if they ever misbehave. *)
+      ("em", "textit");
       ("strong", "textbf");
       ("big", "large");
       ("small", "small");
@@ -23,30 +26,14 @@ let simple_tag_1 t str =
   in
   if str <> "" then Format.sprintf "\\%s{%s}" cmd str else ""
 
-(* TODO remove later *)
-let _latex_escape s =
-  let buf = Buffer.create (String.length s) in
-  String.iter
-    (fun c ->
-      match c with
-      | '&' | '%' | '$' | '#' | '_' | '{' | '}' ->
-          Buffer.add_char buf '\\';
-          Buffer.add_char buf c
-      | '~' -> Buffer.add_string buf "\\textasciitilde{}"
-      | '^' -> Buffer.add_string buf "\\textasciicircum{}"
-      | '\\' -> Buffer.add_string buf "\\textbackslash{}"
-      | c -> Buffer.add_char buf c)
-    s;
-  Buffer.contents buf
-
 let escape_aux str =
   let special =
     [
       ('&', "\\&{}");
       ('%', "\\%{}");
       ('#', "\\#{}");
-      ('~', "\\textasciitilde{}");
-      ('^', "\\textasciicircum{}");
+      ('~', "\\~{}");
+      ('^', "\\^{}");
       ('_', "\\_{}");
       (* dont escape $, {, } and \, we need them in the content *)
     ]
@@ -62,22 +49,33 @@ let escape_aux str =
   Buffer.contents b
 
 (*\includegraphics[width=1.50cm]{./images/chausey/andre.0.fauchon_villeplee.jpg}*)
-(* Do not escape _ in file names !! *)
+(*\input{./images/chausey/some_file}*)
+(* Do not escape the argument of these commands: it is a raw file name or
+   path, not GeneWeb text - see also mkTex.ml's handling of \includegraphics
+   arguments in image filenames. Add more command names here as needed. *)
+let protected_commands = [ "\\includegraphics"; "\\input" ]
+
 let escape str =
-  let i = Sutil.contains_index str "\\includegraphics" in
-  if i = -1 then escape_aux str
-  else
-    let rec loop str1 str2 =
-      let i = Sutil.contains_index str1 "\\includegraphics" in
-      if i = -1 then str2 ^ escape_aux str1
-      else
+  let find_first str1 =
+    List.fold_left
+      (fun acc cmd ->
+        match Sutil.contains_index str1 cmd with
+        | -1 -> acc
+        | i -> ( match acc with Some j when j <= i -> acc | _ -> Some i))
+      None protected_commands
+  in
+  let rec loop str1 acc =
+    match find_first str1 with
+    | None -> acc ^ escape_aux str1
+    | Some i -> (
         let j = try String.index_from str1 i '}' with Not_found -> -1 in
-        if j = -1 then str1 ^ str2
-        else
-          loop
-            (String.sub str1 (j + 1) (String.length str1 - j - 1))
-            (escape_aux (String.sub str1 0 i)
-            ^ String.sub str1 i (j - i + 1)
-            ^ str2)
-    in
-    loop str ""
+        match j with
+        | -1 -> acc ^ str1
+        | _ ->
+            loop
+              (String.sub str1 (j + 1) (String.length str1 - j - 1))
+              (acc
+              ^ escape_aux (String.sub str1 0 i)
+              ^ String.sub str1 i (j - i + 1)))
+  in
+  loop str ""
