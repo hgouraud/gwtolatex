@@ -368,7 +368,13 @@ let print_tree (conf : Config.config) tree =
         ^ (if conf.debug = 1 then
              print_tree_mode_0 conf tree_right ^ "\\newpage"
            else if conf.samepage then "\\hspace{40mm}\n"
-           else "\\vskip 20mm")
+           else
+             (* one half per page: the continuation arrows assume it.
+                A \vskip only worked by accident when inflated bar
+                heights made each half overflow the page on its own;
+                with compact spacing both halves would now share a
+                page. *)
+             "\\newpage\n")
         ^ print_tree_mode_1 conf tree_left "left"
     | n -> Printf.sprintf "Error: bad tree mode %d\n" n)
   else
