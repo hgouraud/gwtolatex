@@ -605,7 +605,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
               Format.sprintf "(%s, %s%s)" sn fn
                 (if ocn <> 0 then Format.sprintf " (%d)" ocn else "")
             in
-            if m = "CAL" then content ^ index_s
+            if m = "CAL" then content
             else if Sutil.contains content "includegraphics" then
               "{\\bf " ^ content ^ "}"
             else if List.mem (Lutil.escape test_hl) conf.highlights then

@@ -188,6 +188,7 @@
         %apply;link(witness.var)
       %end;)%nn;
     %end;%nn;
+    %let;person;%xx.first_name; %xx.surname;%in;
     %if;(evar.comm = "on" and has_comment)%nl;(%comment;)%end;%nn;
     %if;(curlev < maxlev)
       %if;(curlev = 0 or
@@ -200,6 +201,7 @@
         %elseif;(family.desc_level > famlev)
           {\it , [see above]}.
           %apply;lazy_print%with;\newline %nl;%end;
+        %elseif;(has_children and e.skip!="" and person in e.skip), {\it %e.see;}%nn;
         %elseif;has_children;, {\it dont :}%nn;
         %(end marriage bloc %)
             %family.set_infinite_desc_level;
