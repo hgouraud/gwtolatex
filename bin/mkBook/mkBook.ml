@@ -98,6 +98,7 @@ let main () =
   let anonfun s = raise (Arg.Bad ("don't know what to do with " ^ s)) in
   Arg.parse speclist anonfun usage;
 
+  let ocmlrparam = if !verbose then "OCAMLRUNPARAM=b" else "" in
   let base_new = !base ^ "-new" in
   Printf.eprintf
     "\nThis is \027[32mmkBook\027[0m version %s on base %s for family %s (%d)\n"
@@ -197,7 +198,9 @@ let main () =
     if !verbose then Printf.eprintf "Create %s.gw file\n" !base;
     let gwu = Filename.concat !gw_dir "gwu" in
     let out = Filename.concat !bases !base ^ ".gw" in
-    let make_gw_file = Format.sprintf "%s -o %s %s" gwu out !base in
+    let make_gw_file =
+      Format.sprintf "%s %s -bd %s -o %s %s" ocmlrparam gwu !bases out !base
+    in
     if !verbose then Printf.eprintf "Commd: %s\n" make_gw_file;
     flush stderr;
     let error = Sys.command make_gw_file in
@@ -225,7 +228,8 @@ let main () =
     let in_file = String.concat Filename.dir_sep [ !bases; base_new ^ ".gw" ] in
     let log_file = String.concat Filename.dir_sep [ "tmp"; "gwc.log" ] in
     let make_new_base =
-      Format.sprintf "%s -f -o %s %s > %s" gwc base_new in_file log_file
+      Format.sprintf "%s %s -bd %s -f -o %s %s > %s" ocmlrparam gwc !bases
+        base_new in_file log_file
     in
     if !verbose then Printf.eprintf "Commd: %s\n" make_new_base;
     flush stderr;
@@ -251,7 +255,7 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   in
   let out_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".tex" ] in
   let make_tex_file =
-    Format.sprintf "%s -o %s %s" mkTex_exe out_file gw2l_options
+    Format.sprintf "%s %s -o %s %s" ocmlrparam mkTex_exe out_file gw2l_options
   in
   if !verbose then Printf.eprintf "Commd: %s\n" make_tex_file;
   flush stderr;
@@ -337,7 +341,9 @@ Inspect %s/tmp/gwc.log for possible errors.|}
   if !verbose then Printf.eprintf "Run mkTweekInd\n";
   let tweek_index_exe = Filename.concat !gw2l_dir "mkTweekInd" in
   (* makeindex does not like absolute paths! *)
-  let tweek_index = Printf.sprintf "%s -family %s" tweek_index_exe !family in
+  let tweek_index =
+    Printf.sprintf "%s %s -family %s" ocmlrparam tweek_index_exe !family
+  in
   if !verbose then Printf.eprintf "Commd: %s\n" tweek_index;
   flush stderr;
   let error = Sys.command tweek_index in
