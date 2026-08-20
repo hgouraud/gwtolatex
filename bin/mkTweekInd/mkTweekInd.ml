@@ -82,7 +82,7 @@ let merge_index_file items =
       | (item : item) :: items when Sutil.start_with "\\item" 0 item.surname
         -> (
           let surname =
-            String.sub item.surname 6 (String.length item.surname - 6)
+            String.sub item.surname 5 (String.length item.surname - 5)
           in
           let first_name = item.first_name in
           let photo_id = item.photo_id in
