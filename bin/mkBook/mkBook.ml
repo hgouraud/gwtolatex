@@ -146,6 +146,8 @@ let main () =
     exit 1);
   flush stderr;
 
+  if !verbose then Printf.eprintf "Bases dir is %s\n" !bases;
+
   if !verbose then Printf.eprintf "Create temp dir\n";
   (if not (Sys.file_exists "tmp") then
      try

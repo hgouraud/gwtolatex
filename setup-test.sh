@@ -4,29 +4,32 @@ cd `dirname "$0"`
 GW_BIN_DIR="./../geneweb/distribution/gw"
 BASES_DIR="./bases"
 
-if [ ! -d ./bases ]; then
-  mkdir ./bases
+if [ ! -d $BASES_DIR ]; then
+  mkdir $BASES_DIR
 fi
-if [ ! -d ./bases/etc ]; then
-  mkdir ./bases/etc
+if [ ! -d $BASES_DIR/etc ]; then
+  mkdir $BASES_DIR/etc
 fi
 
-rm -f -R ./bases/images
-rm -f -R ./bases/src
-cp -f -R ./gw2l_env/base-test.gw ./bases
-cp -f -R ./gw2l_env/images ./bases
-cp -f -R ./gw2l_env/lang ./bases
-cp -f -R ./gw2l_env/src ./bases
-cp -f -R ./gw2l_env/tex ./bases/etc/base_test
+#cp $GW_BIN_DIR/lang/lexicon.txt ./gw2l_env/lang/
+
+rm -f -R $BASES_DIR/images
+rm -f -R $BASES_DIR/src
+cp -f -R ./gw2l_env/base-test.gw $BASES_DIR
+cp -f -R ./gw2l_env/images $BASES_DIR
+cp -f -R ./gw2l_env/lang $BASES_DIR
+cp -f -R ./gw2l_env/src $BASES_DIR
+cp -f -R ./gw2l_env/tex $BASES_DIR/etc/base_test
 # execution of gw2l components must be in bases
+pwd
 
 if [ -d ./gw2l_dist ]; then
-  cp -f -R ./gw2l_dist ./bases
+  cp -f -R ./gw2l_dist $BASES_DIR
 else
   echo "gw2l_dist must be present.\nRun make distrib."
 fi
 
-$GW_BIN_DIR/gwc -f -o $BASES_DIR/base-test $BASES_DIR/base-test.gw
+OCAMLRUNPARAM=b $GW_BIN_DIR/gwc -bd $BASES_DIR -f -o base-test $BASES_DIR/base-test.gw
 if [ $? -eq 0 ]; then
     echo "bases folder initialized and base-test created"
 else

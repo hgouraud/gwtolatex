@@ -4,8 +4,6 @@
 
 <x Input ./gw2l_dist/Gw2LaTeX-env.tex>
 
-\newcommand{\gwtol}[0]{Gw\kern-0.1em ToLa\kern-0.13em T\kern-0.08em eX}
-
 %%%%%%%%%%%%%%%%%%%%
 % Edit your own title page data here
 %%%%%%%%%%%%%%%%%%%%

@@ -162,28 +162,30 @@ let estimate_content_height_cm (conf : Config.config) width_cm
 let vr_height_cm (_conf : Config.config) rows ri =
   let above = nearest_sig rows ri (-1) in
   let below = nearest_sig rows ri 1 in
-  let branch_gap = 0.3 in
+  let branch_gap = 0.2 in
   (* The tabular FLOWS rows: every content row already occupies its own
      height, so a bar row is pure inter-generation whitespace. The
      previous version added the estimated content height of the adjacent
      row to the bar - correct for dagSvg.js absolute positioning, wrong
      here: a 5cm portrait in the row below inflated the bar to 5cm of
      blank air on top of the portrait's own row. Bars are now short
-     constants; content rows provide their own space. *)
+     constants; content rows provide their own space. Constants tuned
+     down (v3): a generation gap is bar+branch+bar, so each bar must be
+     small or the gaps balloon. *)
   match (above, below) with
   | Some (_, Content), Some (_, Content) ->
       (* direct bar between two content rows *)
-      (3.0 *. branch_gap, false)
+      (2.0 *. branch_gap, false)
   | Some (_, Content), Some (_, (Branch | Sibling)) ->
       (* parent bar — from content down to branch line *)
-      (2.0 *. branch_gap, false)
+      (branch_gap, false)
   | Some (_, (Branch | Sibling)), Some (_, Content) ->
       (* child bar — from branch line down to content *)
-      (2.0 *. branch_gap, false)
+      (branch_gap, false)
   | Some (_, (Branch | Sibling)), Some (_, (Branch | Sibling)) ->
       (* bar between two branch rows — short dot *)
       (branch_gap, true)
-  | _ -> (0.2, false)
+  | _ -> (0.1, false)
 (* fallback *)
 
 let row_width row = List.fold_left (fun w (_, s, _, _, _, _) -> w + s) 0 row
@@ -431,10 +433,15 @@ let split_tree (conf : Config.config) tree =
     if desc_tree_2 || desc_tree_3 then
       if List.length tree < 4 then tree
       else
+        (* Strip exactly the head rows that get re-added below via
+           row_left/row_right. This used to be a hard-coded 3, but for the
+           (1,1,_) layout (desc_tree_2) only 2 head rows are re-added, so
+           dropping 3 silently deleted the first content row (the oldest
+           generation) from BOTH halves in twopages mode. *)
         let rec copy_tree i new_tree = function
           | [] -> List.rev new_tree
           | row :: tree ->
-              if i < 3 then copy_tree (i + 1) new_tree tree
+              if i < !nb_head_rows then copy_tree (i + 1) new_tree tree
               else copy_tree (i + 1) (row :: new_tree) tree
         in
         copy_tree 0 [] tree
@@ -455,6 +462,10 @@ let split_tree (conf : Config.config) tree =
       | (w, s, ty, te, it, im) :: row when i1 = 0 && i + s > i2 ->
           if i2 - i <= 0 then
             Printf.eprintf "Neg span left 2: i2:%d, i:%d, s:%d\n" i2 i s;
+          (* This cell straddles the seam: it is the one actually cut. Mark
+             a cut horizontal rule (im="cut") so the renderer draws a
+             continuation arrow at exactly this rule and nowhere else. *)
+          let im = if ty = "Hl" || ty = "Hr" || ty = "Hc" then "cut" else im in
           loop (i + s) ((w, i2 - i, ty, te, it, im) :: new_row) row
       | (w, s, ty, te, it, im) :: row when i1 <> 0 && i >= i1 ->
           if s <= 0 then
@@ -465,6 +476,8 @@ let split_tree (conf : Config.config) tree =
       | (w, s, ty, te, it, im) :: row when i1 <> 0 && i + s >= i1 ->
           if i + s - i1 <= 0 then
             Printf.eprintf "Neg span right 2: i:%d, s:%d, i1:%d\n" i s i1;
+          (* straddling cell = the cut one; mark a cut rule (see left half) *)
+          let im = if ty = "Hl" || ty = "Hr" || ty = "Hc" then "cut" else im in
           loop (i + s) ((w, i + s - i1, ty, te, it, im) :: new_row) row
       | (_w, s, _ty, _te, _it, _im) :: _row ->
           Printf.eprintf "Assert: i=%d, i1=%d, i2=%d, s=%d\n" i i1 i2 s;
@@ -496,6 +509,52 @@ let split_tree (conf : Config.config) tree =
         ]
     | _ -> assert false
   in
+  (* Diagnostic: with -debug 2, dump each body content row's people as
+     they fall on the left vs the right half, so a dropped or duplicated
+     seam cell is visible. new_tree, tree_left and tree_right are split
+     1:1 by tree_split, so index i aligns across all three. *)
+  if conf.debug = 2 then (
+    let want_left = col_middle + 1 in
+    let want_right = nb_cols - col_middle - 1 in
+    Printf.eprintf
+      "SPLIT: nb_cols=%d col_middle=%d desc=%s split=%d want L=%d R=%d\n%!"
+      nb_cols col_middle
+      (if desc_tree_1 then "1"
+       else if desc_tree_2 then "2"
+       else if desc_tree_3 then "3"
+       else "0")
+      conf.split want_left want_right;
+    let total row = List.fold_left (fun a (_, s, _, _, _, _) -> a + s) 0 row in
+    (* full cell-type+span sequence of a row, so leading padding / a bad
+       truncated cell at the seam is visible *)
+    let seq row =
+      String.concat " "
+        (List.map
+           (fun (_, s, ty, te, it, _) ->
+             let tag =
+               match ty with
+               | "Te" | "It" ->
+                   let t = if String.trim te <> "" then te else it in
+                   let t = String.trim t in
+                   if String.length t > 6 then String.sub t 0 6 else t
+               | t -> t
+             in
+             Printf.sprintf "%s(%d)" tag s)
+           row)
+    in
+    List.iteri
+      (fun i row ->
+        let l = List.nth tree_left i and r = List.nth tree_right i in
+        let tl = total l and tr = total r in
+        let flag =
+          (if tl <> want_left then " !L" else "")
+          ^ if tr <> want_right then " !R" else ""
+        in
+        if classify_row row = Content || flag <> "" then (
+          Printf.eprintf "  row %d  L=%d R=%d%s\n%!" i tl tr flag;
+          Printf.eprintf "    ORIG : %s\n    LEFT : %s\n    RIGHT: %s\n%!"
+            (seq row) (seq l) (seq r)))
+      new_tree);
   if desc_tree_2 then
     ( [ row_left row1; row_left row2 ] @ tree_left,
       [ row_right row1; row_right row2 ] @ tree_right )

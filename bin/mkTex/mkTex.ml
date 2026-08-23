@@ -488,14 +488,11 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     let src_dir =
       String.concat Filename.dir_sep [ "."; "src"; conf.basename ]
     in
-    let ic =
-      try Some (open_in (Filename.concat src_dir (v ^ ".txt"))) with _ -> None
-    in
-    match ic with
-    | None ->
+    match open_in (Filename.concat src_dir (v ^ ".txt")) with
+    | exception _ ->
         Format.sprintf " (Missing file %s) "
           (Lutil.escape (Filename.concat src_dir (v ^ ".txt")))
-    | Some ic ->
+    | ic ->
         let file = really_input_string ic (in_channel_length ic) in
         if not (Sutil.contains file "usemap=") then
           Format.sprintf
@@ -523,6 +520,19 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             else Format.sprintf "Funny SRC content %s" (Lutil.escape href)
   in
 
+  (* NOTES file *)
+  let read_notes_file f content =
+    let notes_dir =
+      String.concat Filename.dir_sep [ "."; conf.basename ^ ".gwb"; "notes_d" ]
+    in
+    match open_in (Filename.concat notes_dir (f ^ ".txt")) with
+    | exception _ ->
+        Format.sprintf " (Missing file %s) "
+          (Lutil.escape (Filename.concat notes_dir (f ^ ".txt")))
+    | ic ->
+        let file = really_input_string ic (in_channel_length ic) in
+        content ^ file
+  in
   (*
   <a href="%sm=SRC;v=grande-ile-aerien">
   permet de localiser presque toutes les maisons.<br>
@@ -559,6 +569,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     let k = Hutil.get_href_attr "k" href_attrl in
     let s = Hutil.get_href_attr "s" href_attrl in
     let v = Hutil.get_href_attr "v" href_attrl in
+    let f = Hutil.get_href_attr "f" href_attrl in
     let t = Hutil.get_href_attr "t" href_attrl in
     if conf.debug > 0 then
       Printf.eprintf "b=%s vs basename=%s\n" b conf.basename;
@@ -575,6 +586,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
          or collected in images_in_page, so print_images emitted no
          images on person pages. *)
       if m = "SRC" || m = "DOC" then read_src_file v content
+      else if m = "NOTES" then read_notes_file f content
       else if m = "D" && t = "V" then
         Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
       else if String.lowercase_ascii b <> String.lowercase_ascii conf.basename
@@ -727,7 +739,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         | "table" when Hutil.test_attr attributes "id" "dag" ->
             (* version marker: printed unconditionally so a stale binary
                is immediately visible on stderr *)
-            Printf.eprintf "dag translator v3\n%!";
+            Printf.eprintf "dag translator v4 (portrait+dates on own lines)\n%!";
             (* GeneWeb 7.x renders trees as <table id="dag"> instead of the
                old <bigtree><cell>... markup, so these pages were falling
                into the generic table flattening below and coming out
@@ -744,6 +756,14 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                is reversed before print_tree. *)
             let dag_rows = ref [] in
             let dag_row = ref [] in
+            (* true if a node subtree contains an <img>: GeneWeb wraps the
+               portrait in <div class="text-center"><a><img></a></div>, not
+               the "dag-img-slot" class the first version looked for. *)
+            let rec node_has_img = function
+              | Element ("img", _, _) -> true
+              | Element (_, _, ch) -> List.exists node_has_img ch
+              | Text _ -> false
+            in
             let rec do_rows nodes =
               List.iter
                 (fun n ->
@@ -792,13 +812,32 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                             in
                             (0, span, typ, "", "", "")
                           else
-                            (* split the cell at the first top-level <br>:
-                               person line -> te, spouse line -> it.
-                               Trees renders Te cells with both as
-                               te \\ it, matching the dag's two lines. *)
-                            let te, it =
+                            (* A person cell becomes a Te cell with up to
+                               three stacked lines:
+                                 im  = portrait (its own line, on top)
+                                 te  = name
+                                 it  = dates (or, for the root, the spouse)
+                               The portrait goes in the im field (NOT jammed
+                               into te with a \\, which the te cleaning would
+                               strip); Trees prepends it with a surviving
+                               break. The dates, always wrapped in <bdo>, are
+                               routed to the second line so each block stays
+                               narrow. The person <span> is flattened first
+                               so its inner <a> (name) and <bdo> (dates) can
+                               be told apart. When a spouse line is present
+                               (a <br>, only the root), the dates stay inline
+                               with the name and the spouse takes line two. *)
+                            let te, it, im =
                               let seen_br = ref false in
                               let img = ref "" in
+                              let dates = ref "" in
+                              let ch =
+                                List.concat_map
+                                  (function
+                                    | Element ("span", _, sch) -> sch
+                                    | n -> [ n ])
+                                  ch
+                              in
                               let te, it =
                                 List.fold_left
                                   (fun (te, it) n ->
@@ -806,18 +845,26 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                                     | Element ("br", _, _) ->
                                         seen_br := true;
                                         (te, it)
-                                    | Element ("div", a, _)
+                                    | Element ("div", a, dch)
                                       when Sutil.contains
                                              (Hutil.get_attr a "class")
-                                             "dag-img-slot" ->
-                                        (* portrait slot: keep it on its
-                                           own centered line above the
-                                           person text *)
+                                             "dag-img-slot"
+                                           || List.exists node_has_img dch ->
+                                        (* portrait slot -> im field *)
                                         let s =
                                           process_tree_cumul conf base och "" n
                                             (row, col)
                                         in
-                                        if String.trim s <> "" then img := s;
+                                        if String.trim s <> "" then
+                                          img := String.trim s;
+                                        (te, it)
+                                    | Element ("bdo", _, _) when not !seen_br ->
+                                        (* main person's dates -> own line *)
+                                        let s =
+                                          process_tree_cumul conf base och "" n
+                                            (row, col)
+                                        in
+                                        dates := !dates ^ s;
                                         (te, it)
                                     | n ->
                                         let s =
@@ -828,20 +875,22 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                                         else (te ^ s, it))
                                   ("", "") ch
                               in
-                              let te =
-                                if !img = "" then te else !img ^ "\\\\" ^ te
+                              let te, it =
+                                if !seen_br then
+                                  (String.trim te ^ " " ^ String.trim !dates, it)
+                                else (te, !dates)
                               in
                               if conf.debug = 2 then
                                 Printf.eprintf
-                                  "dag cell: img?%b split?%b te=(%s) it=(%s)\n\
+                                  "dag cell: img?%b spouse?%b te=(%s) it=(%s)\n\
                                    %!"
-                                  (!img <> "") (it <> "") (chop_body 80 te)
+                                  (!img <> "") !seen_br (chop_body 80 te)
                                   (chop_body 80 it);
-                              (te, it)
+                              (te, it, !img)
                             in
-                            if String.trim (te ^ it) = "" then
+                            if String.trim (te ^ it ^ im) = "" then
                               (0, span, "E", "", "", "")
-                            else (0, span, "Te", te, it, "")
+                            else (0, span, "Te", te, it, im)
                       in
                       dag_row := cell :: !dag_row
                   | _ -> ())
@@ -850,6 +899,8 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             do_rows children;
             Trees.print_tree conf (List.rev !dag_rows)
         | "table" ->
+            Printf.eprintf "generic table branch (id=%s)\n%!"
+              (Hutil.get_attr attributes "id");
             let content = get_child children in
             content
         | "caption" ->
@@ -1009,6 +1060,15 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         (* Trees ********* NON REENTRANT !! ********** *)
         (* <tables> in trees dont work !!              *)
         | "bigtree" ->
+            Printf.eprintf
+              "bigtree translator v5 (cellitem: portrait+dates on own lines)\n\
+               %!";
+            (* run with -debug 2 to dump the raw cell tree so the exact
+               person-cell markup (portrait / dates / br) can be seen *)
+            if conf.debug = 2 then (
+              Printf.eprintf "==== BIGTREE RAW DUMP BEGIN ====\n%!";
+              dump children 0;
+              Printf.eprintf "==== BIGTREE RAW DUMP END ====\n%!");
             new_tree := [];
             new_row := [];
             let _ = continue "" children in
@@ -1034,38 +1094,71 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             c_txt := get_child children;
             continue "" children
         | "cellitem" ->
-            c_typ := "It";
-            (* Split the item at its first top-level <br>: person line
-               goes to c_txt (te), spouse line to c_item (it) - Trees
-               renders a cell with both as te \\ it, stacked. A
-               dag-img-slot portrait becomes its own leading line.
-               Previously everything was flattened into one string whose
-               newlines collapse to spaces downstream: portrait, person
-               and spouse all ran together on one line. *)
+            (* A person cell becomes up to three stacked lines:
+                 im  = portrait (its own line, on top)
+                 te  = name
+                 it  = dates (or, for the root, the spouse line)
+               The portrait goes in the im field (NOT jammed into te with
+               a \\, which the te cleaning would strip); Trees prepends it
+               with a surviving break. Dates, always wrapped in <bdo>, go
+               to the second line so each block stays narrow. The person
+               <span> is flattened first so its inner <a> (name) and <bdo>
+               (dates) can be told apart. When a spouse line is present (a
+               top-level <br>, only the root cell), the dates stay inline
+               with the name and the spouse takes line two.
+               GeneWeb wraps the portrait in <div>...<a><img></a></div>
+               (no "dag-img-slot" class), so detect it by looking for an
+               <img> anywhere in the subtree. *)
+            let rec node_has_img = function
+              | Element ("img", _, _) -> true
+              | Element (_, _, ch) -> List.exists node_has_img ch
+              | Text _ -> false
+            in
             let seen_br = ref false in
             let img = ref "" in
-            let te = ref "" in
-            let it = ref "" in
-            List.iter
-              (fun nd ->
-                match nd with
-                | Element ("br", _, _) -> seen_br := true
-                | Element ("div", a, _)
-                  when Sutil.contains (Hutil.get_attr a "class") "dag-img-slot"
-                  ->
-                    let s = process_tree_cumul conf base och "" nd (row, col) in
-                    if String.trim s <> "" then img := s
-                | nd ->
-                    let s = process_tree_cumul conf base och "" nd (row, col) in
-                    if !seen_br then it := !it ^ s else te := !te ^ s)
-              children;
-            let te_full = if !img = "" then !te else !img ^ "\\\\" ^ !te in
-            if String.trim !it = "" then (
-              c_txt := "";
-              c_item := te_full)
-            else (
-              c_txt := te_full;
-              c_item := !it);
+            let dates = ref "" in
+            let ch =
+              List.concat_map
+                (function Element ("span", _, sch) -> sch | n -> [ n ])
+                children
+            in
+            let te, it =
+              List.fold_left
+                (fun (te, it) nd ->
+                  match nd with
+                  | Element ("br", _, _) ->
+                      seen_br := true;
+                      (te, it)
+                  | Element ("div", a, dch)
+                    when Sutil.contains (Hutil.get_attr a "class")
+                           "dag-img-slot"
+                         || List.exists node_has_img dch ->
+                      let s =
+                        process_tree_cumul conf base och "" nd (row, col)
+                      in
+                      if String.trim s <> "" then img := String.trim s;
+                      (te, it)
+                  | Element ("bdo", _, _) when not !seen_br ->
+                      let s =
+                        process_tree_cumul conf base och "" nd (row, col)
+                      in
+                      dates := !dates ^ s;
+                      (te, it)
+                  | nd ->
+                      let s =
+                        process_tree_cumul conf base och "" nd (row, col)
+                      in
+                      if !seen_br then (te, it ^ s) else (te ^ s, it))
+                ("", "") ch
+            in
+            let te, it =
+              if !seen_br then (String.trim te ^ " " ^ String.trim !dates, it)
+              else (te, !dates)
+            in
+            c_typ := "Te";
+            c_txt := te;
+            c_item := it;
+            c_img := !img;
             continue "" children
         | "rule-left" ->
             c_typ := "Hl";
@@ -1262,12 +1355,29 @@ let rec one_command conf base och line =
     let on_off = param = "off" || param = "Off" in
     match on_off with
     | true -> (true, default)
-    | false ->
+    | false -> (
+        (* Tolerate a trailing unit suffix, e.g. "-1.5cm" -> -1.5:
+           Float.of_string chokes on the "cm" and used to silently fall
+           back to the default (0.0), so "Offset -1.5cm" was a no-op. The
+           length unit itself is taken from conf.unit downstream. *)
+        let num =
+          let n = String.length param in
+          let rec cut k =
+            if
+              k > 0
+              &&
+              let c = param.[k - 1] in
+              (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+            then cut (k - 1)
+            else k
+          in
+          String.sub param 0 (cut n)
+        in
         ( false,
-          try Float.of_string param
+          try Float.of_string num
           with Failure _ ->
             Printf.eprintf "Bad param %s\n" line;
-            default )
+            default ))
   in
   let get_int_value line param default =
     let on_off = param = "off" || param = "Off" in
@@ -1630,6 +1740,72 @@ let rec one_command conf base och line =
       let _off, value = get_int_value line param 0 in
       { conf with treemode = value }
   | "TwoPages" -> { conf with twopages = param = "on" || param = "On" }
+  | "TreeNewPage" ->
+      (* Start each split tree half on its own page (default on). Kept as a
+         Trees-module knob so config.ml need not change. Turn off to let the
+         first half share a page with a preceding section title. *)
+      Trees.tree_newpage := param = "on" || param = "On";
+      conf
+  | "ClipMode" ->
+      (* Two-page trees via clip-a-single-layout (default on) instead of
+         splitting the cell model. Requires \usepackage{adjustbox}. Off falls
+         back to the old split path. *)
+      Trees.clip_mode := param = "on" || param = "On";
+      conf
+  | "ClipOverlap" ->
+      (* How far (in conf.unit, cm) each clipped page reaches past the fold so
+         a name/portrait on the cut stays readable on both pages. *)
+      let _off, value = get_float_value line param 1.0 in
+      Trees.clip_overlap := value;
+      conf
+  | "ClipEnlarge" ->
+      (* Extra width (conf.unit, cm) each window may gain on its fold side,
+         spilling into the page margin. *)
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_enlarge := value;
+      conf
+  | "ClipOffset" ->
+      (* Shift the fold off the tree centre (conf.unit, cm): grow the left half
+         and shrink the right by this amount (negative reverses). *)
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_fold := value;
+      conf
+  | "ClipShiftLeft" ->
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_shift_l := value;
+      conf
+  | "ClipShiftRight" ->
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_shift_r := value;
+      conf
+  | "ClipPad" ->
+      (* Margin (conf.unit, cm) on BOTH sides of the saved tree box so edge
+         names that overflow their column are not shaved off by the clip. *)
+      let _off, value = get_float_value line param 1.5 in
+      Trees.clip_pad_l := value;
+      Trees.clip_pad_r := value;
+      conf
+  | "ClipPadLeft" ->
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_pad_l := value;
+      conf
+  | "ClipPadRight" ->
+      let _off, value = get_float_value line param 1.5 in
+      Trees.clip_pad_r := value;
+      conf
+  | "ClipTick" ->
+      (* Length (conf.unit, cm) of the centre fold registration ticks; 0 off. *)
+      let _off, value = get_float_value line param 0.35 in
+      Trees.clip_tick := value;
+      conf
+  | "MidPoint" ->
+      (* Where to draw the fold star: top | bottom | both | off | auto. *)
+      Trees.clip_midpoint := String.lowercase_ascii (String.trim param);
+      conf
+  | "ShowBoxes" ->
+      (* Frame cells, images and clipped windows with \fbox to tune layout. *)
+      Trees.show_boxes := param = "on" || param = "On";
+      conf
   | "Unit" -> { conf with unit = param }
   | "Version" ->
       output_string och (Sutil.version ^ "\n");
