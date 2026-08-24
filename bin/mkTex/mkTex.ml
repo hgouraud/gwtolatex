@@ -72,6 +72,12 @@ let current_level = ref 0
 let image_nbr = ref 0
 let images_in_page = ref []
 
+(* Number of text columns currently open via <x Columns N> (1 = none). A
+   \begin{multicols} is closed by the next <x Columns 1>, or automatically at
+   the next section (a \section may not sit inside multicols), keeping the
+   two-column body local to the content under one heading. *)
+let multicols_n = ref 1
+
 (* defaults *)
 let imgwidth_default = 5.1
 let portraitwidth_default = 5.1
@@ -297,6 +303,26 @@ Outside \verb, the first seven of them can be typeset
 by prepending a backslash; for the other three,
 use the macros \textasciitilde, \textasciicircum, and \textbackslash.
 *)
+
+(* Canonical highlight key, order-independent, so that however a person's name
+   is presented - "(surname, firstname)" in person links, "surname, firstname"
+   in a_ref spans, "Firstname Surname" or "Surname Firstname" as the user types
+   it in <x HighLight ...> - they all compare equal. Steps: drop parentheses
+   and commas, lower ASCII case, split on whitespace, then SORT the words. So
+   "Jean Get", "Get, Jean" and "get jean" all become "get jean". *)
+let norm_hl s =
+  let b = Buffer.create (String.length s) in
+  String.iter
+    (fun c ->
+      match c with
+      | '(' | ')' | ',' -> ()
+      | 'A' .. 'Z' -> Buffer.add_char b (Char.chr (Char.code c + 32))
+      | '\t' | '\n' -> Buffer.add_char b ' '
+      | c -> Buffer.add_char b c)
+    s;
+  String.split_on_char ' ' (Buffer.contents b)
+  |> List.filter (fun x -> x <> "")
+  |> List.sort compare |> String.concat " "
 
 let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
@@ -617,10 +643,12 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
               Format.sprintf "(%s, %s%s)" sn fn
                 (if ocn <> 0 then Format.sprintf " (%d)" ocn else "")
             in
+            if conf.debug >= 2 then
+              Printf.eprintf "tag_a hl test = [%s]\n%!" (norm_hl test_hl);
             if m = "CAL" then content
             else if Sutil.contains content "includegraphics" then
               "{\\bf " ^ content ^ "}"
-            else if List.mem (Lutil.escape test_hl) conf.highlights then
+            else if List.mem (norm_hl test_hl) conf.highlights then
               "{\\hl {\\bf " ^ content ^ " xxx}}"
             else "{\\bf " ^ content ^ "}" ^ index_s
         | None -> "{\\bf " ^ content ^ "}"
@@ -660,16 +688,33 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
       let image_label = Format.sprintf "%s.%s.%s" fn ocn sn in
       let vignette = Sutil.contains s "-vignette" || Sutil.contains s "-v." in
       if not vignette then incr image_nbr;
-      let image =
-        ( (if vignette then Vignette
-           else if k <> "" then Imagek
-           else if s <> "" then Images
-           else Portrait),
-          (if k <> "" then image_label else s),
-          (!chapter, !section, !subsection, !subsubsection),
-          !image_nbr )
+      let img_type =
+        if vignette then Vignette
+        else if k <> "" then Imagek
+        else if s <> "" then Images
+        else Portrait
       in
-      print_image conf image ^ index_s
+      (* A Portrait's filename must come from the person key (fn.ocn.sn), like
+         Imagek - NOT from s, which is empty for a header portrait and gave
+         "./images/BASE/.jpg" and a "file not found" that halts LaTeX. *)
+      let img_name =
+        match img_type with Imagek | Portrait -> image_label | _ -> s
+      in
+      (* If the person did not resolve (fn/sn empty), image_label is
+         meaningless (".0."), so skip rather than emit a broken \includegraphics
+         that stops the compile. *)
+      if (img_type = Imagek || img_type = Portrait) && fn = "" && sn = "" then (
+        if conf.debug > 0 then
+          Printf.eprintf "tag_img: skipping unnameable portrait (href=%s)\n%!"
+            href;
+        index_s)
+      else
+        print_image conf
+          ( img_type,
+            img_name,
+            (!chapter, !section, !subsection, !subsubsection),
+            !image_nbr )
+        ^ index_s
     in
     str
   in
@@ -983,7 +1028,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                 | "highlight" ->
                     (* highlight content *)
                     (* attention, \\textbf{{\\hl xxxx}} ne fonctionne pas *)
-                    if List.mem content conf.highlights then
+                    if List.mem (norm_hl content) conf.highlights then
                       Format.sprintf "\\bf {\\hl %s}" content
                     else content
                 | "caption" ->
@@ -1008,7 +1053,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                       Format.sprintf "%s, %s%s" sn fn
                         (if oc <> 0 then Format.sprintf " (%d)" oc else "")
                     in
-                    (List.mem (Lutil.escape test_hl) conf.highlights, index_l)
+                    if conf.debug >= 2 then
+                      Printf.eprintf "a_ref hl test = [%s]\n%!"
+                        (norm_hl test_hl);
+                    (List.mem (norm_hl test_hl) conf.highlights, index_l)
                   with e ->
                     if conf.debug = 2 then
                       Printf.eprintf
@@ -1551,11 +1599,13 @@ let rec one_command conf base och line =
            branch src commit_id commit_date compil_date);
       conf
   | "HighLight" ->
+      if conf.debug >= 2 then
+        Printf.eprintf "HighLight: key = [%s]\n%!" (norm_hl param);
       {
         conf with
         highlights =
           (if param = "off" || param = "Off" then []
-           else Lutil.escape param :: conf.highlights);
+           else norm_hl param :: conf.highlights);
       }
   | "Hrule" -> { conf with hrule = param = "on" || param = "On" }
   | "ImageLabels" ->
@@ -1696,6 +1746,15 @@ let rec one_command conf base och line =
           conf
       | _ -> conf)
   | "SamePage" -> { conf with samepage = param = "on" || param = "On" }
+  | "Columns" ->
+      (* Set the text-column MODE for the bodies of following <a> ancestry
+         links: N>=2 flows each body (below its full-width section title) into
+         N columns; 1 turns it off. The <a> handler in process_one_line does
+         the actual \begin/\end{multicols} around each body, so it is always
+         balanced and local to one link. Requires \usepackage{multicol}. *)
+      let _off, n = get_int_value line param 1 in
+      multicols_n := if n > 1 then n else 1;
+      conf
   | "Section" ->
       out "section" param;
       incr section;
@@ -1797,6 +1856,12 @@ let rec one_command conf base och line =
       (* Length (conf.unit, cm) of the centre fold registration ticks; 0 off. *)
       let _off, value = get_float_value line param 0.35 in
       Trees.clip_tick := value;
+      conf
+  | "PortraitFill" ->
+      (* Height (conf.unit, cm) of the connector bar that fills a name-only
+         person's empty portrait slot when its row has portraits; 0 = off. *)
+      let _off, value = get_float_value line param 0.0 in
+      Trees.portrait_fill := value;
       conf
   | "MidPoint" ->
       (* Where to draw the fold star: top | bottom | both | off | auto. *)
@@ -2099,7 +2164,18 @@ let process_one_line conf base _dict1 _dict2 och line =
                if String.trim tail <> "" && not !gwtest then
                  process_html conf base och tail);
 
+              (* Two-column body: open multicols AFTER the section title (and
+                 its inline tail) so the heading stays full width, then run the
+                 ancestry body, then close - balanced and local to this link.
+                 Enabled per-link by <x Columns N> set before it. *)
+              let cols_here =
+                line.[1] = 'a' && !multicols_n > 1 && not !gwtest
+              in
+              if cols_here then
+                output_string och
+                  (Format.sprintf "\\begin{multicols}{%d}\n" !multicols_n);
               one_http_call conf base och line;
+              if cols_here then output_string och "\n\\end{multicols}\n";
 
               if conf.collectimages && !images_in_page <> [] then
                 print_images conf och !images_in_page key_str;

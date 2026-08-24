@@ -7,6 +7,14 @@ let row_width row = List.fold_left (fun w (_, s, _, _, _, _) -> w + s) 0 row
 let row_nb = ref 0
 let nb_head_rows = ref 0
 
+(* Height (conf.unit, cm) of a filler vertical bar drawn in the portrait slot
+   of a name-only person when OTHER people in the same row have a portrait.
+   Portrait height varies per photo, so a name-only cell is top-aligned in the
+   tall row and leaves a blank below; this bar fills that slot (a connector)
+   and drops the name to line up with the portrait people's names. Match it to
+   your portraits' height. 0 = off. Set via <x PortraitFill 2>. *)
+let portrait_fill = ref 0.0
+
 (* Start the first tree half on a fresh page. Forcing this wastes the space
    under a preceding section title, so it defaults OFF; instead shrink the
    first half with clip_fold (ClipOffset) so it fits below the title. Toggle
@@ -193,6 +201,16 @@ let print_tree (conf : Config.config) tree =
           let ri = !row_nb in
           incr row_nb;
           let row = List.rev row in
+          (* Does this row mix a portrait person with name-only people? If so,
+             the name-only cells get a filler bar (portrait_fill) so they line
+             up and the blank left by the missing portrait is bridged. *)
+          let has_portrait =
+            !portrait_fill > 0.0
+            && List.exists
+                 (fun (_, _, ty, _, _, im) ->
+                   (ty = "Te" || ty = "It") && String.trim im <> "")
+                 row
+          in
           let _, row_str =
             List.fold_left
               (fun (col, acc2) (_, s, ty, te, it, im) ->
@@ -319,6 +337,16 @@ let print_tree (conf : Config.config) tree =
                     else
                       match ty with
                       | "Te" | "It" ->
+                          (* Fill the empty portrait slot of a name-only person
+                             (in a row that has portraits) with a connector bar
+                             so it lines up and the blank is bridged. Goes in im
+                             so it is prepended raw (not stripped like te/it). *)
+                          let im =
+                            if im = "" && has_portrait then
+                              Format.sprintf "\\rule[0pt]{%1.2fpt}{%1.2f%s}"
+                                conf.rulethickns !portrait_fill conf.unit
+                            else im
+                          in
                           let te =
                             Sutil.replace '\n' ' ' te
                             |> Sutil.suppress_leading_sp

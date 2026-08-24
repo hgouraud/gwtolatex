@@ -1,0 +1,28 @@
+<!-- $Id: buttons.txt v7.1 31/03/2026 17:11:23 $ -->
+<!-- Copyright (c) 1998-2007 INRIA -->
+%( Boutons de configurations et d'options %)
+%let;l_v0;%if;(e.v!="")
+            %if;(e.m="A" and e.v>static_max_anc_level)%static_max_anc_level;
+            %elseif;(e.m="D" and e.v>static_max_desc_level)%static_max_desc_level;
+            %else;%e.v;%end;
+          %else;1%end;%in;
+%let;l_v;%if;(e.m="A")
+           %if;(bvar.max_anc_level="" or bvar.max_anc_level>l_v0)%l_v0;%else;%bvar.max_anc_level;%end;
+         %elseif;(e.m="D")
+           %if;(bvar.max_desc_level="" or bvar.max_desc_level>l_v0)%l_v0;%else;%bvar.max_desc_level;%end;
+         %end;%in;
+%( TODO: homogeneize e_v/l_v usage at last in ancsosa linked templates %)
+%let;e_v;%l_v;%in;
+%let;v0;%if;(e.v0="")
+          %if;(e.t="Y")1%else;0%end;
+        %else;
+          %if;(e.only="on" or e.v0>l_v)%l_v;
+          %elseif;(e.v0!="" and e.v0>0 and e.v0<=l_v)%e.v0;
+          %else;0%end;
+        %end;%in;
+%let;only;%if;(e.only="on" or (v0=l_v and v0>1))1%else;0%end;%in;
+%( DEBUG<br>v0 = %v0;<br>v = %l_v;<br>only=%only; %)
+%define;urlset(xx,yy)
+  %url_set.xx.yy;
+%end;
+%let;istable;%if;((e.m="D" and (e.t="H" or e.t="I")) or (e.m="A" and (e.t="Z" or e.t="Y")))1%end;%in;
