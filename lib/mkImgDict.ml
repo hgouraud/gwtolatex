@@ -195,25 +195,33 @@ let create_images_dicts img_file fam_file =
     match line with
     | Some line ->
         if Sutil.start_with "<a href" 0 line then
-          if Sutil.contains line "&p" && Sutil.contains line "&n" then
-            let parts1 = String.split_on_char '&' line in
-            let parts2 =
-              List.fold_left
-                (fun acc p ->
-                  let kv = String.split_on_char '=' p in
-                  if List.length kv = 2 then
-                    (List.nth kv 0, List.nth kv 1) :: acc
-                  else acc)
-                [] parts1
-            in
-            let fn = List.assoc "p" parts2 in
-            let sn = List.assoc "n" parts2 in
-            let oc = try List.assoc "oc" parts2 with Not_found -> "0" in
-            let (key : key) =
-              { pk_first_name = fn; pk_surname = sn; pk_occ = int_of_string oc }
-            in
-            loop (key :: acc) (Sutil.read_line ic)
-          else loop acc (Sutil.read_line ic)
+          (* Query params may be separated by '&' or ';' (or a mix), so split
+             on both, then on '='. A person link has p= and n=; anything else
+             (image/src/nav links) simply lacks them and is skipped silently -
+             no Not_found, no noise. *)
+          let parts2 =
+            String.split_on_char '&' line
+            |> List.concat_map (String.split_on_char ';')
+            |> List.fold_left
+                 (fun acc p ->
+                   match String.split_on_char '=' p with
+                   | [ k; v ] -> (k, v) :: acc
+                   | _ -> acc)
+                 []
+          in
+          match (List.assoc_opt "p" parts2, List.assoc_opt "n" parts2) with
+          | Some fn, Some sn ->
+              let oc =
+                match List.assoc_opt "oc" parts2 with
+                | Some o -> o
+                | None -> "0"
+              in
+              let occ = try int_of_string oc with _ -> 0 in
+              let (key : key) =
+                { pk_first_name = fn; pk_surname = sn; pk_occ = occ }
+              in
+              loop (key :: acc) (Sutil.read_line ic)
+          | _ -> loop acc (Sutil.read_line ic)
         else loop acc (Sutil.read_line ic)
     | None ->
         close_in ic;

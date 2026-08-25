@@ -347,19 +347,30 @@ let print_tree (conf : Config.config) tree =
                                 conf.rulethickns !portrait_fill conf.unit
                             else im
                           in
+                          (* Markers the cellitem handler leaves in te/it,
+                             converted AFTER cleaning (literal \\ or \mbox there
+                             would be stripped/mangled): @@BR@@ -> a hard break;
+                             @@MB@@../@@ME@@ -> \mbox{..} around a name or a date
+                             group, so "name dates" wraps only when it must. *)
+                          let unbr s =
+                            s
+                            |> Sutil.replace_str "@@BR@@" "\\\\"
+                            |> Sutil.replace_str "@@MB@@" "\\mbox{"
+                            |> Sutil.replace_str "@@ME@@" "}"
+                          in
                           let te =
                             Sutil.replace '\n' ' ' te
                             |> Sutil.suppress_leading_sp
                             |> Sutil.clean_double_back_slash_2
                             |> Sutil.clean_leading_double_back_slash
-                            |> Sutil.clean_item
+                            |> Sutil.clean_item |> unbr
                           in
                           let it =
                             Sutil.replace '\n' ' ' it
                             |> Sutil.suppress_leading_sp
                             |> Sutil.clean_double_back_slash_2
                             |> Sutil.clean_leading_double_back_slash
-                            |> Sutil.clean_item
+                            |> Sutil.clean_item |> unbr
                           in
                           let str =
                             match (te, it) with
@@ -532,8 +543,20 @@ let print_tree (conf : Config.config) tree =
 
   (* A \par before the tree forces it to start on a new line (harmless if we
      are already at the start of one) instead of running on from whatever text
-     - a section title, a sentence - precedes it in the document. *)
-  "\\par\n"
+     - a section title, a sentence - precedes it in the document.
+
+     \gwpers{name}{dates} lays "name dates" on one line when it fits the cell
+     (\linewidth inside the centred p{} column is the column width), and drops
+     the dates onto a second line via \newline only when the combination
+     overflows.  Defined once, guarded so a second tree in the same document
+     does not redefine it.  Emitted as raw (uncleaned) LaTeX so the single
+     backslashes survive; the cell bodies call it with single-backslash
+     \gwpers{..}{..}, which likewise survives the \\-stripping cleaner. *)
+  "\\par\n\
+   \\ifdefined\\gwpers\\else\\newsavebox\\gwpbox\\newcommand\\gwpers[2]{\\sbox\\gwpbox{#1 \
+   \\mbox{#2}}%\n\
+   \\ifdim\\wd\\gwpbox>\\linewidth #1\\newline\\mbox{#2}\\else #1 \
+   \\mbox{#2}\\fi}\\fi\n"
   ^
   if conf.twopages && !clip_mode && conf.treemode = 1 then (
     (* Clip path: lay out the whole tree once, ~two pages wide, into a save

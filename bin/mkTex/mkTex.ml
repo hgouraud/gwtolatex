@@ -438,6 +438,7 @@ let in_tex_raw = ref false
    Text node case in process_tree_cumul can restore them. *)
 let brace_open_marker = "\xEE\x80\x80" (* U+E000 *)
 let brace_close_marker = "\xEE\x80\x81" (* U+E001 *)
+let nbsp_marker = "\xEE\x80\x82" (* U+E002 *)
 
 (** process_tree_cumul accumulates results in a string each tag is processed
     according to its role *)
@@ -546,8 +547,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             else Format.sprintf "Funny SRC content %s" (Lutil.escape href)
   in
 
-  (* NOTES file *)
-  let read_notes_file f content =
+  (* NOTES file - legacy filesystem inliner, no longer wired into tag_a (a
+     NOTES link now renders as its anchor text; see the m=NOTES branch below).
+     Kept, underscore-prefixed, in case a future structural inliner needs it. *)
+  let _read_notes_file f content =
     let notes_dir =
       String.concat Filename.dir_sep [ "."; conf.basename ^ ".gwb"; "notes_d" ]
     in
@@ -612,7 +615,18 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
          or collected in images_in_page, so print_images emitted no
          images on person pages. *)
       if m = "SRC" || m = "DOC" then read_src_file v content
-      else if m = "NOTES" then read_notes_file f content
+      else if m = "NOTES" then
+        (* A NOTES link embedded in flowing text (typically a person's note
+           cross-referencing another notes page, e.g.
+           <a href="..m=NOTES;f=regates-chausey-1937">Régates de Chausey</a>)
+           must render as JUST its anchor text.  It must NOT pull in and
+           inline the whole referenced notes file: read_notes_file dumped that
+           file's raw HTML/wiki markup (<table>, [[..]], <sup>..) straight into
+           the .tex, mixing an unrelated note into the page and producing
+           broken LaTeX (the "Missing number" at \end{hgitemize}).  Structural
+           notes-page sections are fetched over HTTP at the process_one_line
+           level, never through tag_a. *)
+        content
       else if m = "D" && t = "V" then
         Format.sprintf "%s\\\\m=D\\&{}t=V\\\\ not available " content
       else if String.lowercase_ascii b <> String.lowercase_ascii conf.basename
@@ -733,7 +747,16 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         let s = if s = "\n" then " " else s in
         let s = Sutil.replace_str brace_open_marker "{" s in
         let s = Sutil.replace_str brace_close_marker "}" s in
-        if !in_tex_raw then s else Lutil.escape s
+        (* &nbsp; (and the U+00A0 the HTML parser may have already decoded it
+           into) becomes a LaTeX unbreakable space "~". Routed through a
+           private-use marker BEFORE escaping - both so the substitution
+           happens before Lutil.escape can mangle the '&' into '\&', and so
+           escape (which would turn a literal ~ into \textasciitilde) leaves
+           the result alone. The marker is restored to ~ afterwards. *)
+        let s = Sutil.replace_str "&nbsp;" nbsp_marker s in
+        let s = Sutil.replace_str "\xC2\xA0" nbsp_marker s in
+        let s = if !in_tex_raw then s else Lutil.escape s in
+        Sutil.replace_str nbsp_marker "~" s
     | Element (name, attributes, children) (* as elt *) -> (
         match name with
         | ("u" | "b" | "em" | "tt" | "strong" | "tiny" | "small" | "big") as t
@@ -922,7 +945,8 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                               in
                               let te, it =
                                 if !seen_br then
-                                  (String.trim te ^ " " ^ String.trim !dates, it)
+                                  ( String.trim te ^ " " ^ String.trim !dates,
+                                    it )
                                 else (te, !dates)
                               in
                               if conf.debug = 2 then
@@ -944,8 +968,6 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             do_rows children;
             Trees.print_tree conf (List.rev !dag_rows)
         | "table" ->
-            Printf.eprintf "generic table branch (id=%s)\n%!"
-              (Hutil.get_attr attributes "id");
             let content = get_child children in
             content
         | "caption" ->
@@ -1054,8 +1076,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                         (if oc <> 0 then Format.sprintf " (%d)" oc else "")
                     in
                     if conf.debug >= 2 then
-                      Printf.eprintf "a_ref hl test = [%s]\n%!"
-                        (norm_hl test_hl);
+                      Printf.eprintf "a_ref hl test = [%s]\n%!" (norm_hl test_hl);
                     (List.mem (norm_hl test_hl) conf.highlights, index_l)
                   with e ->
                     if conf.debug = 2 then
@@ -1108,9 +1129,6 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
         (* Trees ********* NON REENTRANT !! ********** *)
         (* <tables> in trees dont work !!              *)
         | "bigtree" ->
-            Printf.eprintf
-              "bigtree translator v5 (cellitem: portrait+dates on own lines)\n\
-               %!";
             (* run with -debug 2 to dump the raw cell tree so the exact
                person-cell markup (portrait / dates / br) can be seen *)
             if conf.debug = 2 then (
@@ -1151,9 +1169,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                with a surviving break. Dates, always wrapped in <bdo>, go
                to the second line so each block stays narrow. The person
                <span> is flattened first so its inner <a> (name) and <bdo>
-               (dates) can be told apart. When a spouse line is present (a
-               top-level <br>, only the root cell), the dates stay inline
-               with the name and the spouse takes line two.
+               (dates) can be told apart. A spouse line (after a top-level
+               <br>, in couples / descendant trees) takes a further line;
+               dates always get their own line either way.
                GeneWeb wraps the portrait in <div>...<a><img></a></div>
                (no "dag-img-slot" class), so detect it by looking for an
                <img> anywhere in the subtree. *)
@@ -1165,18 +1183,24 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             let seen_br = ref false in
             let img = ref "" in
             let dates = ref "" in
+            let sp_name = ref "" in
+            let sp_dates = ref "" in
             let ch =
               List.concat_map
-                (function Element ("span", _, sch) -> sch | n -> [ n ])
+                (function
+                  | Element ("span", _, sch) -> sch
+                  | n -> [ n ])
                 children
             in
-            let te, it =
+            (* Collect, separately: the main person's name and dates, and (after
+               a top-level <br>, in couples) the spouse's name and dates. *)
+            let te =
               List.fold_left
-                (fun (te, it) nd ->
+                (fun te nd ->
                   match nd with
                   | Element ("br", _, _) ->
                       seen_br := true;
-                      (te, it)
+                      te
                   | Element ("div", a, dch)
                     when Sutil.contains (Hutil.get_attr a "class")
                            "dag-img-slot"
@@ -1185,27 +1209,43 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                         process_tree_cumul conf base och "" nd (row, col)
                       in
                       if String.trim s <> "" then img := String.trim s;
-                      (te, it)
-                  | Element ("bdo", _, _) when not !seen_br ->
+                      te
+                  | Element ("bdo", _, _) ->
                       let s =
                         process_tree_cumul conf base och "" nd (row, col)
                       in
-                      dates := !dates ^ s;
-                      (te, it)
+                      if !seen_br then sp_dates := !sp_dates ^ s
+                      else dates := !dates ^ s;
+                      te
                   | nd ->
                       let s =
                         process_tree_cumul conf base och "" nd (row, col)
                       in
-                      if !seen_br then (te, it ^ s) else (te ^ s, it))
-                ("", "") ch
+                      if !seen_br then (
+                        sp_name := !sp_name ^ s;
+                        te)
+                      else te ^ s)
+                "" ch
             in
-            let te, it =
-              if !seen_br then (String.trim te ^ " " ^ String.trim !dates, it)
-              else (te, !dates)
+            (* Build a "name dates" unit via \gwpers{name}{dates} (auto-defined
+               once by trees.ml): it measures name+dates against the cell width
+               and, only if they don't fit, forces the dates onto their own line
+               below the (still-wrappable) name - so a wide cell stays on one
+               line, a tight one drops the dates cleanly instead of leaving them
+               stuck to the surname. Dates are \mbox'd inside so the year range
+               never breaks. A single backslash + brace args survive the te/it
+               cleaning (like {\bf ..} and \includegraphics{..} do). The main
+               person is te, the spouse it - a forced break separates the two. *)
+            let unit nm dt =
+              let nm = String.trim nm and dt = String.trim dt in
+              if nm <> "" && dt <> "" then "\\gwpers{" ^ nm ^ "}{" ^ dt ^ "}"
+              else if nm <> "" then nm
+              else if dt <> "" then "\\mbox{" ^ dt ^ "}"
+              else ""
             in
             c_typ := "Te";
-            c_txt := te;
-            c_item := it;
+            c_txt := unit te !dates;
+            c_item := unit !sp_name !sp_dates;
             c_img := !img;
             continue "" children
         | "rule-left" ->
@@ -1403,7 +1443,7 @@ let rec one_command conf base och line =
     let on_off = param = "off" || param = "Off" in
     match on_off with
     | true -> (true, default)
-    | false -> (
+    | false ->
         (* Tolerate a trailing unit suffix, e.g. "-1.5cm" -> -1.5:
            Float.of_string chokes on the "cm" and used to silently fall
            back to the default (0.0), so "Offset -1.5cm" was a no-op. The
@@ -1425,7 +1465,7 @@ let rec one_command conf base och line =
           try Float.of_string num
           with Failure _ ->
             Printf.eprintf "Bad param %s\n" line;
-            default ))
+            default )
   in
   let get_int_value line param default =
     let on_off = param = "off" || param = "Off" in
@@ -1753,7 +1793,7 @@ let rec one_command conf base och line =
          the actual \begin/\end{multicols} around each body, so it is always
          balanced and local to one link. Requires \usepackage{multicol}. *)
       let _off, n = get_int_value line param 1 in
-      multicols_n := if n > 1 then n else 1;
+      multicols_n := (if n > 1 then n else 1);
       conf
   | "Section" ->
       out "section" param;
@@ -1803,13 +1843,13 @@ let rec one_command conf base och line =
       (* Start each split tree half on its own page (default on). Kept as a
          Trees-module knob so config.ml need not change. Turn off to let the
          first half share a page with a preceding section title. *)
-      Trees.tree_newpage := param = "on" || param = "On";
+      Trees.tree_newpage := (param = "on" || param = "On");
       conf
   | "ClipMode" ->
       (* Two-page trees via clip-a-single-layout (default on) instead of
          splitting the cell model. Requires \usepackage{adjustbox}. Off falls
          back to the old split path. *)
-      Trees.clip_mode := param = "on" || param = "On";
+      Trees.clip_mode := (param = "on" || param = "On");
       conf
   | "ClipOverlap" ->
       (* How far (in conf.unit, cm) each clipped page reaches past the fold so
@@ -1869,7 +1909,7 @@ let rec one_command conf base och line =
       conf
   | "ShowBoxes" ->
       (* Frame cells, images and clipped windows with \fbox to tune layout. *)
-      Trees.show_boxes := param = "on" || param = "On";
+      Trees.show_boxes := (param = "on" || param = "On");
       conf
   | "Unit" -> { conf with unit = param }
   | "Version" ->
@@ -2075,12 +2115,18 @@ let print_images conf och images_list _key_str =
                 String.concat "" index_l
             | _ -> ""
           in
+          (* A "-wide" image takes the full text width, so it must own its
+             row: emit an explicit \par BEFORE it (so it starts fresh, not
+             tacked onto the end of a row of narrow images) and AFTER it (so
+             the following image starts on a new row).  An explicit \par is
+             more reliable here than trailing blank lines, which paragraph
+             mode can swallow. *)
+          let wide_sep = if Sutil.contains name "-wide" then "\\par\n" else "" in
           output_string och
             (Format.sprintf
-               "\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\newline%s%s%s}%s\n"
-               width width images_dir Filename.dir_sep name img_number img_label
-               index_list
-               (if Sutil.contains name "-wide" then "\n\n\n" else "")))
+               "%s\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\newline%s%s%s}%s\n"
+               wide_sep width width images_dir Filename.dir_sep name img_number
+               img_label index_list wide_sep))
     (List.rev images_list);
   output_string och (Format.sprintf "\n\n")
 
@@ -2197,6 +2243,46 @@ let process_one_line conf base _dict1 _dict2 och line =
     conf
   else conf
 
+(* Final safety net: rewrite the finished .tex replacing every &nbsp; (and the
+   U+00A0 it decodes to, and an escaped \&nbsp; should any slip through) by a
+   LaTeX unbreakable space "~".  process_tree_cumul already converts the
+   entities it sees, but prose typed straight into family.txt (or an included
+   .txt) is emitted verbatim by process_one_line and never passes through that
+   walker - so those &nbsp; survive to the output.  A literal "&nbsp;" is never
+   valid LaTeX, so this global pass is safe. *)
+(* Replace EVERY occurrence of [sub] by [by] - a self-contained global
+   replace, so we don't depend on whatever Sutil.replace_str does about
+   repeated matches (a note line holds several &nbsp;). *)
+let replace_all_sub sub by s =
+  let ls = String.length s and lsub = String.length sub in
+  if lsub = 0 then s
+  else begin
+    let buf = Buffer.create ls in
+    let i = ref 0 in
+    while !i <= ls - lsub do
+      if String.sub s !i lsub = sub then (
+        Buffer.add_string buf by;
+        i := !i + lsub)
+      else (
+        Buffer.add_char buf s.[!i];
+        incr i)
+    done;
+    Buffer.add_string buf (String.sub s !i (ls - !i));
+    Buffer.contents buf
+  end
+
+let scrub_nbsp fname =
+  if fname <> "" && Sys.file_exists fname then (
+    let ic = open_in_bin fname in
+    let s = really_input_string ic (in_channel_length ic) in
+    close_in ic;
+    let s = replace_all_sub "\\&nbsp;" "~" s in
+    let s = replace_all_sub "&nbsp;" "~" s in
+    let s = replace_all_sub "\xC2\xA0" "~" s in
+    let oc = open_out_bin fname in
+    output_string oc s;
+    close_out oc)
+
 (* current version reads family.txt and runs pdflatex and makeindex *)
 (* in a short future makeBook will handle the whole process including  *)
 (* addition in each personnal page of image index information *)
@@ -2312,6 +2398,7 @@ let main () =
         let _ = process_html conf base och body in
         close_in ic;
         close_out och;
+        if not !gwtest then scrub_nbsp fname_out;
         exit 0
     | _ -> (
         tmp := conf;
@@ -2323,7 +2410,8 @@ let main () =
           done
         with End_of_file ->
           close_in ic;
-          close_out och));
+          close_out och;
+          if not !gwtest then scrub_nbsp fname_out));
     Printf.eprintf "\n";
     flush stderr;
     let out_channel = open_out_bin "dict1.dat" in

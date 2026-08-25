@@ -459,6 +459,8 @@ let main () =
   (* build images dictionnaries *)
   let dict1, dict2, _dict3 = MkImgDict.create_images_dicts img_file fname_all in
 
+  if !verbose then Printf.eprintf "Image dicts created\n";
+
   let out_channel = open_out_bin "dict1.dat" in
   Marshal.to_channel out_channel dict1 [];
   close_out out_channel;

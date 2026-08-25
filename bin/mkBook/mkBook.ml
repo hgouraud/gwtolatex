@@ -214,7 +214,9 @@ let main () =
     (* make new .gw file *)
     if !verbose then Printf.eprintf "Make new %s-new.gw file\n" !base;
     let make_new_gw = Filename.concat !dist_dir "mkNewGw" in
-    let make_new_gw_file = Format.sprintf "%s %s\n" make_new_gw gw2l_options in
+    let make_new_gw_file =
+      Format.sprintf "%s %s %s\n" ocmlrparam make_new_gw gw2l_options
+    in
     if !verbose then Printf.eprintf "Commd: %s\n" make_new_gw_file;
     flush stderr;
     let error = Sys.command make_new_gw_file in
