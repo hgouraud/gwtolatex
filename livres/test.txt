@@ -20,6 +20,17 @@ Version :
 \copyright 2024}
 \end{titlepage}
 
+% Code monospace helper.
+\newcommand{\cmd}[1]{\texttt{#1}}
+
+% Column types for the reference tables.
+\newcolumntype{C}{>{\raggedright\arraybackslash}p{2.9cm}}    % Commande
+\newcolumntype{T}{>{\raggedright\arraybackslash}p{2.7cm}}    % Type / défaut
+\newcolumntype{E}{>{\raggedright\arraybackslash}p{12.0cm}}   % Effet (2 col.)
+\newcolumntype{F}{>{\raggedright\arraybackslash}p{9.5cm}}    % Effet large (3 col.)
+
+
+
 % Beginning of document
 \begin{document}
 \WarningsOff*

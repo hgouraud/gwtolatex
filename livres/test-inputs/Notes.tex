@@ -101,10 +101,11 @@ GwTo\LaTeX{}{} version :
 \end{document}
 \end{verbatim}
 
-\subsection{Liste des commandes \gwtol{}}
 
+\subsection{Liste des commandes \gwtol{}}
 Les commandes \gwtol{} présentes dans le document \verb|famille.txt| ont la forme
 \verb|<c Commande paramètres>|
+
 Les valeurs de «\,c\,» peuvent être:
 \begin{description}[style=nextline]
 \item[x] Exécute Commande avec paramètres (voir ci-dessous).
@@ -116,102 +117,480 @@ la valeur du paramètre «\,BumpSub\,» ci-dessous. La partie de la ligne compri
 On émet ensuite une commande \LaTeX{} \verb|\index{personne}| où «\,personne\,» est
 la personne désignée dans les paramètres de la commande GeneWeb, sauf si le
 titre contient lui même une commande \LaTeX{} \verb|\index{texte}|.
-
 Le texte :
 \begin{verbatim}
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;
-    templ=tex;w=%%%PASSWD%%%">Dupont, Léon\label{leondupont}</a>
+<a href="http://127.0.0.1:2317/base-test-new?p=leon;n=dupont;oc=0;
+    templ=tex;w=">Dupont, Léon\label{leondupont}</a>
 \end{verbatim}
 donne la page \pageref{leondupont} et correspond au premier cas, alors que
 \begin{verbatim}
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien;n=dupont;oc=0;
-    templ=tex;w=%%%PASSWD%%%">Dupont, Lucien\index{Dupont,
+<a href="http://127.0.0.1:2317/base-test-new?p=lucien;n=dupont;oc=0;
+    templ=tex;w=">Dupont, Lucien\index{Dupont,
     Lucien dit Le Frère}\label{luciendupont}</a>
 \end{verbatim}
 correspond au second.
 \item[b] Fonctionne comme le cas précédent («\,a\,») sans générer de
 nouvelle section. Permet à l'utilisateur de créer lui même la nouvelle
 section, et d'ajouter avant le contenu de la page des commentaires spécifiques.
-
 le texte :
 \begin{verbatim}
 <x Section Dupont, Léon>\label{leondupont}
 Commentaire qui n'existe pas dans l'autre cas.
 \par
-<b href="http://127.0.0.1:2317/%%%BASE%%%?p=leon;n=dupont;oc=0;
-    templ=tex;w=%%%PASSWD%%%"></a>
+<b href="http://127.0.0.1:2317/base-test-new?p=leon;n=dupont;oc=0;
+    templ=tex;w="></a>
 \end{verbatim}
-est équivalent (au commentaire près) à 
+est équivalent (au commentaire près) à
 \begin{verbatim}
-<a href="http://127.0.0.1:2317/%%%BASE%%%?p=lucien;n=dupont;oc=0;
-    templ=tex;w=%%%PASSWD%%%">Dupont, Léon\label{leondupont}</a>
+<a href="http://127.0.0.1:2317/base-test-new?p=lucien;n=dupont;oc=0;
+    templ=tex;w=">Dupont, Léon\label{leondupont}</a>
 \end{verbatim}
 \end{description}
 Toutes les autres lignes du fichier \verb|famille.txt| sont recopiées tel-quel.
 
-Les commande \gwtol{} sont les suivantes :
+\par
+Toutes les commandes de configuration et de mise en page du gabarit sont
+écrites sous la forme :
 
-\begin{description}[style=nextline]
-\item[Arbres/Trees] If «\,on\,», mets ImgWidth et PortraitWidth à 1.5.
-Si «\,off\,» redonne à ces parametres leurs valeurs par defaut.
-\item[Chapter/Section/SubSection/SubSubSection] Nouveau chapitre/section/...
-\gwtol{} a besoin de connaitre la numérotation des chapitres et sections afin
-de numéroter correctement les images. Il ne faut donc pas utiliser directement
-les commandes \LaTeX{} équivalentes (\verb|\chapter|, \verb|\section|...).
-\item[CollectImages] «\,on/off\,», Rassembler les images citées dans les notes
-d'une personne pour les imprimer à la fin de la page personnelle.
-\item[Expand] Cherche à étendre la largeur des cellules en utilisant
-les cellules vides adjacentes. Cette commande prend un paramètre indiquant
-le nombre de fois où cette opération est effectuée. ATTENTION : cette opération
-peut introduire des décalages dans les lignes horizontales des arbres.
-\item[FontSize] Définit la taille de la police de caractères\label{fontsize}
-(small, tiny, off returns to default).
-\item[HighLight] Surligner le nom de la personne désignée par
-«\,Patronyme prénom (occ)\,». Omettre «\,(0)\,» si l'occurrence est 0.
-\item[Hoffset] Décale la page à droite/gauche. Ne s'applique que pendant les arbres.
-\item[Hrule] Ajouter une ligne horizontale de la largeur du texte à la fin
-des pages produites par «\,<a\,» ou «\,<b\,».
-\item[Incr] Afin de numéroter correctement les images, \gwtol{} a besoin de
-connaître les numéros de chapitre, section, etc. Si une commande
-\verb|\chapter{xxx}|, \verb|\section{xxx}|, ... est insérée directement
-dans le document, il convient d'en informer \gwtol{} en incrémentant
-le niveau de section approprié. Cette commande remet à zéro les sections de
-niveau supérieur. On regardera l'exemple des fiches individuelles
-page \pageref{fiches}. Sans cette commande, les images de la section
-{\bf Dupont, Léon} auraient été numérotées 3.1.x.
-\item[ImageLabel] Précise le nombre d'éléments pris en compte dans
-la numérotation des images (ch, sec, ssec, img-nbr).
-\item[ImgWidth] Définit la largeur des images (float).
-\item[Input] Inclure dans le livre le fichier désigné. Dans ce fichier,
-remplacer les occurrences de \verb|%%%LIVRES%%%|, \verb|%%%BASE%%%| et
-\verb|%%%PASSWD%%%| par leurs valeurs telles que définies au lancement du programme.
-\item[LaTeX] Insérer dans le livre une commande \LaTeX{}.
-\item[NbImgPerLine] Définit le nombre d'images par ligne (defaut 3) et en
-déduit la largeur.
-\item[Newpage] Passer à la page suivante.
-\item[Offset] Si «\,off\,», annule le décalage horizontal et vertical de la page.
-Su une valeur numérique est proposée, elle correspond à un décalage horizontal;
-\item[PortraitWidth] Définit la largeur des portraits (float).
-\item[Print] Imprimer la valeur du paramètre.
-\item[Reset] remet à zéro les numéros de chapitre, section, etc.
-voir la commande «\,Incr\,» ci-dessus.
-\item[SamePage] Dans le cas d'impression Sideways et TwoPages,
-il se peut que les deux moitiés d'arbre puisse tenir sur une seule page.
-\item[Sideways] Imprime la page en mode paysage (utile pour les arbres
-qui peuvent être larges).\label{sideways}
-\item[Split] Dans le cas TwoPages, décale la coupure à droite ou à gauche
-pour ne pas séparer un couple.
-\item[TreeMode] 0 imprime l'arbre comme une liste de liste de cellules
-(debug, devrait fonctionner pour tous les arbres), 1 imprime l'arbre.
-\item[TwoPages] Éclate un arbre en deux moitiés sur deux pages (voir la commande SamePage).
-\item[Unit] Définit l'unité (cm, mm, pt, em).
-\item[Version] Imprime la version du logiciel \gwtol{}.
-\item[Voffset] Décale la page à haut/bas. Idem
-\item[VignWidth] Définit la largeur des vignettes (float).
-\item[WideImages] «\,on/off\,». Donne aux images qui suivent la largeur du texte
-(\verb|\textwidth|).
+\begin{verbatim}
+<x Commande paramètre>reste
+\end{verbatim}
 
-\end{description}
+\begin{itemize}
+  \item \textbf{\cmd{Commande}} : le nom, sensible à la casse, reconnu par
+        \cmd{one\_command}.
+  \item \textbf{\cmd{paramètre}} : le texte compris entre le premier espace
+        \emph{à l'intérieur} de la balise et le \cmd{>} fermant. Il est
+        automatiquement « trimé ».
+  \item \textbf{\cmd{reste}} : tout ce qui suit le \cmd{>}. Seules les
+        commandes de sectionnement (\cmd{Chapter}, \cmd{Section}, \ldots) et
+        la fonction interne \cmd{out} réinjectent \cmd{reste} dans la sortie ;
+        pour les autres il est ignoré.
+\end{itemize}
+
+Conventions de paramètre :
+
+\begin{itemize}
+  \item \textbf{on/off} : accepte \cmd{on}, \cmd{On}, \cmd{off}, \cmd{Off}.
+        Toute autre valeur est traitée comme « faux ».
+  \item \textbf{flottant} : un nombre décimal, avec un suffixe d'unité
+        optionnel toléré (\cmd{-1.5cm} $\to$ \cmd{-1.5} ; l'unité effective
+        vient de \cmd{conf.unit}). \cmd{off}/\cmd{Off} neutralise et rétablit
+        la valeur par défaut.
+  \item \textbf{entier} : un entier ; \cmd{off}/\cmd{Off} rétablit le défaut.
+  \item Un paramètre illisible produit \cmd{Bad param \ldots} sur \cmd{stderr}
+        et retombe sur le défaut.
+\end{itemize}
+
+Une commande inconnue émet \cmd{Commande reste ???} dans le \cmd{.tex} (repère
+visible d'une faute de frappe).
+
+Les longueurs par défaut (en cm) : largeur texte 15.5, hauteur texte 24.5,
+image 5.1, portrait 5.1, vignette 1.5, marge 2.5, séparation colonnes 0.05,
+épaisseur des filets 0.5.
+
+\vspace{1em}
+
+%======================================================================
+\subsubsection*{Sectionnement et compteurs}
+
+\begin{longtable}{C E}
+\toprule
+\textbf{Commande} & \textbf{Effet} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commande} & \textbf{Effet} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\cmd{Chapter} & Émet \cmd{\textbackslash chapter\{titre\}}, incrémente le
+compteur de chapitre, remet à zéro section/sous-section/sous-sous-section,
+passe au niveau courant 1. \\
+\addlinespace
+
+\cmd{Section} & Émet \cmd{\textbackslash section\{titre\}}, incrémente la
+section, niveau 2, remet à zéro les compteurs inférieurs. \\
+\addlinespace
+
+\cmd{SubSection} & Émet \cmd{\textbackslash subsection\{titre\}}, niveau 3. \\
+\addlinespace
+
+\cmd{SubSubSection} & Émet \cmd{\textbackslash subsubsection\{titre\}},
+niveau 4. \\
+\addlinespace
+
+\cmd{Incr} & Paramètre \cmd{Chapter} $|$ \cmd{Section} $|$ \cmd{SubSection}
+$|$ \cmd{SubSubSection} : incrémente le compteur nommé \emph{sans} produire de
+titre, et remet à zéro les compteurs plus profonds. \\
+\addlinespace
+
+\cmd{Reset} & Même paramètre que \cmd{Incr} : remet à zéro le compteur nommé
+(et les plus profonds), sans rien émettre. \\
+\end{longtable}
+
+\noindent
+Le niveau courant fixé par \cmd{Chapter}/\cmd{Section}/\ldots{} détermine la
+profondeur des titres générés automatiquement par les liens \cmd{<a>}
+(voir \cmd{process\_one\_line}).
+
+%======================================================================
+\subsubsection*{Géométrie de la page (flottants, en \cmd{conf.unit})}
+
+\begin{longtable}{C T F}
+\toprule
+\textbf{Commande} & \textbf{Défaut} & \textbf{Effet} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commande} & \textbf{Défaut} & \textbf{Effet} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\cmd{TextWidth}  & 15.5 & Largeur du bloc de texte (\cmd{textwidth}). \\
+\addlinespace
+
+\cmd{TextHeight} & 24.5 & Hauteur du bloc de texte (\cmd{textheight}). \\
+\addlinespace
+
+\cmd{ColSep}     & 0.05 & Séparation entre colonnes (\cmd{colsep}). \\
+\addlinespace
+
+\cmd{Unit}       & \cmd{cm} & Unité de longueur employée par toutes les valeurs
+numériques (\cmd{unit}). \\
+\addlinespace
+
+\cmd{Offset}     & 0.0 & Décalage horizontal : active \cmd{offset}, fixe
+\cmd{hoffset} à la valeur, remet \cmd{voffset} à 0. \cmd{off} désactive. \\
+\addlinespace
+
+\cmd{Hoffset}    & 1.5 \textbf{(!)} & Décalage horizontal seul (\cmd{offset} +
+\cmd{hoffset}). Le défaut hérité est \cmd{vignwidth\_default} (1.5),
+probablement un copier-coller — préciser toujours une valeur. \\
+\addlinespace
+
+\cmd{Voffset}    & 1.5 \textbf{(!)} & Décalage vertical seul (\cmd{offset} +
+\cmd{voffset}). Même remarque que \cmd{Hoffset}. \\
+\end{longtable}
+
+%======================================================================
+\subsubsection*{Images}
+
+\begin{longtable}{C T F}
+\toprule
+\textbf{Commande} & \textbf{Type / défaut} & \textbf{Effet} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commande} & \textbf{Type / défaut} & \textbf{Effet} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\cmd{ImgWidth}      & flottant / 5.1 & Largeur des images du corps
+(\cmd{imgwidth}). \\
+\addlinespace
+
+\cmd{PortraitWidth} & flottant / 5.1 & Largeur des portraits
+(\cmd{portraitwidth}). \\
+\addlinespace
+\cmd{VignWidth}     & flottant / 1.5 & Largeur des vignettes
+(\cmd{vignwidth}). \\
+
+\addlinespace
+\cmd{NbImgPerLine}  & entier / 3 & Nombre d'images par ligne ; ajuste aussi
+\cmd{imgwidth = textwidth / N}. \\
+\addlinespace
+
+\cmd{ImageLabels}   & entier / 3 & Schéma de numérotation : \cmd{1} et \cmd{3}
+$\to$ \cmd{ch.sec.nbr} ; \cmd{4} $\to$ \cmd{ch.sec.ssec.nbr}. \\
+\addlinespace
+
+\cmd{CollectImages} & on/off & Rassemble et imprime les images citées dans les
+notes d'une personne (\cmd{collectimages}). \\
+\addlinespace
+\cmd{WideImages}    & on/off & \cmd{on} : \cmd{imgwidth = textwidth} (images
+pleine largeur) et positionne l'indicateur \cmd{wide} ; \cmd{off} : rétablit
+5.1. \\
+\end{longtable}
+
+%======================================================================
+\subsubsection*{Arbres généalogiques}
+
+\begin{longtable}{C T F}
+\toprule
+\textbf{Commande} & \textbf{Type / défaut} & \textbf{Effet} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commande} & \textbf{Type / défaut} & \textbf{Effet} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\cmd{Arbres} / \cmd{Trees} & on/off & \cmd{on} : force \cmd{imgwidth} et
+\cmd{portraitwidth} à 1.5 (petites images dans les arbres) et met \cmd{arbres}
+à vrai ; \cmd{off} : rétablit les défauts. \\
+\addlinespace
+
+\cmd{TreeMode}    & entier / 0 & Mode de rendu des arbres (\cmd{treemode}). \\
+\addlinespace
+
+\label{sideways}
+\cmd{Sideways}    & on/off & Fait pivoter les arbres de 90 degrés ; réinitialise
+\cmd{textwidth}/\cmd{textheight} aux défauts. \\
+\addlinespace
+
+\cmd{TwoPages}    & on/off & Rend un arbre sur deux pages. \\
+\addlinespace
+\cmd{DoubleCells} & on/off & Cellules doubles (\cmd{double}). \\
+\addlinespace
+
+\cmd{Split}       & entier / 0 & Paramètre de découpage (\cmd{split}, ancien
+chemin de coupe en deux pages). \\
+\addlinespace
+
+\cmd{Expand}      & entier / 0 & Facteur d'expansion (\cmd{expand}). \\
+\addlinespace
+\cmd{SamePage}    & on/off & Maintient l'arbre sur une même page
+(\cmd{samepage}). \\
+\end{longtable}
+
+%======================================================================
+\subsubsection*{Rendu deux pages par « clipping » (module \cmd{Trees})}
+
+\noindent
+Ces commandes règlent des variables globales du module \cmd{Trees} (pas la
+\cmd{conf}). Le mécanisme dessine l'arbre une seule fois, large d'environ deux
+pages, dans une save-box, puis en montre deux fenêtres clippées qui se
+recouvrent. Nécessite \cmd{\textbackslash usepackage\{adjustbox\}}.
+
+\vspace{0.6em}
+
+\begin{longtable}{C T F}
+\toprule
+\textbf{Commande} & \textbf{Type / défaut} & \textbf{Effet} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commande} & \textbf{Type / défaut} & \textbf{Effet} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\cmd{ClipMode}      & on/off / \textbf{on} & Active le rendu par clipping
+(\cmd{off} : retour à l'ancien découpage du modèle de cellules). \\
+\addlinespace
+
+\cmd{ClipOverlap}   & flottant / 1.0 & Recouvrement (cm) de part et d'autre du
+pli, pour qu'un nom/portrait à cheval reste lisible sur les deux pages. \\
+\addlinespace
+
+\cmd{ClipEnlarge}   & flottant / 0.0 & Largeur supplémentaire que chaque
+fenêtre peut gagner côté pli, en débordant dans la marge. \\
+\addlinespace
+
+\cmd{ClipOffset}    & flottant / 0.0 & Décale le pli hors du centre
+(\cmd{clip\_fold}) : agrandit la moitié gauche, réduit la droite (négatif :
+inverse). \\
+\addlinespace
+
+\cmd{ClipShiftLeft}  & flottant / 0.0 & Ajustement horizontal de la fenêtre
+gauche (\cmd{clip\_shift\_l}). \\
+\addlinespace
+
+\cmd{ClipShiftRight} & flottant / 0.0 & Ajustement horizontal de la fenêtre
+droite (\cmd{clip\_shift\_r}). \\
+\addlinespace
+
+\cmd{ClipPad}       & flottant / 1.5 & Marge (cm) des \emph{deux} côtés de la
+box sauvegardée, pour que les noms de bord débordant leur colonne ne soient pas
+rognés par le clip. \\
+\addlinespace
+
+\cmd{ClipPadLeft}   & flottant / 0.0 & Marge gauche seule
+(\cmd{clip\_pad\_l}). \\
+\addlinespace
+
+\cmd{ClipPadRight}  & flottant / 1.5 & Marge droite seule
+(\cmd{clip\_pad\_r}). \\
+\addlinespace
+
+\cmd{ClipTick}      & flottant / 0.35 & Longueur (cm) des repères d'alignement
+au centre du pli ; 0 les supprime. \\
+\addlinespace
+
+\cmd{MidPoint}      & \cmd{top} $|$ \cmd{bottom} $|$ \cmd{both} $|$ \cmd{off}
+$|$ \cmd{auto} & Où dessiner l'étoile de pli (\cmd{clip\_midpoint}).
+\cmd{auto} infère selon l'extrémité la plus chargée. \\
+
+\addlinespace
+\cmd{PortraitFill}  & flottant / 0.0 & Hauteur (cm) de la barre de liaison qui
+comble l'emplacement de portrait vide d'une personne sans photo, quand sa
+rangée en comporte ; 0 = désactivé. \\
+\addlinespace
+
+\cmd{ShowBoxes}     & on/off & Encadre cellules, images et fenêtres clippées
+avec \cmd{\textbackslash fbox} pour régler la mise en page. \\
+\addlinespace
+
+\cmd{TreeNewPage}   & on/off / \textbf{on} & Démarre chaque moitié d'arbre sur
+sa propre page. \cmd{off} laisse la première moitié partager la page avec un
+titre de section qui précède. \\
+\end{longtable}
+
+%======================================================================
+\subsubsection*{Mise en évidence}
+
+\begin{longtable}{C E}
+\toprule
+\textbf{Commande} & \textbf{Effet} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commande} & \textbf{Effet} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\cmd{HighLight} & Paramètre : nom, ou \cmd{off}. Ajoute une clé de surbrillance
+normalisée (ordre des mots indifférent) à \cmd{highlights} ; \cmd{off}/\cmd{Off}
+vide la liste. Les personnes correspondantes sont mises en évidence dans les
+arbres et les liens. \\
+\end{longtable}
+
+%======================================================================
+\subsubsection*{Mise en forme et flux du document}
+
+\begin{longtable}{C T F}
+\toprule
+\textbf{Commande} & \textbf{Type / défaut} & \textbf{Effet} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commande} & \textbf{Type / défaut} & \textbf{Effet} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\cmd{FontSize} & chaîne & Fixe la taille de police (\cmd{fontsize}) ; \cmd{off},
+\cmd{Off} ou vide la neutralise. \\
+\addlinespace
+
+\cmd{Hrule} & on/off & Filet horizontal après chaque fiche personne
+(\cmd{hrule}). \\
+\addlinespace
+
+\cmd{Columns} & entier / 1 & Mode multi-colonnes pour le \emph{corps} des liens
+\cmd{<a>} suivants : \cmd{N >= 2} fait couler chaque corps (sous son titre
+pleine largeur) en \cmd{N} colonnes ; \cmd{1} désactive. \cmd{process\_one\_line}
+place les \cmd{\textbackslash begin/\textbackslash end\{multicols\}}. Nécessite
+\cmd{\textbackslash usepackage\{multicol\}}. \\
+\addlinespace
+
+\cmd{Defaults} & — & Réinitialise en bloc un large ensemble de champs de
+\cmd{conf} (mise en forme + options mkTex) à leurs valeurs par défaut. \\
+\end{longtable}
+
+%======================================================================
+\subsubsection*{Insertion de contenu}
+
+\begin{longtable}{C E}
+\toprule
+\textbf{Commande} & \textbf{Effet} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commande} & \textbf{Effet} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\cmd{Input} & Paramètre : chemin. Inclut un fichier (après substitution de
+\cmd{\%\%\%LIVRES\%\%\%}, \cmd{\%\%\%GW2L\_DIST\%\%\%}, \cmd{\%\%\%PASSWD\%\%\%},
+\cmd{\%\%\%BASE\%\%\%}). Un \cmd{.tex} est recopié \emph{verbatim} (macros,
+préambules) ; tout autre fichier (\cmd{.txt}\ldots) est traité comme du contenu
+GeneWeb : les lignes \cmd{<x \ldots>}/\cmd{<y \ldots>} sont dispatchées, le
+reste est mis en tampon puis passé à \cmd{process\_html}, en préservant l'ordre
+d'origine. \\
+\addlinespace
+
+\cmd{LaTeX} & Écrit \cmd{paramètre} suivi d'un saut de ligne — une ligne de
+LaTeX brut. \\
+\addlinespace
+
+\cmd{Print} & Écrit \cmd{paramètre} tel quel, sans saut de ligne. \\
+\addlinespace
+
+\cmd{NewPage} & Émet \cmd{\textbackslash newpage}. \\
+\end{longtable}
+
+%======================================================================
+\subsubsection*{Diagnostic et information}
+
+\begin{longtable}{C T F}
+\toprule
+\textbf{Commande} & \textbf{Sortie} & \textbf{Effet} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commande} & \textbf{Sortie} & \textbf{Effet} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\cmd{Debug} & — & Fixe le niveau de débogage (\cmd{debug}, entier). \cmd{2}
+active les traces détaillées. \\
+\addlinespace
+
+\cmd{DumpConfig}  & stderr & Écrit la configuration courante sur \cmd{stderr}
+(\cmd{dump\_conf}). \\
+\addlinespace
+
+\cmd{PrintConfig} & .tex & Écrit la configuration dans le document
+(\cmd{print\_conf}). \\
+\addlinespace
+
+\cmd{Version} & .tex & Écrit la version de l'outil (\cmd{Sutil.version}). \\
+\addlinespace
+
+\cmd{BaseVersion} & .tex & Écrit la date du dernier accès au fichier de base
+\cmd{.gwb} (résout le suffixe \cmd{-new}). \\
+\addlinespace
+
+\cmd{GeneWebCommit} & .tex & Écrit les informations de build GeneWeb (branche,
+source, id et date de commit, date de compilation) sous forme d'\cmd{itemize}. \\
+\end{longtable}
+
+%======================================================================
+\subsubsection*{Analyse d'une ligne \cmd{<x \ldots>} (rappel)}
+
+\cmd{one\_command} découpe la ligne ainsi :
+
+\begin{itemize}
+  \item \cmd{cmd} : de la colonne 3 (après \cmd{<x\ }) jusqu'au premier espace
+        \emph{interne} à la balise (ou le \cmd{>} s'il n'y a pas d'espace) ;
+  \item \cmd{param} : entre cet espace et le \cmd{>} ;
+  \item \cmd{remain} : après le \cmd{>}.
+\end{itemize}
+
+Le premier espace retenu est cherché \emph{avant} le \cmd{>}, ce qui évite
+qu'un \cmd{<x Cmd>texte avec espaces} n'absorbe \cmd{>texte} dans \cmd{cmd}
+(ancien bug de \cmd{String.sub} à longueur négative). La plupart des commandes
+retournent une nouvelle \cmd{conf} (enregistrement immuable mis à jour),
+certaines n'ont qu'un effet de bord (écriture ou variable globale
+\cmd{Trees.*}).
+
 
 \subsection{Les pages GeneWeb}
 
@@ -259,7 +638,8 @@ Le dernier pavé cite les sources d'information pour les données collectées.
 \item[Liste par titre] Obtenues avec la commande
 \verb|m=TT;sm=S;t=titre;p=lieu;|.
 
-\item[Arbres] Obtenues avec les commandes \verb|m=A;t=T| et \verb|m=D;t=T|.
+\item[Arbres] Obtenues avec les commandes \verb|m=R|, \verb|m=RL|, \verb|m=RLM|,
+\verb|m=A;t=T| et \verb|m=D;t=T|.
 La mise en page automatique de ces arbres est un problème difficile et
 nécessite des tâtonnements an ajustant la profondeur, l'orientation «\,portrait\,»
 ou «\,paysage\,» de la page (commande «\,Sideways\,» page \pageref{sideways}) et la

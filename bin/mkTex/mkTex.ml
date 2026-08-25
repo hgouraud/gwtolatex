@@ -598,7 +598,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
     let k = Hutil.get_href_attr "k" href_attrl in
     let s = Hutil.get_href_attr "s" href_attrl in
     let v = Hutil.get_href_attr "v" href_attrl in
-    let f = Hutil.get_href_attr "f" href_attrl in
+    let _f = Hutil.get_href_attr "f" href_attrl in
     let t = Hutil.get_href_attr "t" href_attrl in
     if conf.debug > 0 then
       Printf.eprintf "b=%s vs basename=%s\n" b conf.basename;
@@ -663,7 +663,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             else if Sutil.contains content "includegraphics" then
               "{\\bf " ^ content ^ "}"
             else if List.mem (norm_hl test_hl) conf.highlights then
-              "{\\hl {\\bf " ^ content ^ " xxx}}"
+              "{\\hl {\\bf " ^ content ^ "}}"
             else "{\\bf " ^ content ^ "}" ^ index_s
         | None -> "{\\bf " ^ content ^ "}"
   in
@@ -945,8 +945,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                               in
                               let te, it =
                                 if !seen_br then
-                                  ( String.trim te ^ " " ^ String.trim !dates,
-                                    it )
+                                  (String.trim te ^ " " ^ String.trim !dates, it)
                                 else (te, !dates)
                               in
                               if conf.debug = 2 then
@@ -1076,7 +1075,8 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                         (if oc <> 0 then Format.sprintf " (%d)" oc else "")
                     in
                     if conf.debug >= 2 then
-                      Printf.eprintf "a_ref hl test = [%s]\n%!" (norm_hl test_hl);
+                      Printf.eprintf "a_ref hl test = [%s]\n%!"
+                        (norm_hl test_hl);
                     (List.mem (norm_hl test_hl) conf.highlights, index_l)
                   with e ->
                     if conf.debug = 2 then
@@ -1187,9 +1187,7 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
             let sp_dates = ref "" in
             let ch =
               List.concat_map
-                (function
-                  | Element ("span", _, sch) -> sch
-                  | n -> [ n ])
+                (function Element ("span", _, sch) -> sch | n -> [ n ])
                 children
             in
             (* Collect, separately: the main person's name and dates, and (after
@@ -1443,7 +1441,7 @@ let rec one_command conf base och line =
     let on_off = param = "off" || param = "Off" in
     match on_off with
     | true -> (true, default)
-    | false ->
+    | false -> (
         (* Tolerate a trailing unit suffix, e.g. "-1.5cm" -> -1.5:
            Float.of_string chokes on the "cm" and used to silently fall
            back to the default (0.0), so "Offset -1.5cm" was a no-op. The
@@ -1465,7 +1463,7 @@ let rec one_command conf base och line =
           try Float.of_string num
           with Failure _ ->
             Printf.eprintf "Bad param %s\n" line;
-            default )
+            default ))
   in
   let get_int_value line param default =
     let on_off = param = "off" || param = "Off" in
@@ -1565,11 +1563,72 @@ let rec one_command conf base och line =
       subsubsection := 0;
       mark_section och;
       conf
+  | "ClipMode" ->
+      (* Two-page trees via clip-a-single-layout (default on) instead of
+         splitting the cell model. Requires \usepackage{adjustbox}. Off falls
+         back to the old split path. *)
+      Trees.clip_mode := param = "on" || param = "On";
+      conf
+  | "ClipOverlap" ->
+      (* How far (in conf.unit, cm) each clipped page reaches past the fold so
+         a name/portrait on the cut stays readable on both pages. *)
+      let _off, value = get_float_value line param 1.0 in
+      Trees.clip_overlap := value;
+      conf
+  | "ClipEnlarge" ->
+      (* Extra width (conf.unit, cm) each window may gain on its fold side,
+         spilling into the page margin. *)
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_enlarge := value;
+      conf
+  | "ClipOffset" ->
+      (* Shift the fold off the tree centre (conf.unit, cm): grow the left half
+         and shrink the right by this amount (negative reverses). *)
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_fold := value;
+      conf
+  | "ClipShiftLeft" ->
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_shift_l := value;
+      conf
+  | "ClipShiftRight" ->
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_shift_r := value;
+      conf
+  | "ClipPad" ->
+      (* Margin (conf.unit, cm) on BOTH sides of the saved tree box so edge
+         names that overflow their column are not shaved off by the clip. *)
+      let _off, value = get_float_value line param 1.5 in
+      Trees.clip_pad_l := value;
+      Trees.clip_pad_r := value;
+      conf
+  | "ClipPadLeft" ->
+      let _off, value = get_float_value line param 0.0 in
+      Trees.clip_pad_l := value;
+      conf
+  | "ClipPadRight" ->
+      let _off, value = get_float_value line param 1.5 in
+      Trees.clip_pad_r := value;
+      conf
+  | "ClipTick" ->
+      (* Length (conf.unit, cm) of the centre fold registration ticks; 0 off. *)
+      let _off, value = get_float_value line param 0.35 in
+      Trees.clip_tick := value;
+      conf
   | "CollectImages" ->
       { conf with collectimages = param = "on" || param = "On" }
   | "ColSep" ->
       let _off, value = get_float_value line param colsep_default in
       { conf with colsep = value }
+  | "Columns" ->
+      (* Set the text-column MODE for the bodies of following <a> ancestry
+         links: N>=2 flows each body (below its full-width section title) into
+         N columns; 1 turns it off. The <a> handler in process_one_line does
+         the actual \begin/\end{multicols} around each body, so it is always
+         balanced and local to one link. Requires \usepackage{multicol}. *)
+      let _off, n = get_int_value line param 1 in
+      multicols_n := if n > 1 then n else 1;
+      conf
   | "Debug" ->
       let _off, value = get_int_value line param 0 in
       { conf with debug = value }
@@ -1751,9 +1810,21 @@ let rec one_command conf base och line =
   | "NewPage" ->
       output_string och "\\newpage";
       conf
+  | "Hoffset" ->
+      let off, value = get_float_value line param vignwidth_default in
+      { conf with offset = off; hoffset = value }
+  | "Voffset" ->
+      let off, value = get_float_value line param vignwidth_default in
+      { conf with offset = off; voffset = value }
   | "Offset" ->
       let off, value = get_float_value line param 0.0 in
       { conf with offset = off; hoffset = value; voffset = 0.0 }
+  | "PortraitFill" ->
+      (* Height (conf.unit, cm) of the connector bar that fills a name-only
+         person's empty portrait slot when its row has portraits; 0 = off. *)
+      let _off, value = get_float_value line param 0.0 in
+      Trees.portrait_fill := value;
+      conf
   | "PortraitWidth" ->
       let _off, value = get_float_value line param imgwidth_default in
       { conf with portraitwidth = value }
@@ -1786,15 +1857,6 @@ let rec one_command conf base och line =
           conf
       | _ -> conf)
   | "SamePage" -> { conf with samepage = param = "on" || param = "On" }
-  | "Columns" ->
-      (* Set the text-column MODE for the bodies of following <a> ancestry
-         links: N>=2 flows each body (below its full-width section title) into
-         N columns; 1 turns it off. The <a> handler in process_one_line does
-         the actual \begin/\end{multicols} around each body, so it is always
-         balanced and local to one link. Requires \usepackage{multicol}. *)
-      let _off, n = get_int_value line param 1 in
-      multicols_n := (if n > 1 then n else 1);
-      conf
   | "Section" ->
       out "section" param;
       incr section;
@@ -1843,65 +1905,7 @@ let rec one_command conf base och line =
       (* Start each split tree half on its own page (default on). Kept as a
          Trees-module knob so config.ml need not change. Turn off to let the
          first half share a page with a preceding section title. *)
-      Trees.tree_newpage := (param = "on" || param = "On");
-      conf
-  | "ClipMode" ->
-      (* Two-page trees via clip-a-single-layout (default on) instead of
-         splitting the cell model. Requires \usepackage{adjustbox}. Off falls
-         back to the old split path. *)
-      Trees.clip_mode := (param = "on" || param = "On");
-      conf
-  | "ClipOverlap" ->
-      (* How far (in conf.unit, cm) each clipped page reaches past the fold so
-         a name/portrait on the cut stays readable on both pages. *)
-      let _off, value = get_float_value line param 1.0 in
-      Trees.clip_overlap := value;
-      conf
-  | "ClipEnlarge" ->
-      (* Extra width (conf.unit, cm) each window may gain on its fold side,
-         spilling into the page margin. *)
-      let _off, value = get_float_value line param 0.0 in
-      Trees.clip_enlarge := value;
-      conf
-  | "ClipOffset" ->
-      (* Shift the fold off the tree centre (conf.unit, cm): grow the left half
-         and shrink the right by this amount (negative reverses). *)
-      let _off, value = get_float_value line param 0.0 in
-      Trees.clip_fold := value;
-      conf
-  | "ClipShiftLeft" ->
-      let _off, value = get_float_value line param 0.0 in
-      Trees.clip_shift_l := value;
-      conf
-  | "ClipShiftRight" ->
-      let _off, value = get_float_value line param 0.0 in
-      Trees.clip_shift_r := value;
-      conf
-  | "ClipPad" ->
-      (* Margin (conf.unit, cm) on BOTH sides of the saved tree box so edge
-         names that overflow their column are not shaved off by the clip. *)
-      let _off, value = get_float_value line param 1.5 in
-      Trees.clip_pad_l := value;
-      Trees.clip_pad_r := value;
-      conf
-  | "ClipPadLeft" ->
-      let _off, value = get_float_value line param 0.0 in
-      Trees.clip_pad_l := value;
-      conf
-  | "ClipPadRight" ->
-      let _off, value = get_float_value line param 1.5 in
-      Trees.clip_pad_r := value;
-      conf
-  | "ClipTick" ->
-      (* Length (conf.unit, cm) of the centre fold registration ticks; 0 off. *)
-      let _off, value = get_float_value line param 0.35 in
-      Trees.clip_tick := value;
-      conf
-  | "PortraitFill" ->
-      (* Height (conf.unit, cm) of the connector bar that fills a name-only
-         person's empty portrait slot when its row has portraits; 0 = off. *)
-      let _off, value = get_float_value line param 0.0 in
-      Trees.portrait_fill := value;
+      Trees.tree_newpage := param = "on" || param = "On";
       conf
   | "MidPoint" ->
       (* Where to draw the fold star: top | bottom | both | off | auto. *)
@@ -1909,7 +1913,7 @@ let rec one_command conf base och line =
       conf
   | "ShowBoxes" ->
       (* Frame cells, images and clipped windows with \fbox to tune layout. *)
-      Trees.show_boxes := (param = "on" || param = "On");
+      Trees.show_boxes := param = "on" || param = "On";
       conf
   | "Unit" -> { conf with unit = param }
   | "Version" ->
@@ -1926,12 +1930,6 @@ let rec one_command conf base och line =
            else imgwidth_default);
         wide = param = "on" || param = "On";
       }
-  | "Hoffset" ->
-      let off, value = get_float_value line param vignwidth_default in
-      { conf with offset = off; hoffset = value }
-  | "Voffset" ->
-      let off, value = get_float_value line param vignwidth_default in
-      { conf with offset = off; voffset = value }
   | _ ->
       output_string och (Format.sprintf "%s%s ???\n" cmd remain);
       conf
@@ -2121,7 +2119,9 @@ let print_images conf och images_list _key_str =
              the following image starts on a new row).  An explicit \par is
              more reliable here than trailing blank lines, which paragraph
              mode can swallow. *)
-          let wide_sep = if Sutil.contains name "-wide" then "\\par\n" else "" in
+          let wide_sep =
+            if Sutil.contains name "-wide" then "\\par\n" else ""
+          in
           output_string och
             (Format.sprintf
                "%s\\parbox{%s}{\\includegraphics[width=%s]{%s%s%s}\\newline%s%s%s}%s\n"
