@@ -36,7 +36,35 @@ let dict_credits = ref (Hashtbl.create 100)
    credit) per printed photo that has a credit. The page is unknown here (only
    pdflatex knows it), so it is resolved later by the mkPhotoCredits post-pass
    from the .aux, which looks up each aux_label. *)
+(* Body photos for PhotoCredits: (aux_label, image_id, number, file, credit). *)
 let photocredits = ref []
+
+(* Portraits for PhotoCredits, de-duplicated by image_id. A portrait is
+   pictured many times (once per individual page, many times inside trees), so
+   we keep ONE record per id and prefer the individual-page occurrence, which
+   alone carries a page number (ch.sec.0) and a \label. Value:
+   (number_opt, file, credit) - number_opt = Some "ch.sec.0" once an
+   individual-page occurrence was seen, None while only tree occurrences were. *)
+let portrait_recs : (int, string option * string * string) Hashtbl.t =
+  Hashtbl.create 100
+
+(* True while rendering the cells of a tree (bigtree / dag): a portrait drawn
+   there is a repeat, not the person's individual-page portrait, so it must not
+   grab a page number nor emit a \label. *)
+let in_tree = ref false
+
+(* <x ShowNoCredits on> : also list the credit-less photos. In per-page mode it
+   controls whether they appear in the page block; in global mode it feeds the
+   mkPhotoCredits post-pass via the .pcredits header. *)
+let show_no_credits = ref false
+
+(* <x PhotoCredits on> : per-page mode. Instead of a global chapter, a small
+   "Crédits" block is emitted at the end of each personal page. page_images
+   accumulates that page's photos/portraits as (kind, number, credit); it is
+   emitted and cleared at the page boundary. Needs no page numbers, no .aux and
+   no post-pass. *)
+let per_page_credits = ref false
+let page_images = ref []
 let img_name_list = ref []
 let img_ok_list = ref []
 
@@ -747,23 +775,71 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
           Printf.eprintf "tag_img: skipping unnameable portrait (href=%s)\n%!"
             href;
         index_s)
-      else (
+      else
+        (* Canonical portrait/keyed-image file name, exactly as print_image
+           builds it on disk and as the who_is_where skeleton records it. *)
+        let pf =
+          (Sutil.lower img_name |> Sutil.replace '-' '_'
+         |> Sutil.replace ' ' '_')
+          ^ ".jpg"
+        in
         (* Part 1: collect portraits (and keyed person images) for the
-           who_is_where skeleton. The file on disk is the canonicalised person
-           key + .jpg, exactly as print_image builds it. *)
-        (if img_type = Portrait || img_type = Imagek then
-           let pf =
-             (Sutil.lower img_name |> Sutil.replace '-' '_'
-            |> Sutil.replace ' ' '_')
-             ^ ".jpg"
-           in
-           used_portraits := (pf, fn, sn, ocn) :: !used_portraits);
-        print_image conf
-          ( img_type,
-            img_name,
-            (!chapter, !section, !subsection, !subsubsection),
-            !image_nbr )
-        ^ index_s)
+           who_is_where skeleton. *)
+        if img_type = Portrait || img_type = Imagek then
+          used_portraits := (pf, fn, sn, ocn) :: !used_portraits;
+        let img_str =
+          print_image conf
+            ( img_type,
+              img_name,
+              (!chapter, !section, !subsection, !subsubsection),
+              !image_nbr )
+        in
+        (* PhotoCredits for portraits / keyed images registered in
+           who_is_where. Deduplicated by image_id in portrait_recs:
+           - individual-page occurrence (NOT in a tree): assign the number
+             ch.sec.0 (nb=0), emit a \label so the page resolves, and record it
+             as the authoritative (Some number) occurrence - only once, even if
+             the individual portrait shows more than once.
+           - tree occurrence (in_tree): never number nor label it; just record
+             a placeholder (None) if the id has not been seen at all, so a
+             person who has NO individual page is still listed later, without a
+             page number. *)
+        let credit_label =
+          if img_type = Portrait || img_type = Imagek then
+            match lookup_image_id pf with
+            | Some id when id <> 0 ->
+                let credit =
+                  match Hashtbl.find_opt !dict_credits id with
+                  | Some c -> String.trim c
+                  | None -> ""
+                in
+                if !in_tree then (
+                  if not (Hashtbl.mem portrait_recs id) then
+                    Hashtbl.replace portrait_recs id (None, pf, credit);
+                  "")
+                else (
+                  (* per-page mode: this page's portrait *)
+                  page_images := ("portrait", "", credit) :: !page_images;
+                  let already_paged =
+                    match Hashtbl.find_opt portrait_recs id with
+                    | Some (Some _, _, _) -> true
+                    | _ -> false
+                  in
+                  if already_paged then ""
+                  else
+                    let number =
+                      match conf.imagelabels with
+                      | 4 ->
+                          Format.sprintf "%d.%d.%d.0" !chapter !section
+                            !subsection
+                      | _ -> Format.sprintf "%d.%d.0" !chapter !section
+                    in
+                    Hashtbl.replace portrait_recs id (Some number, pf, credit);
+                    Format.sprintf "\\label{img_ref_%d.%s}" id number)
+            | _ -> ""
+          else ""
+        in
+        img_str ^ credit_label ^ index_s
     in
     str
   in
@@ -999,7 +1075,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                   | _ -> ())
                 cells
             in
+            in_tree := true;
             do_rows children;
+            in_tree := false;
             Trees.print_tree conf (List.rev !dag_rows)
         | "table" ->
             let content = get_child children in
@@ -1172,7 +1250,9 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
               Printf.eprintf "==== BIGTREE RAW DUMP END ====\n%!");
             new_tree := [];
             new_row := [];
+            in_tree := true;
             let _ = continue "" children in
+            in_tree := false;
             if !new_row <> [] then new_tree := !new_row :: !new_tree;
             Trees.print_tree conf (List.rev !new_tree)
         | "cell" ->
@@ -1870,13 +1950,23 @@ let rec one_command conf base och line =
       output_string och (print_conf conf);
       conf
   | "PhotoCredits" ->
-      (* Drop a marker where the photo-credits table should appear. At this
-         stage page numbers are unknown, so we cannot build the list yet: it is
-         a bare LaTeX comment (thus invisible and harmless) until the
-         mkPhotoCredits post-pass - run after the first pdflatex, when the .aux
-         holds every img_ref page - replaces this exact line with the list,
-         grouped and sorted by page. *)
-      output_string och (Sutil.photocredits_marker ^ "\n");
+      (* Two modes:
+         - "on" (or "page"): per-page credits. A small block is emitted at the
+           end of each personal page; no marker, no post-pass.
+         - "off": turn per-page credits off.
+         - no parameter: the old global chapter. Drop a marker where the table
+           should appear; the mkPhotoCredits post-pass, run after the first
+           pdflatex, replaces it with the page-grouped list. *)
+      (match String.lowercase_ascii param with
+      | "on" | "page" -> per_page_credits := true
+      | "off" -> per_page_credits := false
+      | _ -> output_string och (Sutil.photocredits_marker ^ "\n"));
+      conf
+  | "ShowNoCredits" ->
+      (* When on, the PhotoCredits table is followed by a separate list of the
+         used photos that have no credit yet. Recorded in the .pcredits header
+         and honoured by the mkPhotoCredits post-pass. *)
+      show_no_credits := param = "on" || param = "On";
       conf
   | "Reset" -> (
       let param = String.trim param in
@@ -2124,19 +2214,27 @@ let print_images conf och images_list _key_str =
               Format.sprintf "\\label{img_ref_%d.%s}" image_id img_number0
             else ""
           in
-          (* Record this photo for the <x PhotoCredits> table when it carries a
-             credit (5th field of who_is_where.txt). Only image_id<>0 photos
-             have an img_ref label - and thus a resolvable page - so those are
-             the only ones a page-grouped credits list can place. *)
-          (if image_id <> 0 then
-             match Hashtbl.find_opt !dict_credits image_id with
-             | Some credit when String.trim credit <> "" ->
-                 let aux_label =
-                   Format.sprintf "img_ref_%d.%s" image_id img_number0
-                 in
-                 photocredits :=
-                   (aux_label, img_number0, String.trim credit) :: !photocredits
-             | _ -> ());
+          (* Record this photo for the <x PhotoCredits> table. Every image_id<>0
+             photo has an img_ref label - and thus a resolvable page - so record
+             them all, with an empty credit when none: the post-pass keeps the
+             credited ones for the main list and, under <x ShowNoCredits on>,
+             the credit-less ones for the separate list. *)
+          if image_id <> 0 then (
+            let credit =
+              match Hashtbl.find_opt !dict_credits image_id with
+              | Some c -> String.trim c
+              | None -> ""
+            in
+            let aux_label =
+              Format.sprintf "img_ref_%d.%s" image_id img_number0
+            in
+            (* name1 is the image file name (underscores restored); image_id is
+                the who_is_where id. Both carried so the no-credit list can show
+                the file and id to find the entry quickly. *)
+            photocredits :=
+              (aux_label, image_id, img_number0, name1, credit) :: !photocredits;
+            (* per-page mode: this page's body photo *)
+            page_images := ("photo", img_number0, credit) :: !page_images);
           (* list of persons present on this image *)
           (* TODO les personnes /z ont été éliminées!! *)
           let index_list =
@@ -2186,6 +2284,37 @@ let print_images conf och images_list _key_str =
                img_label index_list wide_sep))
     (List.rev images_list);
   output_string och (Format.sprintf "\n\n")
+
+(* Per-page credits: emit a small footnotesize "Crédits" block for the images
+   collected on the current page, then clear the accumulator. Credit-less
+   photos are shown only under <x ShowNoCredits on>. A credit identical to the
+   previous one on the line is written "idem" instead of being repeated. *)
+let flush_page_credits och =
+  let recs = List.rev !page_images in
+  page_images := [];
+  let recs =
+    List.filter (fun (_k, _n, credit) -> credit <> "" || !show_no_credits) recs
+  in
+  if recs <> [] then
+    let prev = ref "" in
+    let items =
+      List.map
+        (fun (kind, number, credit) ->
+          let word = if kind = "portrait" then "portrait" else "photo" in
+          let num = if number = "" then "" else " " ^ number in
+          let shown =
+            if credit = "" then "sans crédit"
+            else if credit = !prev then "idem"
+            else credit
+          in
+          if credit <> "" then prev := credit;
+          Format.sprintf "%s%s (%s)" word num shown)
+        recs
+    in
+    output_string och
+      (Format.sprintf
+         "\\par{\\footnotesize\\noindent Crédits photos~: %s.\\par}\n"
+         (String.concat " ; " items))
 
 let process_one_line conf base _dict1 _dict2 och line =
   if line <> "" then
@@ -2283,6 +2412,9 @@ let process_one_line conf base _dict1 _dict2 och line =
               if conf.collectimages && !images_in_page <> [] then
                 print_images conf och !images_in_page key_str;
               images_in_page := [];
+              (* per-page photo credits at the end of this personal page *)
+              if !per_page_credits && not !gwtest then flush_page_credits och
+              else page_images := [];
               if conf.hrule && not !gwtest then
                 output_string och (Format.sprintf "\n\\vspace{0.5cm}\\hrule\n");
               conf
@@ -2345,13 +2477,29 @@ let scrub_nbsp fname =
    mkPhotoCredits post-pass reads it, resolves aux_label -> page via the .aux,
    and builds the page-grouped list. Written even when empty (no credited
    photo) so the post-pass has a definite input and can blank the marker. *)
-let write_photocredits fname_out records =
+let write_photocredits fname_out records portraits show_nc =
   let fname = Filename.remove_extension fname_out ^ ".pcredits" in
   let oc = open_out fname in
+  (* header directive read back by mkPhotoCredits. Each record:
+       kind<TAB>aux_label<TAB>id<TAB>number<TAB>file<TAB>credit
+     kind is "photo" or "portrait"; a portrait with no individual page has an
+     empty aux_label and number (listed later without a page). *)
+  Printf.fprintf oc "#shownocredits %d\n" (if show_nc then 1 else 0);
   List.iter
-    (fun (aux_label, number, credit) ->
-      Printf.fprintf oc "%s\t%s\t%s\n" aux_label number credit)
+    (fun (aux_label, id, number, file, credit) ->
+      Printf.fprintf oc "photo\t%s\t%d\t%s\t%s\t%s\n" aux_label id number file
+        credit)
     records;
+  Hashtbl.iter
+    (fun id (number_opt, file, credit) ->
+      let label, number =
+        match number_opt with
+        | Some n -> (Format.sprintf "img_ref_%d.%s" id n, n)
+        | None -> ("", "")
+      in
+      Printf.fprintf oc "portrait\t%s\t%d\t%s\t%s\t%s\n" label id number file
+        credit)
+    portraits;
   close_out oc
 
 (* Part 1: scaffold an absent who_is_where.txt from the body photos the run
@@ -2600,7 +2748,8 @@ let main () =
     let out_channel = open_out_bin "list1.dat" in
     Marshal.to_channel out_channel !img_ok_list [];
     close_out out_channel;
-    if not !gwtest then write_photocredits fname_out !photocredits;
+    if not !gwtest then
+      write_photocredits fname_out !photocredits portrait_recs !show_no_credits;
     if not !gwtest then
       sync_who_is_where img_file !used_images !used_portraits !who_existed
   with e ->
