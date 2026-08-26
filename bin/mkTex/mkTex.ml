@@ -837,6 +837,46 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                     Hashtbl.replace portrait_recs id (Some number, pf, credit);
                     Format.sprintf "\\label{img_ref_%d.%s}" id number)
             | _ -> ""
+          else if (img_type = Images || img_type = Wide) && not !in_tree then
+            (* Inline image (<img src="..m=IM;s=xxx.jpg">): number it ch.sec.nb
+               like a body photo, emit its \label and its credits record (both
+               the global list and the per-page block). image_nbr was already
+               incremented above, so it is this image's number. *)
+            match lookup_image_id img_name with
+            | Some id when id <> 0 ->
+                let number =
+                  match conf.imagelabels with
+                  | 4 ->
+                      Format.sprintf "%d.%d.%d.%d" !chapter !section !subsection
+                        !image_nbr
+                  | _ -> Format.sprintf "%d.%d.%d" !chapter !section !image_nbr
+                in
+                let credit =
+                  match Hashtbl.find_opt !dict_credits id with
+                  | Some c -> String.trim c
+                  | None -> ""
+                in
+                let aux_label = Format.sprintf "img_ref_%d.%s" id number in
+                photocredits :=
+                  (aux_label, id, number, img_name, credit) :: !photocredits;
+                page_images := ("photo", number, credit) :: !page_images;
+                (* Record this occurrence in dict1's image_occ, exactly as
+                   print_images does for grid photos, so mkUpdImgl can resolve
+                   the "Présent(e) aussi sur les photos ..." cross-reference for
+                   the persons on this inline image. *)
+                (match Hashtbl.find_opt !dict1 id with
+                | Some (anx_page, desc, fname, key_l, key_l_2, image_occ) ->
+                    Hashtbl.replace !dict1 id
+                      ( anx_page,
+                        desc,
+                        fname,
+                        key_l,
+                        key_l_2,
+                        number :: image_occ )
+                | None -> ());
+                Format.sprintf "{\\raisebox{.6ex}{\\small (%s)}}\\label{%s}"
+                  number aux_label
+            | _ -> ""
           else ""
         in
         img_str ^ credit_label ^ index_s
@@ -2141,7 +2181,9 @@ let one_http_call conf base och line =
 
 (** print all images mentioned in the notes of a person *)
 let print_images conf och images_list _key_str =
-  output_string och (Format.sprintf "\n\n");
+  (* \noindent so the first \parbox is not pushed right by \parindent, which
+     was stealing enough width to drop the first row from three images to two. *)
+  output_string och (Format.sprintf "\n\n\\noindent ");
   (* TODO manage Wide *)
   List.iter
     (fun (im_type, name, (ch, sec, ssec, _sssec), nbr) ->
