@@ -2359,8 +2359,29 @@ let write_photocredits fname_out records =
    order:  <id>;0;;<filename>;  (empty description and credit, no person
    \index lines) for the user to fill in. Only called when the file was
    absent, so it never clobbers user data. *)
-let write_who_skeleton img_file used portraits =
-  (* de-duplicate keeping first-seen order (both lists are prepended). *)
+(* Skeleton lines. A body photo's person(s) are unknown (left for the user);
+   a portrait's subject is known so its description is pre-filled - but with NO
+   \index line, since a portrait pictures a single person (itself). *)
+let body_entry id name = Format.sprintf "%d;0;;%s;\n\n" id name
+
+let portrait_entry id file fn sn =
+  Format.sprintf "%d;0;%s %s;%s;\n\n" id (Sutil.replace '_' ' ' fn)
+    (Sutil.replace '_' ' ' sn) file
+
+(* Keep who_is_where.txt in step with the images the document actually uses.
+
+   - absent: write a full skeleton (Part 1), ids from 1.
+   - present: APPEND, in a marked block, only the images/portraits whose file
+     is not registered yet (lookup_image_id = None), with ids continuing past
+     the current maximum. Existing entries and the user's data are never
+     touched. So a new person page or a new image added to a page simply shows
+     up as fresh stub entries on the next build.
+
+   Append is idempotent across runs: once appended, an entry is parsed on the
+   next run, so lookup finds it and it is not added again. (A photo whose entry
+   the user deliberately deleted while still using the image will reappear - a
+   deliberate deletion should keep the entry with empty fields instead.) *)
+let sync_who_is_where img_file used portraits existed =
   let dedup_first key lst =
     let seen = Hashtbl.create 100 in
     List.rev lst
@@ -2373,45 +2394,69 @@ let write_who_skeleton img_file used portraits =
   in
   let photos = dedup_first (fun n -> n) used in
   let ports = dedup_first (fun (f, _, _, _) -> f) portraits in
-  if photos <> [] || ports <> [] then (
-    let dir = Filename.dirname img_file in
-    if not (Sys.file_exists dir) then
-      ignore (Sys.command (Format.sprintf "mkdir -p %s" (Filename.quote dir)));
-    let oc = open_out img_file in
-    output_string oc
-      "#\n\
-       # who_is_where.txt - AUTO-GENERATED skeleton (Part 1).\n\
-       # One entry per image actually used, format:\n\
-       #   image_id;annex_page;description;file.jpg;credit\n\
-       # annex_page 0 = image in the body. Fill in description, credit and,\n\
-       # below each entry, one \\index{Surname, Firstname} line per identified\n\
-       # person (see the manual). Then rebuild.\n\
-       #\n\n";
-    let id = ref 0 in
-    (* body photos: person(s) unknown, left for the user to add *)
-    if photos <> [] then output_string oc "# --- body photos ---\n\n";
-    List.iter
-      (fun name ->
-        incr id;
-        Printf.fprintf oc "%d;0;;%s;\n\n" !id name)
-      photos;
-    (* portraits: the person is known, so pre-fill the description. No \index
-       line: a portrait pictures a single person (its own subject), so the
-       "person appears on this photo" cross-reference would be redundant. *)
-    if ports <> [] then output_string oc "# --- portraits ---\n\n";
-    List.iter
-      (fun (file, fn, sn, _ocn) ->
-        incr id;
-        let fn_d = Sutil.replace '_' ' ' fn in
-        let sn_d = Sutil.replace '_' ' ' sn in
-        Printf.fprintf oc "%d;0;%s %s;%s;\n\n" !id fn_d sn_d file)
-      ports;
-    close_out oc;
-    Printf.eprintf
-      "who_is_where.txt was absent: wrote a skeleton to %s (%d body photo(s), \
-       %d portrait(s)) - complete it (descriptions, credits, \\index persons) \
-       and rebuild.\n"
-      img_file (List.length photos) (List.length ports))
+  if not existed then (
+    if photos <> [] || ports <> [] then (
+      let dir = Filename.dirname img_file in
+      if not (Sys.file_exists dir) then
+        ignore (Sys.command (Format.sprintf "mkdir -p %s" (Filename.quote dir)));
+      let oc = open_out img_file in
+      output_string oc
+        "#\n\
+         # who_is_where.txt - AUTO-GENERATED skeleton.\n\
+         # One entry per image actually used, format:\n\
+         #   image_id;annex_page;description;file.jpg;credit\n\
+         # annex_page 0 = image in the body. Fill in description, credit and,\n\
+         # below each body entry, one \\index{Surname, Firstname} line per\n\
+         # identified person (see the manual). Then rebuild.\n\
+         #\n\n";
+      let id = ref 0 in
+      if photos <> [] then output_string oc "# --- body photos ---\n\n";
+      List.iter
+        (fun name ->
+          incr id;
+          output_string oc (body_entry !id name))
+        photos;
+      if ports <> [] then output_string oc "# --- portraits ---\n\n";
+      List.iter
+        (fun (file, fn, sn, _ocn) ->
+          incr id;
+          output_string oc (portrait_entry !id file fn sn))
+        ports;
+      close_out oc;
+      Printf.eprintf
+        "who_is_where.txt was absent: wrote a skeleton to %s (%d body \
+         photo(s), %d portrait(s)) - complete it and rebuild.\n"
+        img_file (List.length photos) (List.length ports)))
+  else
+    (* incremental: only files not already registered *)
+    let new_photos = List.filter (fun n -> lookup_image_id n = None) photos in
+    let new_ports =
+      List.filter (fun (f, _, _, _) -> lookup_image_id f = None) ports
+    in
+    if new_photos <> [] || new_ports <> [] then (
+      let max_id = Hashtbl.fold (fun id _ m -> max id m) !dict1 0 in
+      let oc = open_out_gen [ Open_append; Open_creat ] 0o644 img_file in
+      Printf.fprintf oc "\n# --- added automatically: %d new image(s) ---\n\n"
+        (List.length new_photos + List.length new_ports);
+      let id = ref max_id in
+      if new_photos <> [] then output_string oc "# --- body photos ---\n\n";
+      List.iter
+        (fun name ->
+          incr id;
+          output_string oc (body_entry !id name))
+        new_photos;
+      if new_ports <> [] then output_string oc "# --- portraits ---\n\n";
+      List.iter
+        (fun (file, fn, sn, _ocn) ->
+          incr id;
+          output_string oc (portrait_entry !id file fn sn))
+        new_ports;
+      close_out oc;
+      Printf.eprintf
+        "who_is_where.txt: appended %d new entr(y/ies) (%d body photo(s), %d \
+         portrait(s)) - complete them and rebuild.\n"
+        (List.length new_photos + List.length new_ports)
+        (List.length new_photos) (List.length new_ports))
 
 (* current version reads family.txt and runs pdflatex and makeindex *)
 (* in a short future makeBook will handle the whole process including  *)
@@ -2556,8 +2601,8 @@ let main () =
     Marshal.to_channel out_channel !img_ok_list [];
     close_out out_channel;
     if not !gwtest then write_photocredits fname_out !photocredits;
-    if (not !gwtest) && not !who_existed then
-      write_who_skeleton img_file !used_images !used_portraits
+    if not !gwtest then
+      sync_who_is_where img_file !used_images !used_portraits !who_existed
   with e ->
     Printf.eprintf "Fatal error: %s\n%s%!" (Printexc.to_string e)
       (Printexc.get_backtrace ());
