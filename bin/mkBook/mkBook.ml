@@ -356,6 +356,25 @@ Inspect %s/tmp/gwc.log for possible errors.|}
     exit 1);
   flush stderr;
 
+  (* run mkPhotoCredits: the first pdflatex has produced tmp/family.aux with
+     the real page of every photo, so the <x PhotoCredits> table can now be
+     built and injected into the .tex, in place of its marker. Must run before
+     the second pdflatex, which typesets it. Harmless when the document has no
+     <x PhotoCredits> (the pass finds no marker and does nothing). *)
+  if !verbose then Printf.eprintf "Run mkPhotoCredits\n";
+  let photo_credits_exe = Filename.concat !gw2l_dir "mkPhotoCredits" in
+  let photo_credits =
+    Printf.sprintf "%s %s -family %s%s" ocmlrparam photo_credits_exe !family
+      (if !verbose then " -v" else "")
+  in
+  if !verbose then Printf.eprintf "Commd: %s\n" photo_credits;
+  flush stderr;
+  let error = Sys.command photo_credits in
+  if error > 0 then (
+    Printf.eprintf "Error while building photo credits (%d)\n\n" error;
+    exit 1);
+  flush stderr;
+
   (* run pdflatex second time *)
   if !second then (
     Printf.eprintf

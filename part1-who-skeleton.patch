@@ -1,0 +1,96 @@
+diff --git a/bin/mkTex/mkTex.ml b/bin/mkTex/mkTex.ml
+index 780a846..a0bc142 100644
+--- a/bin/mkTex/mkTex.ml
++++ b/bin/mkTex/mkTex.ml
+@@ -79,6 +79,13 @@ let current_level = ref 0
+ let image_nbr = ref 0
+ let images_in_page = ref []
+ 
++(* Part 1 - bootstrap of who_is_where.txt. When that file is absent, we still
++   run, and collect here every document photo filename actually referenced
++   (body images, i.e. not portraits nor vignettes). At the end a skeleton
++   who_is_where.txt listing them is written for the user to complete. *)
++let who_existed = ref true
++let used_images = ref []
++
+ (* Number of text columns currently open via <x Columns N> (1 = none). A
+    \begin{multicols} is closed by the next <x Columns 1>, or automatically at
+    the next section (a \section may not sit inside multicols), keeping the
+@@ -465,6 +472,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
+ 
+   let make_image_str name k content mode caption =
+     let vignette = Sutil.contains name "-vignette" in
++    (* Bootstrap collection (Part 1): a body photo is one with no portrait key
++       and that is not a vignette. Record its filename (wide or normal) so an
++       absent who_is_where.txt can be scaffolded from what the document uses. *)
++    if k = "" && not vignette then used_images := name :: !used_images;
+     if k = "" && (not vignette) && not (mode = "wide") then incr image_nbr;
+     match mode with
+     | "wide" ->
+@@ -2326,6 +2337,45 @@ let write_photocredits fname_out records =
+     records;
+   close_out oc
+ 
++(* Part 1: scaffold an absent who_is_where.txt from the body photos the run
++   actually used. One skeleton entry per distinct filename, in first-seen
++   order:  <id>;0;;<filename>;  (empty description and credit, no person
++   \index lines) for the user to fill in. Only called when the file was
++   absent, so it never clobbers user data. *)
++let write_who_skeleton img_file used =
++  (* used is prepended -> reverse for encounter order, then keep first occ. *)
++  let seen = Hashtbl.create 100 in
++  let ordered =
++    List.rev used
++    |> List.filter (fun name ->
++           if Hashtbl.mem seen name then false
++           else (
++             Hashtbl.add seen name ();
++             true))
++  in
++  if ordered <> [] then (
++    let dir = Filename.dirname img_file in
++    if not (Sys.file_exists dir) then
++      ignore (Sys.command (Format.sprintf "mkdir -p %s" (Filename.quote dir)));
++    let oc = open_out img_file in
++    output_string oc
++      "#\n\
++       # who_is_where.txt - AUTO-GENERATED skeleton (Part 1).\n\
++       # One line per document photo actually used, format:\n\
++       #   image_id;annex_page;description;file.jpg;credit\n\
++       # annex_page 0 = photo in the body. Fill in description, credit and,\n\
++       # below each entry, one \\index{Surname, Firstname} line per identified\n\
++       # person (see the manual). Then rebuild.\n\
++       #\n\n";
++    List.iteri
++      (fun i name -> Printf.fprintf oc "%d;0;;%s;\n\n" (i + 1) name)
++      ordered;
++    close_out oc;
++    Printf.eprintf
++      "who_is_where.txt was absent: wrote a %d-photo skeleton to %s - complete \
++       it (descriptions, credits, \\index persons) and rebuild.\n"
++      (List.length ordered) img_file)
++
+ (* current version reads family.txt and runs pdflatex and makeindex *)
+ (* in a short future makeBook will handle the whole process including  *)
+ (* addition in each personnal page of image index information *)
+@@ -2385,6 +2435,9 @@ let main () =
+     String.concat Filename.dir_sep
+       [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
+   in
++  (* Part 1: remember whether who_is_where.txt existed at the start; if not, a
++     skeleton is written from the used-photo collection at the end. *)
++  who_existed := Sys.file_exists img_file;
+ 
+   let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
+   let fname_txt = Filename.concat !livres (!family ^ ".txt") in
+@@ -2465,7 +2518,9 @@ let main () =
+     let out_channel = open_out_bin "list1.dat" in
+     Marshal.to_channel out_channel !img_ok_list [];
+     close_out out_channel;
+-    if not !gwtest then write_photocredits fname_out !photocredits
++    if not !gwtest then write_photocredits fname_out !photocredits;
++    if (not !gwtest) && not !who_existed then
++      write_who_skeleton img_file !used_images
+   with e ->
+     Printf.eprintf "Fatal error: %s\n%s%!" (Printexc.to_string e)
+       (Printexc.get_backtrace ());

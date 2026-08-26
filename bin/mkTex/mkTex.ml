@@ -28,6 +28,15 @@ let second = ref false
 let index = ref 0
 let dict1 = ref (Hashtbl.create 100)
 let dict2 = ref (Hashtbl.create 100)
+
+(* image_id -> photo credit / source, from the 5th field of who_is_where.txt *)
+let dict_credits = ref (Hashtbl.create 100)
+
+(* Records for the <x PhotoCredits> table: one (aux_label, photo_number,
+   credit) per printed photo that has a credit. The page is unknown here (only
+   pdflatex knows it), so it is resolved later by the mkPhotoCredits post-pass
+   from the .aux, which looks up each aux_label. *)
+let photocredits = ref []
 let img_name_list = ref []
 let img_ok_list = ref []
 
@@ -71,6 +80,18 @@ let subsubsection = ref 0
 let current_level = ref 0
 let image_nbr = ref 0
 let images_in_page = ref []
+
+(* Part 1 - bootstrap of who_is_where.txt. When that file is absent, we still
+   run, and collect here every document photo filename actually referenced
+   (body images, i.e. not portraits nor vignettes). At the end a skeleton
+   who_is_where.txt listing them is written for the user to complete. *)
+let who_existed = ref true
+let used_images = ref []
+
+(* Portraits used by the document, collected in tag_img. Each is
+   (filename, first_name, surname, occ_string): the person is known, so the
+   skeleton entry can carry its \index line ready-made. *)
+let used_portraits = ref []
 
 (* Number of text columns currently open via <x Columns N> (1 = none). A
    \begin{multicols} is closed by the next <x Columns 1>, or automatically at
@@ -458,6 +479,10 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
 
   let make_image_str name k content mode caption =
     let vignette = Sutil.contains name "-vignette" in
+    (* Bootstrap collection (Part 1): a body photo is one with no portrait key
+       and that is not a vignette. Record its filename (wide or normal) so an
+       absent who_is_where.txt can be scaffolded from what the document uses. *)
+    if k = "" && not vignette then used_images := name :: !used_images;
     if k = "" && (not vignette) && not (mode = "wide") then incr image_nbr;
     match mode with
     | "wide" ->
@@ -722,13 +747,23 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
           Printf.eprintf "tag_img: skipping unnameable portrait (href=%s)\n%!"
             href;
         index_s)
-      else
+      else (
+        (* Part 1: collect portraits (and keyed person images) for the
+           who_is_where skeleton. The file on disk is the canonicalised person
+           key + .jpg, exactly as print_image builds it. *)
+        (if img_type = Portrait || img_type = Imagek then
+           let pf =
+             (Sutil.lower img_name |> Sutil.replace '-' '_'
+            |> Sutil.replace ' ' '_')
+             ^ ".jpg"
+           in
+           used_portraits := (pf, fn, sn, ocn) :: !used_portraits);
         print_image conf
           ( img_type,
             img_name,
             (!chapter, !section, !subsection, !subsubsection),
             !image_nbr )
-        ^ index_s
+        ^ index_s)
     in
     str
   in
@@ -1834,6 +1869,15 @@ let rec one_command conf base och line =
   | "PrintConfig" ->
       output_string och (print_conf conf);
       conf
+  | "PhotoCredits" ->
+      (* Drop a marker where the photo-credits table should appear. At this
+         stage page numbers are unknown, so we cannot build the list yet: it is
+         a bare LaTeX comment (thus invisible and harmless) until the
+         mkPhotoCredits post-pass - run after the first pdflatex, when the .aux
+         holds every img_ref page - replaces this exact line with the list,
+         grouped and sorted by page. *)
+      output_string och (Sutil.photocredits_marker ^ "\n");
+      conf
   | "Reset" -> (
       let param = String.trim param in
       match param with
@@ -2080,6 +2124,19 @@ let print_images conf och images_list _key_str =
               Format.sprintf "\\label{img_ref_%d.%s}" image_id img_number0
             else ""
           in
+          (* Record this photo for the <x PhotoCredits> table when it carries a
+             credit (5th field of who_is_where.txt). Only image_id<>0 photos
+             have an img_ref label - and thus a resolvable page - so those are
+             the only ones a page-grouped credits list can place. *)
+          (if image_id <> 0 then
+             match Hashtbl.find_opt !dict_credits image_id with
+             | Some credit when String.trim credit <> "" ->
+                 let aux_label =
+                   Format.sprintf "img_ref_%d.%s" image_id img_number0
+                 in
+                 photocredits :=
+                   (aux_label, img_number0, String.trim credit) :: !photocredits
+             | _ -> ());
           (* list of persons present on this image *)
           (* TODO les personnes /z ont été éliminées!! *)
           let index_list =
@@ -2283,6 +2340,79 @@ let scrub_nbsp fname =
     output_string oc s;
     close_out oc)
 
+(* Write the photo-credits side file next to the .tex output (family.pcredits).
+   One record per line: aux_label<TAB>photo_number<TAB>credit. The
+   mkPhotoCredits post-pass reads it, resolves aux_label -> page via the .aux,
+   and builds the page-grouped list. Written even when empty (no credited
+   photo) so the post-pass has a definite input and can blank the marker. *)
+let write_photocredits fname_out records =
+  let fname = Filename.remove_extension fname_out ^ ".pcredits" in
+  let oc = open_out fname in
+  List.iter
+    (fun (aux_label, number, credit) ->
+      Printf.fprintf oc "%s\t%s\t%s\n" aux_label number credit)
+    records;
+  close_out oc
+
+(* Part 1: scaffold an absent who_is_where.txt from the body photos the run
+   actually used. One skeleton entry per distinct filename, in first-seen
+   order:  <id>;0;;<filename>;  (empty description and credit, no person
+   \index lines) for the user to fill in. Only called when the file was
+   absent, so it never clobbers user data. *)
+let write_who_skeleton img_file used portraits =
+  (* de-duplicate keeping first-seen order (both lists are prepended). *)
+  let dedup_first key lst =
+    let seen = Hashtbl.create 100 in
+    List.rev lst
+    |> List.filter (fun x ->
+        let k = key x in
+        if Hashtbl.mem seen k then false
+        else (
+          Hashtbl.add seen k ();
+          true))
+  in
+  let photos = dedup_first (fun n -> n) used in
+  let ports = dedup_first (fun (f, _, _, _) -> f) portraits in
+  if photos <> [] || ports <> [] then (
+    let dir = Filename.dirname img_file in
+    if not (Sys.file_exists dir) then
+      ignore (Sys.command (Format.sprintf "mkdir -p %s" (Filename.quote dir)));
+    let oc = open_out img_file in
+    output_string oc
+      "#\n\
+       # who_is_where.txt - AUTO-GENERATED skeleton (Part 1).\n\
+       # One entry per image actually used, format:\n\
+       #   image_id;annex_page;description;file.jpg;credit\n\
+       # annex_page 0 = image in the body. Fill in description, credit and,\n\
+       # below each entry, one \\index{Surname, Firstname} line per identified\n\
+       # person (see the manual). Then rebuild.\n\
+       #\n\n";
+    let id = ref 0 in
+    (* body photos: person(s) unknown, left for the user to add *)
+    if photos <> [] then output_string oc "# --- body photos ---\n\n";
+    List.iter
+      (fun name ->
+        incr id;
+        Printf.fprintf oc "%d;0;;%s;\n\n" !id name)
+      photos;
+    (* portraits: the person is known, so pre-fill the description. No \index
+       line: a portrait pictures a single person (its own subject), so the
+       "person appears on this photo" cross-reference would be redundant. *)
+    if ports <> [] then output_string oc "# --- portraits ---\n\n";
+    List.iter
+      (fun (file, fn, sn, _ocn) ->
+        incr id;
+        let fn_d = Sutil.replace '_' ' ' fn in
+        let sn_d = Sutil.replace '_' ' ' sn in
+        Printf.fprintf oc "%d;0;%s %s;%s;\n\n" !id fn_d sn_d file)
+      ports;
+    close_out oc;
+    Printf.eprintf
+      "who_is_where.txt was absent: wrote a skeleton to %s (%d body photo(s), \
+       %d portrait(s)) - complete it (descriptions, credits, \\index persons) \
+       and rebuild.\n"
+      img_file (List.length photos) (List.length ports))
+
 (* current version reads family.txt and runs pdflatex and makeindex *)
 (* in a short future makeBook will handle the whole process including  *)
 (* addition in each personnal page of image index information *)
@@ -2342,6 +2472,9 @@ let main () =
     String.concat Filename.dir_sep
       [ !livres; !family ^ "-inputs"; "who_is_where.txt" ]
   in
+  (* Part 1: remember whether who_is_where.txt existed at the start; if not, a
+     skeleton is written from the used-photo collection at the end. *)
+  who_existed := Sys.file_exists img_file;
 
   let fname_htm = Printf.sprintf "test/gwtolatex-test%d.html" !test_nb in
   let fname_txt = Filename.concat !livres (!family ^ ".txt") in
@@ -2359,11 +2492,12 @@ let main () =
   if !verbose then Printf.eprintf "Build images dicts\n";
   flush stderr;
   if not !gwtest then (
-    let dict1_t, dict2_t, img_name_l =
+    let dict1_t, dict2_t, credits_t, img_name_l =
       MkImgDict.create_images_dicts img_file fname_txt
     in
     dict1 := dict1_t;
     dict2 := dict2_t;
+    dict_credits := credits_t;
     img_name_list := img_name_l);
   if !basename = "" then (
     Arg.usage speclist usage;
@@ -2420,7 +2554,10 @@ let main () =
     img_ok_list := List.sort_uniq compare !img_ok_list;
     let out_channel = open_out_bin "list1.dat" in
     Marshal.to_channel out_channel !img_ok_list [];
-    close_out out_channel
+    close_out out_channel;
+    if not !gwtest then write_photocredits fname_out !photocredits;
+    if (not !gwtest) && not !who_existed then
+      write_who_skeleton img_file !used_images !used_portraits
   with e ->
     Printf.eprintf "Fatal error: %s\n%s%!" (Printexc.to_string e)
       (Printexc.get_backtrace ());

@@ -100,11 +100,11 @@ let input_real_line_opt ic =
    of reading a fresh line, otherwise consecutive definitions (an image
    with no \index person followed directly by another image) are lost —
    which surfaced later as "Image (...) absente de img_name_list". *)
-let process dict1 ic line =
+let process dict1 dict_credits ic line =
   try
     let parts = String.split_on_char ';' line in
     if line = "" then None
-    else if List.length parts <> 4 then (
+    else if List.length parts < 4 || List.length parts > 5 then (
       Printf.eprintf "Bad image definition %s\n" line;
       None)
     else
@@ -112,6 +112,13 @@ let process dict1 ic line =
       let anx_page = int_of_string (String.trim (List.nth parts 1)) in
       let desc = String.trim (List.nth parts 2) in
       let fname = canonical_img_name (List.nth parts 3) in
+      (* Optional 5th field: photo credit / source (e.g. "Henri Gouraud
+         /Internet"). Absent in older files -> empty string. Stored in a
+         separate dict_credits keyed by image_id so the dict1 tuple, which is
+         destructured in many places, is left unchanged. *)
+      let credit =
+        if List.length parts >= 5 then String.trim (List.nth parts 4) else ""
+      in
       if image_id = 0 then (
         Printf.eprintf
           "Image_id 0 is reserved for lookup failures, skipping: %s\n" line;
@@ -169,6 +176,7 @@ let process dict1 ic line =
         in
         let key_l, leftover = loop (input_real_line_opt ic) [] in
         Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], []);
+        if credit <> "" then Hashtbl.replace dict_credits image_id credit;
         leftover
   with Failure _ ->
     Printf.eprintf "Bad image definition %s\n" line;
@@ -180,6 +188,10 @@ let create_images_dicts img_file fam_file =
   let dict1 = ref (Hashtbl.create 100) in
   let dict2 = Hashtbl.create 100 in
   let dict3 = Hashtbl.create 100 in
+  (* image_id -> photo credit / source, filled from the optional 5th field of
+     who_is_where.txt (see process). Kept aside from dict1 to avoid touching
+     the many dict1 destructurings. *)
+  let dict_credits = Hashtbl.create 100 in
   Printf.eprintf "Create images dicts from %s\n" img_file;
   let img_file_opt =
     if not (Sys.file_exists img_file) then (
@@ -237,7 +249,7 @@ let create_images_dicts img_file fam_file =
       | Some line -> (
           (* process may over-read one line (see its comment); re-process it
              as a potential definition instead of dropping it *)
-          match process dict1 ic line with
+          match process dict1 dict_credits ic line with
           | Some leftover -> loop (Some leftover)
           | None -> loop (Sutil.read_line ic))
       | None -> close_in ic
@@ -283,6 +295,6 @@ let create_images_dicts img_file fam_file =
         (fun (_fname1, id1) (_fname2, id2) -> id1 - id2)
         img_fname_l
     in
-    (!dict1, dict2, img_fname_l)
+    (!dict1, dict2, dict_credits, img_fname_l)
   end
-  else (!dict1, dict2, [])
+  else (!dict1, dict2, dict_credits, [])

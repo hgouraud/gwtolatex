@@ -1,0 +1,502 @@
+diff --git a/Makefile b/Makefile
+index 131ac42..1bf9982 100644
+--- a/Makefile
++++ b/Makefile
+@@ -57,6 +57,7 @@ distrib: build ## Build the project and copy what is necessary for distribution
+ 	cp $(BUILD_DIR)default/bin/mkTweekInd/mkTweekInd.exe $(DISTRIB_DIR)/mkTweekInd$(EXT)
+ 	cp $(BUILD_DIR)default/bin/mkNewGw/mkNewGw.exe $(DISTRIB_DIR)/mkNewGw$(EXT)
+ 	cp $(BUILD_DIR)default/bin/mkUpdImgl/mkUpdImgl.exe $(DISTRIB_DIR)/mkUpdImgl$(EXT)
++	cp $(BUILD_DIR)default/bin/mkPhotoCredits/mkPhotoCredits.exe $(DISTRIB_DIR)/mkPhotoCredits$(EXT)
+ 	cp $(BUILD_DIR)default/bin/mkIndex/mkIndex.exe $(DISTRIB_DIR)/mkIndex$(EXT)
+ 	cp $(BUILD_DIR)default/bin/mkBook/mkBook.exe $(DISTRIB_DIR)/mkBook$(EXT)
+ 	cp -R $(ENV_DIR)/tex $(BASES)/etc
+diff --git a/bin/mkBook/mkBook.ml b/bin/mkBook/mkBook.ml
+index b525661..5c7ef9a 100644
+--- a/bin/mkBook/mkBook.ml
++++ b/bin/mkBook/mkBook.ml
+@@ -356,6 +356,25 @@ Inspect %s/tmp/gwc.log for possible errors.|}
+     exit 1);
+   flush stderr;
+ 
++  (* run mkPhotoCredits: the first pdflatex has produced tmp/family.aux with
++     the real page of every photo, so the <x PhotoCredits> table can now be
++     built and injected into the .tex, in place of its marker. Must run before
++     the second pdflatex, which typesets it. Harmless when the document has no
++     <x PhotoCredits> (the pass finds no marker and does nothing). *)
++  if !verbose then Printf.eprintf "Run mkPhotoCredits\n";
++  let photo_credits_exe = Filename.concat !gw2l_dir "mkPhotoCredits" in
++  let photo_credits =
++    Printf.sprintf "%s %s -family %s%s" ocmlrparam photo_credits_exe !family
++      (if !verbose then " -v" else "")
++  in
++  if !verbose then Printf.eprintf "Commd: %s\n" photo_credits;
++  flush stderr;
++  let error = Sys.command photo_credits in
++  if error > 0 then (
++    Printf.eprintf "Error while building photo credits (%d)\n\n" error;
++    exit 1);
++  flush stderr;
++
+   (* run pdflatex second time *)
+   if !second then (
+     Printf.eprintf
+diff --git a/bin/mkNewGw/mkNewGw.ml b/bin/mkNewGw/mkNewGw.ml
+index ca8b18a..1e21588 100644
+--- a/bin/mkNewGw/mkNewGw.ml
++++ b/bin/mkNewGw/mkNewGw.ml
+@@ -457,7 +457,9 @@ let main () =
+   let fname_all = Filename.concat !livres (!family ^ ".txt") in
+ 
+   (* build images dictionnaries *)
+-  let dict1, dict2, _dict3 = MkImgDict.create_images_dicts img_file fname_all in
++  let dict1, dict2, _credits, _dict3 =
++    MkImgDict.create_images_dicts img_file fname_all
++  in
+ 
+   if !verbose then Printf.eprintf "Image dicts created\n";
+ 
+diff --git a/bin/mkPhotoCredits/dune b/bin/mkPhotoCredits/dune
+new file mode 100644
+index 0000000..01bb812
+--- /dev/null
++++ b/bin/mkPhotoCredits/dune
+@@ -0,0 +1,4 @@
++(executable
++ (public_name mkPhotoCredits)
++ (name mkPhotoCredits)
++ (libraries gwtolatex ezcurl markup unidecode geneweb.db geneweb))
+diff --git a/bin/mkPhotoCredits/mkPhotoCredits.ml b/bin/mkPhotoCredits/mkPhotoCredits.ml
+new file mode 100644
+index 0000000..896b364
+--- /dev/null
++++ b/bin/mkPhotoCredits/mkPhotoCredits.ml
+@@ -0,0 +1,231 @@
++(* Copyright (c) 2026 H.Gouraud *)
++open Gwtolatex
++
++(* Post-pass for the <x PhotoCredits> command.
++
++   mkTex has already:
++   - emitted the marker line Sutil.photocredits_marker where the credits table
++     should appear (an inert LaTeX comment until now);
++   - written tmp/<family>.pcredits, one record per printed credited photo:
++       aux_label<TAB>photo_number<TAB>credit
++
++   After the first pdflatex run, tmp/<family>.aux holds, for every printed
++   photo, a line
++       \newlabel{img_ref_<id>.<num>}{{<ref>}{<page>}...}
++   from which we read the real page number.
++
++   This pass joins the two, groups the photos by page, sorts by page, and
++   replaces the marker in tmp/<family>.tex with the rendered list. mkBook runs
++   it between the two pdflatex passes; a second pdflatex then typesets the
++   list. *)
++
++let family = ref ""
++let verbose = ref false
++let debug = ref 0
++
++(* ---- small helpers (no Str dependency, like the other binaries) ---- *)
++
++(* Content of the brace group starting at [pos] (where s.[pos] = '{'), and the
++   index just past its matching '}'. Depth-aware, so it stays correct even if a
++   future preamble adds hyperref's nested groups. *)
++let read_group s pos =
++  let n = String.length s in
++  if pos >= n || s.[pos] <> '{' then None
++  else
++    let rec loop i depth =
++      if i >= n then None
++      else
++        match s.[i] with
++        | '{' -> loop (i + 1) (depth + 1)
++        | '}' ->
++            if depth = 1 then Some (String.sub s (pos + 1) (i - pos - 1), i + 1)
++            else loop (i + 1) (depth - 1)
++        | _ -> loop (i + 1) depth
++    in
++    loop pos 0
++
++(* Parse one \newlabel{img_ref_...}{{ref}{page}...} line -> (label, page). *)
++let parse_newlabel line =
++  let tag = "\\newlabel{" in
++  let idx = Sutil.contains_index line tag in
++  if idx = -1 then None
++  else
++    let lb = idx + String.length tag in
++    match String.index_from_opt line lb '}' with
++    | None -> None
++    | Some le ->
++        let label = String.sub line lb (le - lb) in
++        if not (Sutil.start_with "img_ref_" 0 label) then None
++        else (
++          (* outer '{' of the second argument, then {ref}{page}... *)
++          match String.index_from_opt line (le + 1) '{' with
++          | None -> None
++          | Some o -> (
++              match read_group line (o + 1) with
++              | None -> None
++              | Some (_ref, p2) -> (
++                  match read_group line p2 with
++                  | None -> None
++                  | Some (page, _) -> Some (label, String.trim page))))
++
++let read_aux aux_file =
++  let tbl = Hashtbl.create 256 in
++  if Sys.file_exists aux_file then (
++    let ic = open_in aux_file in
++    (try
++       while true do
++         let line = input_line ic in
++         match parse_newlabel line with
++         | Some (label, page) -> Hashtbl.replace tbl label page
++         | None -> ()
++       done
++     with End_of_file -> ());
++    close_in ic);
++  tbl
++
++let read_pcredits file =
++  let recs = ref [] in
++  if Sys.file_exists file then (
++    let ic = open_in file in
++    (try
++       while true do
++         let line = input_line ic in
++         match String.split_on_char '\t' line with
++         | [ label; number; credit ] -> recs := (label, number, credit) :: !recs
++         | [ label; number ] -> recs := (label, number, "") :: !recs
++         | _ -> ()
++       done
++     with End_of_file -> ());
++    close_in ic);
++  List.rev !recs
++
++(* Natural order for photo numbers like "4.11.1" (so 4.8.2 < 4.11.1). *)
++let compare_number a b =
++  let split s = List.map (fun p -> try int_of_string p with _ -> 0)
++      (String.split_on_char '.' s) in
++  compare (split a) (split b)
++
++let page_int p = match int_of_string_opt (String.trim p) with Some n -> n | None -> max_int
++
++(* Replace every occurrence of [sub] by [by] (all occurrences, whole file). *)
++let replace_all_sub sub by s =
++  let ls = String.length s and lsub = String.length sub in
++  if lsub = 0 then s
++  else begin
++    let buf = Buffer.create ls in
++    let i = ref 0 in
++    while !i <= ls - lsub do
++      if String.sub s !i lsub = sub then (Buffer.add_string buf by; i := !i + lsub)
++      else (Buffer.add_char buf s.[!i]; incr i)
++    done;
++    Buffer.add_string buf (String.sub s !i (ls - !i));
++    Buffer.contents buf
++  end
++
++(* Build the LaTeX list, one \par line per page, photos in natural order. *)
++let build_list aux records =
++  let unresolved = ref 0 in
++  (* (page_string, number, credit) for records whose label has a page *)
++  let resolved =
++    List.filter_map
++      (fun (label, number, credit) ->
++        match Hashtbl.find_opt aux label with
++        | Some page -> Some (page, number, credit)
++        | None ->
++            incr unresolved;
++            if !verbose then
++              Printf.eprintf "PhotoCredits: no page for %s (photo %s)\n" label
++                number;
++            None)
++      records
++  in
++  (* sort by page then by photo number *)
++  let sorted =
++    List.sort
++      (fun (pa, na, _) (pb, nb, _) ->
++        let c = compare (page_int pa) (page_int pb) in
++        if c <> 0 then c else compare_number na nb)
++      resolved
++  in
++  (* group consecutive same-page entries *)
++  let buf = Buffer.create 4096 in
++  let rec group = function
++    | [] -> ()
++    | (page, _, _) :: _ as l ->
++        let same, rest =
++          List.partition (fun (p, _, _) -> p = page) l
++        in
++        Buffer.add_string buf
++          (Format.sprintf "\\par\\noindent \\textbf{Page %s}~: " page);
++        let photos =
++          List.map
++            (fun (_, number, credit) ->
++              if credit <> "" then
++                Format.sprintf "photo %s (%s)" number credit
++              else Format.sprintf "photo %s" number)
++            same
++        in
++        Buffer.add_string buf (String.concat ", " photos);
++        Buffer.add_string buf ".\n";
++        group rest
++  in
++  group sorted;
++  (!unresolved, Buffer.contents buf)
++
++let main () =
++  let usage =
++    "Usage: " ^ Filename.basename Sys.argv.(0) ^ " [options] where options are:"
++  in
++  let speclist =
++    [
++      ("-family", Arg.String (fun x -> family := x), " Choose family.");
++      ("-famille", Arg.String (fun x -> family := x), " Choose family.");
++      ("-debug", Arg.Int (fun x -> debug := x), " Debug traces level.");
++      ("-v", Arg.Set verbose, " verbose or quiet.");
++    ]
++  in
++  let speclist = Arg.align (List.sort compare speclist) in
++  Arg.parse speclist (fun _ -> ()) usage;
++
++  let tex_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".tex" ] in
++  let aux_file = String.concat Filename.dir_sep [ "tmp"; !family ^ ".aux" ] in
++  let pcr_file =
++    String.concat Filename.dir_sep [ "tmp"; !family ^ ".pcredits" ]
++  in
++
++  Printf.eprintf "This is \027[32mmkPhotoCredits\027[0m version %s for %s\n"
++    Sutil.version !family;
++  flush stderr;
++
++  if not (Sys.file_exists tex_file) then (
++    Printf.eprintf "PhotoCredits: %s not found, nothing to do\n" tex_file;
++    exit 0);
++
++  let ic = open_in_bin tex_file in
++  let tex = really_input_string ic (in_channel_length ic) in
++  close_in ic;
++
++  if Sutil.contains_index tex Sutil.photocredits_marker = -1 then (
++    (* the document never used <x PhotoCredits> - leave it untouched *)
++    if !verbose then Printf.eprintf "PhotoCredits: no marker, nothing to do\n";
++    exit 0);
++
++  let aux = read_aux aux_file in
++  let records = read_pcredits pcr_file in
++  let unresolved, content = build_list aux records in
++
++  let content =
++    if content = "" then "\\par\\noindent (aucun crédit photo).\n" else content
++  in
++  let tex = replace_all_sub Sutil.photocredits_marker content tex in
++  let oc = open_out_bin tex_file in
++  output_string oc tex;
++  close_out oc;
++
++  Printf.eprintf
++    "PhotoCredits: %d credited photo(s) placed, %d without a resolved page\n"
++    (List.length records - unresolved)
++    unresolved;
++  flush stderr
++
++let () = try main () with e -> Printf.eprintf "%s\n" (Printexc.to_string e)
+diff --git a/bin/mkTex/mkTex.ml b/bin/mkTex/mkTex.ml
+index 525eb4c..780a846 100644
+--- a/bin/mkTex/mkTex.ml
++++ b/bin/mkTex/mkTex.ml
+@@ -28,6 +28,13 @@ let second = ref false
+ let index = ref 0
+ let dict1 = ref (Hashtbl.create 100)
+ let dict2 = ref (Hashtbl.create 100)
++(* image_id -> photo credit / source, from the 5th field of who_is_where.txt *)
++let dict_credits = ref (Hashtbl.create 100)
++(* Records for the <x PhotoCredits> table: one (aux_label, photo_number,
++   credit) per printed photo that has a credit. The page is unknown here (only
++   pdflatex knows it), so it is resolved later by the mkPhotoCredits post-pass
++   from the .aux, which looks up each aux_label. *)
++let photocredits = ref []
+ let img_name_list = ref []
+ let img_ok_list = ref []
+ 
+@@ -1834,6 +1841,15 @@ let rec one_command conf base och line =
+   | "PrintConfig" ->
+       output_string och (print_conf conf);
+       conf
++  | "PhotoCredits" ->
++      (* Drop a marker where the photo-credits table should appear. At this
++         stage page numbers are unknown, so we cannot build the list yet: it is
++         a bare LaTeX comment (thus invisible and harmless) until the
++         mkPhotoCredits post-pass - run after the first pdflatex, when the .aux
++         holds every img_ref page - replaces this exact line with the list,
++         grouped and sorted by page. *)
++      output_string och (Sutil.photocredits_marker ^ "\n");
++      conf
+   | "Reset" -> (
+       let param = String.trim param in
+       match param with
+@@ -2080,6 +2096,19 @@ let print_images conf och images_list _key_str =
+               Format.sprintf "\\label{img_ref_%d.%s}" image_id img_number0
+             else ""
+           in
++          (* Record this photo for the <x PhotoCredits> table when it carries a
++             credit (5th field of who_is_where.txt). Only image_id<>0 photos
++             have an img_ref label - and thus a resolvable page - so those are
++             the only ones a page-grouped credits list can place. *)
++          (if image_id <> 0 then
++             match Hashtbl.find_opt !dict_credits image_id with
++             | Some credit when String.trim credit <> "" ->
++                 let aux_label =
++                   Format.sprintf "img_ref_%d.%s" image_id img_number0
++                 in
++                 photocredits :=
++                   (aux_label, img_number0, String.trim credit) :: !photocredits
++             | _ -> ());
+           (* list of persons present on this image *)
+           (* TODO les personnes /z ont été éliminées!! *)
+           let index_list =
+@@ -2283,6 +2312,20 @@ let scrub_nbsp fname =
+     output_string oc s;
+     close_out oc)
+ 
++(* Write the photo-credits side file next to the .tex output (family.pcredits).
++   One record per line: aux_label<TAB>photo_number<TAB>credit. The
++   mkPhotoCredits post-pass reads it, resolves aux_label -> page via the .aux,
++   and builds the page-grouped list. Written even when empty (no credited
++   photo) so the post-pass has a definite input and can blank the marker. *)
++let write_photocredits fname_out records =
++  let fname = Filename.remove_extension fname_out ^ ".pcredits" in
++  let oc = open_out fname in
++  List.iter
++    (fun (aux_label, number, credit) ->
++      Printf.fprintf oc "%s\t%s\t%s\n" aux_label number credit)
++    records;
++  close_out oc
++
+ (* current version reads family.txt and runs pdflatex and makeindex *)
+ (* in a short future makeBook will handle the whole process including  *)
+ (* addition in each personnal page of image index information *)
+@@ -2359,11 +2402,12 @@ let main () =
+   if !verbose then Printf.eprintf "Build images dicts\n";
+   flush stderr;
+   if not !gwtest then (
+-    let dict1_t, dict2_t, img_name_l =
++    let dict1_t, dict2_t, credits_t, img_name_l =
+       MkImgDict.create_images_dicts img_file fname_txt
+     in
+     dict1 := dict1_t;
+     dict2 := dict2_t;
++    dict_credits := credits_t;
+     img_name_list := img_name_l);
+   if !basename = "" then (
+     Arg.usage speclist usage;
+@@ -2420,7 +2464,8 @@ let main () =
+     img_ok_list := List.sort_uniq compare !img_ok_list;
+     let out_channel = open_out_bin "list1.dat" in
+     Marshal.to_channel out_channel !img_ok_list [];
+-    close_out out_channel
++    close_out out_channel;
++    if not !gwtest then write_photocredits fname_out !photocredits
+   with e ->
+     Printf.eprintf "Fatal error: %s\n%s%!" (Printexc.to_string e)
+       (Printexc.get_backtrace ());
+diff --git a/gwtolatex.install b/gwtolatex.install
+index 51b7ede..929495b 100644
+--- a/gwtolatex.install
++++ b/gwtolatex.install
+@@ -50,6 +50,7 @@ bin: [
+   "_build/install/default/bin/mkBook"
+   "_build/install/default/bin/mkIndex"
+   "_build/install/default/bin/mkNewGw"
++  "_build/install/default/bin/mkPhotoCredits"
+   "_build/install/default/bin/mkTex"
+   "_build/install/default/bin/mkTweekInd"
+   "_build/install/default/bin/mkUpdImgl"
+diff --git a/lib/mkImgDict.ml b/lib/mkImgDict.ml
+index 4c4757a..7275783 100644
+--- a/lib/mkImgDict.ml
++++ b/lib/mkImgDict.ml
+@@ -100,11 +100,11 @@ let input_real_line_opt ic =
+    of reading a fresh line, otherwise consecutive definitions (an image
+    with no \index person followed directly by another image) are lost —
+    which surfaced later as "Image (...) absente de img_name_list". *)
+-let process dict1 ic line =
++let process dict1 dict_credits ic line =
+   try
+     let parts = String.split_on_char ';' line in
+     if line = "" then None
+-    else if List.length parts <> 4 then (
++    else if List.length parts < 4 || List.length parts > 5 then (
+       Printf.eprintf "Bad image definition %s\n" line;
+       None)
+     else
+@@ -112,6 +112,13 @@ let process dict1 ic line =
+       let anx_page = int_of_string (String.trim (List.nth parts 1)) in
+       let desc = String.trim (List.nth parts 2) in
+       let fname = canonical_img_name (List.nth parts 3) in
++      (* Optional 5th field: photo credit / source (e.g. "Henri Gouraud
++         /Internet"). Absent in older files -> empty string. Stored in a
++         separate dict_credits keyed by image_id so the dict1 tuple, which is
++         destructured in many places, is left unchanged. *)
++      let credit =
++        if List.length parts >= 5 then String.trim (List.nth parts 4) else ""
++      in
+       if image_id = 0 then (
+         Printf.eprintf
+           "Image_id 0 is reserved for lookup failures, skipping: %s\n" line;
+@@ -169,6 +176,7 @@ let process dict1 ic line =
+         in
+         let key_l, leftover = loop (input_real_line_opt ic) [] in
+         Hashtbl.add !dict1 image_id (anx_page, desc, fname, key_l, [], []);
++        if credit <> "" then Hashtbl.replace dict_credits image_id credit;
+         leftover
+   with Failure _ ->
+     Printf.eprintf "Bad image definition %s\n" line;
+@@ -180,6 +188,10 @@ let create_images_dicts img_file fam_file =
+   let dict1 = ref (Hashtbl.create 100) in
+   let dict2 = Hashtbl.create 100 in
+   let dict3 = Hashtbl.create 100 in
++  (* image_id -> photo credit / source, filled from the optional 5th field of
++     who_is_where.txt (see process). Kept aside from dict1 to avoid touching
++     the many dict1 destructurings. *)
++  let dict_credits = Hashtbl.create 100 in
+   Printf.eprintf "Create images dicts from %s\n" img_file;
+   let img_file_opt =
+     if not (Sys.file_exists img_file) then (
+@@ -237,7 +249,7 @@ let create_images_dicts img_file fam_file =
+       | Some line -> (
+           (* process may over-read one line (see its comment); re-process it
+              as a potential definition instead of dropping it *)
+-          match process dict1 ic line with
++          match process dict1 dict_credits ic line with
+           | Some leftover -> loop (Some leftover)
+           | None -> loop (Sutil.read_line ic))
+       | None -> close_in ic
+@@ -283,6 +295,6 @@ let create_images_dicts img_file fam_file =
+         (fun (_fname1, id1) (_fname2, id2) -> id1 - id2)
+         img_fname_l
+     in
+-    (!dict1, dict2, img_fname_l)
++    (!dict1, dict2, dict_credits, img_fname_l)
+   end
+-  else (!dict1, dict2, [])
++  else (!dict1, dict2, dict_credits, [])
+diff --git a/lib/sutil.ml b/lib/sutil.ml
+index c225244..4d3d098 100644
+--- a/lib/sutil.ml
++++ b/lib/sutil.ml
+@@ -1,6 +1,13 @@
+ (* strings utilities *)
+ (* v1  Henri, 2023/10/16 *)
+ 
++(* Placeholder line emitted by mkTex for the <x PhotoCredits> command and later
++   replaced, in place, by the mkPhotoCredits post-pass with the page-grouped
++   credits list. A leading %% makes it an inert LaTeX comment until then, so an
++   intermediate pdflatex run simply ignores it. Shared here so producer and
++   consumer can never disagree on the string. *)
++let photocredits_marker = "%%%PHOTOCREDITS%%%"
++
+ let version =
+   let ic =
+     try

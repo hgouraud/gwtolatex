@@ -1,0 +1,4 @@
+(executable
+ (public_name mkPhotoCredits)
+ (name mkPhotoCredits)
+ (libraries gwtolatex ezcurl markup unidecode geneweb.db geneweb))

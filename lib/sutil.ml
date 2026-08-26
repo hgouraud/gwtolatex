@@ -1,6 +1,13 @@
 (* strings utilities *)
 (* v1  Henri, 2023/10/16 *)
 
+(* Placeholder line emitted by mkTex for the <x PhotoCredits> command and later
+   replaced, in place, by the mkPhotoCredits post-pass with the page-grouped
+   credits list. A leading %% makes it an inert LaTeX comment until then, so an
+   intermediate pdflatex run simply ignores it. Shared here so producer and
+   consumer can never disagree on the string. *)
+let photocredits_marker = "%%%PHOTOCREDITS%%%"
+
 let version =
   let ic =
     try

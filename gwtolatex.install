@@ -50,6 +50,7 @@ bin: [
   "_build/install/default/bin/mkBook"
   "_build/install/default/bin/mkIndex"
   "_build/install/default/bin/mkNewGw"
+  "_build/install/default/bin/mkPhotoCredits"
   "_build/install/default/bin/mkTex"
   "_build/install/default/bin/mkTweekInd"
   "_build/install/default/bin/mkUpdImgl"

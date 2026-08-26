@@ -457,7 +457,9 @@ let main () =
   let fname_all = Filename.concat !livres (!family ^ ".txt") in
 
   (* build images dictionnaries *)
-  let dict1, dict2, _dict3 = MkImgDict.create_images_dicts img_file fname_all in
+  let dict1, dict2, _credits, _dict3 =
+    MkImgDict.create_images_dicts img_file fname_all
+  in
 
   if !verbose then Printf.eprintf "Image dicts created\n";
 
