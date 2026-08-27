@@ -354,24 +354,25 @@ use the macros \textasciitilde, \textasciicircum, and \textbackslash.
 *)
 
 (* Canonical highlight key, order-independent, so that however a person's name
-   is presented - "(surname, firstname)" in person links, "surname, firstname"
-   in a_ref spans, "Firstname Surname" or "Surname Firstname" as the user types
-   it in <x HighLight ...> - they all compare equal. Steps: drop parentheses
-   and commas, lower ASCII case, split on whitespace, then SORT the words. So
-   "Jean Get", "Get, Jean" and "get jean" all become "get jean". *)
+   is presented. It drops parentheses and commas, lowercases ASCII, and
+   collapses runs of whitespace to single spaces - but KEEPS the word order.
+   So "(Marie, Albert (1))" and "Marie Albert 1" both become "marie albert 1".
+   Word order matters here because the <x HighLight> command now stores every
+   acceptable order explicitly (fn sn, sn fn, and their (oc) variants), so we
+   must NOT sort - sorting would make unrelated swapped-name persons collide. *)
 let norm_hl s =
   let b = Buffer.create (String.length s) in
   String.iter
     (fun c ->
       match c with
-      | '(' | ')' | ',' -> ()
+      | '(' | ')' | ',' -> Buffer.add_char b ' '
       | 'A' .. 'Z' -> Buffer.add_char b (Char.chr (Char.code c + 32))
       | '\t' | '\n' -> Buffer.add_char b ' '
       | c -> Buffer.add_char b c)
     s;
   String.split_on_char ' ' (Buffer.contents b)
   |> List.filter (fun x -> x <> "")
-  |> List.sort compare |> String.concat " "
+  |> String.concat " "
 
 let get_att_list attributes =
   List.fold_left (fun acc ((_, k), v) -> (k, v) :: acc) [] attributes
@@ -1239,7 +1240,11 @@ let rec process_tree_cumul conf base och cumul tree (row, col) =
                         (Printexc.to_string e);
                     (false, "")
                 in
-                (if hl then Format.sprintf "{\\hl " ^ content ^ "}" else content)
+                (* highlight -> bold AND yellow, like tag_a and the highlight
+                   span; without the \bf a highlighted a_ref name (e.g. in a
+                   descendants list) stayed in normal weight. *)
+                (if hl then Format.sprintf "{\\hl {\\bf %s}}" content
+                 else content)
                 ^ str
               else content
             in
@@ -1853,14 +1858,39 @@ let rec one_command conf base och line =
            branch src commit_id commit_date compil_date);
       conf
   | "HighLight" ->
-      if conf.debug >= 2 then
-        Printf.eprintf "HighLight: key = [%s]\n%!" (norm_hl param);
-      {
-        conf with
-        highlights =
-          (if param = "off" || param = "Off" then []
-           else norm_hl param :: conf.highlights);
-      }
+      (* <x HighLight fn, sn, oc>  (oc optional, present only if <> 0).
+         A person is rendered in different word orders depending on the page
+         ("fn sn", "sn fn", "sn, fn (oc)"), so we store EVERY acceptable order
+         as a normalised key and a person matches if its rendered name equals
+         any of them:
+           fn sn, sn fn, and - when oc is given - fn sn oc, sn fn oc.
+         Backward compatible: a parameter with no comma is treated as a plain
+         name and both word orders are stored (old behaviour, order-free). *)
+      if param = "off" || param = "Off" then { conf with highlights = [] }
+      else
+        let forms =
+          if String.contains param ',' then
+            let part i =
+              match List.nth_opt (String.split_on_char ',' param) i with
+              | Some s -> String.trim s
+              | None -> ""
+            in
+            let fn = part 0 and sn = part 1 in
+            let oc = part 2 in
+            let base = [ fn ^ " " ^ sn; sn ^ " " ^ fn ] in
+            if oc <> "" && oc <> "0" then
+              base @ [ fn ^ " " ^ sn ^ " " ^ oc; sn ^ " " ^ fn ^ " " ^ oc ]
+            else base
+          else
+            let words =
+              String.split_on_char ' ' param |> List.filter (fun x -> x <> "")
+            in
+            [ String.concat " " words; String.concat " " (List.rev words) ]
+        in
+        let keys = List.map norm_hl forms in
+        if conf.debug >= 2 then
+          Printf.eprintf "HighLight: keys = [%s]\n%!" (String.concat " | " keys);
+        { conf with highlights = keys @ conf.highlights }
   | "Hrule" -> { conf with hrule = param = "on" || param = "On" }
   | "ImageLabels" ->
       let _off, value = get_int_value line param 3 in
@@ -2336,6 +2366,20 @@ let flush_page_credits och =
   page_images := [];
   let recs =
     List.filter (fun (_k, _n, credit) -> credit <> "" || !show_no_credits) recs
+  in
+  (* Order the block by the ch.sec.nb number, not by render order: an image
+     shown inline in the body is emitted before the end-of-page grid photos, so
+     without this its (higher) number would appear out of place. A portrait has
+     an empty number and sorts first. *)
+  let num_key s =
+    List.map
+      (fun p -> try int_of_string p with _ -> -1)
+      (String.split_on_char '.' s)
+  in
+  let recs =
+    List.stable_sort
+      (fun (_, a, _) (_, b, _) -> compare (num_key a) (num_key b))
+      recs
   in
   if recs <> [] then
     let prev = ref "" in
