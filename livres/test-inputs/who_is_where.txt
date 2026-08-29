@@ -31,3 +31,16 @@
 \index{Dupont, Emile}
 \index{Dupont, Lucien}
 
+
+# --- added automatically: 3 new image(s) ---
+
+# --- body photos ---
+
+6;0;;haddock.jpg;
+
+# --- portraits ---
+
+7;0;Lucien Dupont;lucien.0.dupont.jpg;
+
+8;0;Léon Dupont;leon.0.dupont.jpg;
+

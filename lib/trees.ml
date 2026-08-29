@@ -89,6 +89,14 @@ let show_boxes = ref false
 let clip_render_width = ref 0.0
 let no_sideways_wrap = ref false
 
+(* Uniform shrink factor for the WHOLE tree (<x Shrink f>). 1.0 = off. Applied
+   as a \scalebox around the tabular (classic path) or around the laid-out tree
+   inside the save box (clip path), so text, rules, columns and spacing all
+   scale together - unlike FontSize, which only resizes glyphs and reflows. In
+   the clip path the clipping windows stay one page each; only the tree inside
+   shrinks, so more of it fits per window. *)
+let tree_scale = ref 1.0
+
 (* ── Row array for nearest_sig scanning ─────────────────────────── *)
 (* convert tree list to array once per print call so nearest_sig
    can index in O(1)                                                 *)
@@ -175,23 +183,41 @@ let print_tree (conf : Config.config) tree =
       find (Array.length rows - 1)
     in
 
-    let offset_b =
+    (* Hoffset / Voffset nudge the tree on its page in PAGE coordinates: H is
+       always horizontal on the physical page, V always vertical, whatever the
+       orientation. They must therefore be emitted OUTSIDE the \begin{sideways}
+       box - a shift inside it would be rotated with the box (the old \hspace*
+       sat inside sideways, so under Sideways it moved the tree vertically and
+       Voffset did nothing at all). \vspace* needs vertical mode: each half is
+       preceded by \newpage or \par, so we are in vertical mode here. *)
+    let page_offset_b =
+      (if conf.voffset <> 0. then
+         Format.sprintf "\\vspace*{%1.2f%s}\n" conf.voffset conf.unit
+       else "")
+      ^
       if conf.hoffset <> 0. then
-        Format.sprintf "\\hspace*{%1.2f%s}\n" conf.hoffset conf.unit
+        Format.sprintf "\\noindent\\hspace*{%1.2f%s}" conf.hoffset conf.unit
       else ""
+    in
+    let scale_b, scale_e =
+      if !tree_scale <> 1.0 then
+        (Format.sprintf "\\scalebox{%1.3f}{" !tree_scale, "}")
+      else ("", "")
     in
     let tabular_b =
       Format.sprintf
-        "%s\\nohyphens\\newcolumntype{P}[1]{>{\\centering\\arraybackslash}p{#1}}\n\
-         \\renewcommand*{\\arraystretch}{0.1}\\renewcommand*{\\tabcolsep}{%1.2f%s}%s\\begin{tabular}{%s}\n"
+        "%s%s\\nohyphens\\newcolumntype{P}[1]{>{\\centering\\arraybackslash}p{#1}}\n\
+         \\renewcommand*{\\arraystretch}{0.1}\\renewcommand*{\\tabcolsep}{%1.2f%s}\\begin{tabular}{%s}\n"
+        (page_offset_b ^ scale_b)
         (if conf.sideways && not !no_sideways_wrap then "\\begin{sideways}"
          else "")
-        conf.colsep conf.unit offset_b tabular_env
+        conf.colsep conf.unit tabular_env
     in
     let tabular_e =
-      Format.sprintf "\\end{tabular}%s\n\\hyphenation{nor-mal-ly}\n"
+      Format.sprintf "\\end{tabular}%s%s\n\\hyphenation{nor-mal-ly}\n"
         (if conf.sideways && not !no_sideways_wrap then "\\end{sideways}\n"
          else "")
+        scale_e
     in
 
     row_nb := 0;
@@ -665,17 +691,37 @@ let print_tree (conf : Config.config) tree =
           (-.shift) u
     in
     let fb, fe = if !show_boxes then ("\\fbox{", "}") else ("", "") in
+    (* Page-coordinate Hoffset / Voffset for the clip path: applied to each
+       window (each is on its own page), OUTSIDE the adjustbox rotation, so H
+       is horizontal and V vertical on the physical page. hoffset adds to the
+       existing per-window horizontal shift; voffset drops the window down. *)
+    let voff =
+      if conf.voffset <> 0.0 then
+        Format.sprintf "\\vspace*{%1.2f%s}\n" conf.voffset u
+      else ""
+    in
+    let hoff = hsp conf.hoffset in
+    let sc_b, sc_e =
+      if !tree_scale <> 1.0 then
+        (Format.sprintf "\\scalebox{%1.3f}{" !tree_scale, "}")
+      else ("", "")
+    in
     Format.sprintf
       "%s\\ifdefined\\gtree\\else\\newsavebox\\gtree\\fi\n\
        \\savebox\\gtree{\\kern%1.2f%s%s\\kern%1.2f%s}%%\n\
        %s\\noindent %s%s\\adjustbox{trim=0pt 0pt {0.5\\width-%1.2f%s} \
        0pt,clip%s%s}{\\usebox\\gtree}%s%%\n\
        \\newpage\n\
-       \\noindent %s%s\\adjustbox{trim={0.5\\width-%1.2f%s} 0pt 0pt \
+       %s\\noindent %s%s\\adjustbox{trim={0.5\\width-%1.2f%s} 0pt 0pt \
        0pt,clip%s%s}{\\usebox\\gtree}%s%%\n"
       (if !tree_newpage then "\\newpage\n" else "")
-      pl u body pr u ticks (hsp !clip_shift_l) fb sub1 u rot cap fe
-      (hsp !clip_shift_r) fb sub2 u rot cap fe)
+      pl u
+      (sc_b ^ body ^ sc_e)
+      pr u (ticks ^ voff)
+      (hoff ^ hsp !clip_shift_l)
+      fb sub1 u rot cap fe voff
+      (hoff ^ hsp !clip_shift_r)
+      fb sub2 u rot cap fe)
   else if conf.twopages then (
     let tree_left, tree_right = split_tree conf tree in
     test_zero_span_t tree_left "tree_left";

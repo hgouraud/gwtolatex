@@ -251,31 +251,37 @@ profondeur des titres générés automatiquement par les liens \cmd{<a>}
 \bottomrule
 \endfoot
 
-\cmd{TextWidth}  & 15.5 & Largeur du bloc de texte (\cmd{textwidth}). \\
+\cmd{TextWidth}  & flottant /15.5 & Largeur du bloc de texte (\cmd{textwidth}). \\
 \addlinespace
 
-\cmd{TextHeight} & 24.5 & Hauteur du bloc de texte (\cmd{textheight}). \\
+\cmd{TextHeight} & flottant /24.5 & Hauteur du bloc de texte (\cmd{textheight}). \\
 \addlinespace
 
-\cmd{ColSep}     & 0.05 & Séparation entre colonnes (\cmd{colsep}). \\
+\cmd{ColSep}     & flottant /0.05 & Séparation entre colonnes (\cmd{colsep}). \\
 \addlinespace
 
 \cmd{Unit}       & \cmd{cm} & Unité de longueur employée par toutes les valeurs
 numériques (\cmd{unit}). \\
 \addlinespace
 
-\cmd{Offset}     & 0.0 & Décalage horizontal : active \cmd{offset}, fixe
+\cmd{Offset}     & flottant / 0.0 & Décalage horizontal : fixe
 \cmd{hoffset} à la valeur, remet \cmd{voffset} à 0. \cmd{off} désactive. \\
 \addlinespace
 
-\cmd{Hoffset}    & 1.5 \textbf{(!)} & Décalage horizontal seul (\cmd{offset} +
-\cmd{hoffset}). Le défaut hérité est \cmd{vignwidth\_default} (1.5),
-probablement un copier-coller — préciser toujours une valeur. \\
+\cmd{Hoffset}    & flottant / 0.0 & Décalage horizontal seul.
+Préciser toujours une valeur. \\
 \addlinespace
 
-\cmd{Voffset}    & 1.5 \textbf{(!)} & Décalage vertical seul (\cmd{offset} +
-\cmd{voffset}). Même remarque que \cmd{Hoffset}. \\
+\cmd{Voffset}    & flottant / 0.0 & Décalage vertical seul.
+Préciser toujours une valeur. \\
+\addlinespace
+
+\cmd{Shrink}    & flottant / 1.0 & Applique un facteur d'échelle à tout l'arbre.
 \end{longtable}
+
+{\bf NOTE :} Les quatre commande offset et shrink ne s'appliquent qu'au contenu des arbres.
+Pour décaler le contenu des autres pages, utiliser directement \cmd{hspace*} ou
+\cmd{vspace*}.
 
 %======================================================================
 \subsubsection*{Images}

@@ -1775,6 +1775,14 @@ let rec one_command conf base och line =
       let _off, value = get_float_value line param 0.35 in
       Trees.clip_tick := value;
       conf
+  | "Shrink" ->
+      (* Uniform scale factor for the whole tree (\scalebox); 1.0 = off. Scales
+         text, rules, columns and spacing together to fit an oversized tree in
+         the page, without the reflow FontSize causes. Keeps the clipping
+         windows one page each. E.g. <x Shrink 0.85>. *)
+      let _off, value = get_float_value line param 1.0 in
+      Trees.tree_scale := value;
+      conf
   | "CollectImages" ->
       { conf with collectimages = param = "on" || param = "On" }
   | "ColSep" ->
